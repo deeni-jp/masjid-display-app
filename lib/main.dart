@@ -1,10 +1,4 @@
 // lib/main.dart
-// Prayer Times app (fixed):
-// - Firebase initialization is updated to use FlutterFire CLI's generated options.
-// - Improved error handling for the admin sign-in flow.
-// - All other UI fixes and features from your version are retained.
-// - ADDED: A local admin user for testing without full Firebase setup.
-
 import 'dart:async';
 import 'dart:convert';
 
@@ -15,6 +9,8 @@ import 'package:intl/intl.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'package:google_fonts/google_fonts.dart';
 
 // Firebase
 import 'package:firebase_core/firebase_core.dart';
@@ -28,23 +24,12 @@ import 'firebase_options.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // --- FIX: Use the generated firebase_options.dart ---
-  // This is the modern, recommended way to initialize Firebase.
-  // It automatically selects the correct configuration for web, Android, or iOS.
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
   runApp(const PrayerApp());
 }
-
-// --- NOTE for favicon (browser tab icon) ---
-// Flutter web uses web/index.html for the tab icon. To change it to "images/mosque.png",
-// open web/index.html and find the <link rel="icon" ...> line and replace the href.
-// Example:
-//   <link rel="icon" type="image/png" href="/images/mosque.png" />
-// After changing, rebuild the web app (flutter build web) or reload in dev.
-// ------------------------------------------
 
 class PrayerApp extends StatefulWidget {
   const PrayerApp({super.key});
@@ -55,6 +40,7 @@ class PrayerApp extends StatefulWidget {
 
 class _PrayerAppState extends State<PrayerApp> {
   bool _darkMode = false;
+  bool _themeManualOverride = false; // track whether user manually chose theme
 
   @override
   void initState() {
@@ -66,13 +52,30 @@ class _PrayerAppState extends State<PrayerApp> {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       _darkMode = prefs.getBool('dark_mode') ?? false;
+      _themeManualOverride = prefs.getBool('dark_mode_manual') ?? false;
     });
   }
 
-  Future<void> _setDarkMode(bool v) async {
+  /// Set dark mode.
+  /// If [manual] is true then this was a user action and we persist manual override.
+  /// If [manual] is false this is an automatic attempt (sunset/sunrise); it will
+  /// be ignored if the user previously set a manual override.
+  Future<void> _setDarkMode(bool v, {bool manual = true}) async {
     final prefs = await SharedPreferences.getInstance();
+
+    // If this change is automatic but user has manual override, do not change.
+    if (!manual && (prefs.getBool('dark_mode_manual') ?? _themeManualOverride)) {
+      return;
+    }
+
     await prefs.setBool('dark_mode', v);
-    setState(() => _darkMode = v);
+
+    if (manual) {
+      await prefs.setBool('dark_mode_manual', true);
+      _themeManualOverride = true;
+    }
+
+    if (mounted) setState(() => _darkMode = v);
   }
 
   @override
@@ -92,7 +95,8 @@ class _PrayerAppState extends State<PrayerApp> {
 }
 
 class HomePage extends StatefulWidget {
-  final ValueChanged<bool> onToggleTheme;
+  // accepts manual flag: true => user action, false => automatic
+  final Future<void> Function(bool, {bool manual}) onToggleTheme;
   final bool darkMode;
   const HomePage({super.key, required this.onToggleTheme, required this.darkMode});
 
@@ -115,6 +119,12 @@ class _HomePageState extends State<HomePage> {
   bool _adminMode = false;
   bool _usingRemoteIqama = false; // whether Firestore provided current iqama
 
+  // Full-screen iqama/blackout states
+  bool _showFullScreenCountdown = false;
+  bool _blackoutActive = false;
+  DateTime? _blackoutEndsAt;
+  Timer? _blackoutTimer;
+
   // Firestore listener for realtime iqama updates
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _iqamaSub;
 
@@ -128,6 +138,7 @@ class _HomePageState extends State<HomePage> {
   void dispose() {
     _countdownTimer?.cancel();
     _iqamaSub?.cancel();
+    _blackoutTimer?.cancel();
     super.dispose();
   }
 
@@ -196,7 +207,6 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _saveIqamaToFirestore() async {
     // --- EDIT: If there's no Firebase user, don't attempt to save. ---
-    // This handles the local admin case gracefully, preventing errors.
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       return;
@@ -204,7 +214,6 @@ class _HomePageState extends State<HomePage> {
 
     try {
       final docRef = FirebaseFirestore.instance.collection('mosque').doc('iqama');
-      // use merge to avoid accidental deletion of other fields if your doc structure grows
       await docRef.set(_iqama.map((k, v) => MapEntry(k, v)), SetOptions(merge: true));
       setState(() {
         _usingRemoteIqama = true;
@@ -314,6 +323,28 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  void _startBlackoutTimer() {
+    _blackoutTimer?.cancel();
+    final endsAt = _blackoutEndsAt;
+    if (endsAt == null) return;
+    final remaining = endsAt.difference(DateTime.now());
+    if (remaining.isNegative) {
+      setState(() {
+        _blackoutActive = false;
+        _blackoutEndsAt = null;
+      });
+      return;
+    }
+    _blackoutTimer = Timer(remaining, () {
+      if (mounted) {
+        setState(() {
+          _blackoutActive = false;
+          _blackoutEndsAt = null;
+        });
+      }
+    });
+  }
+
   void _updateNextPrayer() {
     if (_timings.isEmpty) return;
 
@@ -352,52 +383,88 @@ class _HomePageState extends State<HomePage> {
     if (next != null) {
       final nextEntry = next;
       final diff = nextEntry.value.difference(now);
-      setState(() {
-        _timeToNext = diff.isNegative ? Duration.zero : diff;
-        _nextPrayer = _normalizePrayerName(nextEntry.key);
-      });
+      final remainingSeconds = diff.isNegative ? 0 : diff.inSeconds;
+      final nextName = _normalizePrayerName(nextEntry.key);
+
+      // detect whether this next prayer is using iqama time specifically
+      final isIqamaNext = _iqama[nextEntry.key] != null && _iqama[nextEntry.key]!.trim().isNotEmpty;
+
+      // Iqama special behaviour:
+      // - Show full-screen countdown at T <= 60 and >5
+      // - At T <= 5: start blackout (7 minutes)
+      if (isIqamaNext && !_blackoutActive) {
+        if (remainingSeconds <= 60 && remainingSeconds > 5) {
+          if (!_showFullScreenCountdown) {
+            setState(() {
+              _showFullScreenCountdown = true;
+            });
+          }
+        } else if (remainingSeconds <= 5) {
+          if (!_blackoutActive) {
+            setState(() {
+              _showFullScreenCountdown = false;
+              _blackoutActive = true;
+              _blackoutEndsAt = DateTime.now().add(const Duration(minutes: 7));
+            });
+            _startBlackoutTimer();
+          }
+        } else {
+          if (_showFullScreenCountdown) {
+            setState(() {
+              _showFullScreenCountdown = false;
+            });
+          }
+        }
+      }
+
+      // Ensure blackout clears when its time passes (safety)
+      if (_blackoutActive && _blackoutEndsAt != null && DateTime.now().isAfter(_blackoutEndsAt!)) {
+        setState(() {
+          _blackoutActive = false;
+          _blackoutEndsAt = null;
+        });
+      }
+
+      if (mounted) {
+        setState(() {
+          _timeToNext = diff.isNegative ? Duration.zero : diff;
+          _nextPrayer = nextName;
+        });
+      }
     }
   }
 
   DateTime? _parseTimeForToday(String raw) {
     if (raw.trim().isEmpty) return null;
 
-    // Normalize and detect "next day" markers
     final lower = raw.toLowerCase();
     int dayOffset = 0;
     if (lower.contains('next') || lower.contains('tomorrow') || lower.contains('next day')) {
       dayOffset = 1;
     }
 
-    // Remove parenthetical notes like "(next day)" or timezone hints
     final cleaned = raw.replaceAll(RegExp(r"\(.*?\)"), '').trim();
 
-    // Try to extract a time token including optional AM/PM
     final timeMatch = RegExp(r'([0-9]{1,2}:[0-9]{2}(?:\s*[apAP][\.]?m[\.]?)?)').firstMatch(cleaned);
     String? timeToken = timeMatch?.group(1)?.trim();
     if (timeToken == null) {
-      // fallback: try bare HH:mm
       final m2 = RegExp(r'([0-9]{1,2}:[0-9]{2})').firstMatch(cleaned);
       timeToken = m2?.group(1);
     }
     if (timeToken == null) return null;
 
-    // Normalize token (remove dots and uppercase AM/PM)
     timeToken = timeToken.replaceAll('.', '').toUpperCase();
 
-    // ensure there's a space before AM/PM if missing (e.g. "3:30PM" -> "3:30 PM")
     timeToken = timeToken.replaceAllMapped(RegExp(r'([0-9])([AP]M)$'), (m) => '${m.group(1)} ${m.group(2)}');
 
     int hour = 0;
     int minute = 0;
     try {
-      // If contains AM/PM, parse using 12-hour format
       if (timeToken.contains(RegExp(r'[AP]M'))) {
         final parsed = DateFormat.jm().parse(timeToken);
         hour = parsed.hour;
         minute = parsed.minute;
       } else {
-        // assume 24-hour
         final parts = timeToken.split(':');
         hour = int.parse(parts[0]);
         minute = int.parse(parts[1]);
@@ -422,21 +489,23 @@ class _HomePageState extends State<HomePage> {
     if (lower.contains('maghrib') || lower.contains('sunset')) return 'Maghrib';
     if (lower.contains('isha')) return 'Isha';
     if (lower.contains('sunrise')) return 'Sunrise';
-    // fallback: capitalize first letter
     return raw.isNotEmpty ? '${raw[0].toUpperCase()}${raw.substring(1)}' : raw;
   }
 
   /// Apply theme (light/dark) based on sunset/maghrib time in the fetched timings.
-  /// If current time is after Maghrib, enable dark mode; otherwise light mode.
   Future<void> _applyThemeBySunset() async {
     try {
       final maghribRaw = _timings['Maghrib'] ?? _timings['Sunset'] ?? '';
+      final sunriseRaw = _timings['Sunrise'] ?? '';
+
       final maghrib = _parseTimeForToday(maghribRaw);
-      if (maghrib == null) return;
+      final sunrise = _parseTimeForToday(sunriseRaw);
+
+      if (maghrib == null || sunrise == null) return;
+
       final now = DateTime.now();
-      final shouldDark = now.isAfter(maghrib);
-      // call parent to persist and apply
-      widget.onToggleTheme(shouldDark);
+      final shouldDark = now.isAfter(maghrib) || now.isBefore(sunrise);
+      await widget.onToggleTheme(shouldDark, manual: false);
     } catch (_) {}
   }
 
@@ -483,7 +552,6 @@ class _HomePageState extends State<HomePage> {
           const SnackBar(content: Text('Signed in as local admin. Firestore saving is disabled.')),
         );
       }
-      // Return true to enable admin mode. Note that FirebaseAuth.instance.currentUser is still null.
       return true;
     }
     // --- END EDIT ---
@@ -515,9 +583,6 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _signOutAdmin() async {
-    // --- EDIT: Handle local admin sign out ---
-    // If a real Firebase user is signed in, sign them out.
-    // Otherwise, just disable admin mode.
     if (FirebaseAuth.instance.currentUser != null) {
       try {
         await FirebaseAuth.instance.signOut();
@@ -530,7 +595,6 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _editIqama(String prayer) async {
-    // The UI should prevent this function from being called if not in admin mode.
     if (!_adminMode) return;
 
     final initial = _iqama[prayer] ?? _timings[prayer] ?? '';
@@ -587,8 +651,7 @@ class _HomePageState extends State<HomePage> {
                   value: localDark,
                   onChanged: (v) {
                     setModalState(() => localDark = v);
-                    // also immediately apply theme app-wide
-                    widget.onToggleTheme(v);
+                    widget.onToggleTheme(v, manual: true);
                   },
                   title: const Text('Dark mode'),
                 ),
@@ -619,56 +682,177 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        // Move mosque image beside title, and center the title.
-        title: Row(mainAxisSize: MainAxisSize.min, children: [
-          Image.asset('images/mosque.png', width: 28, height: 28),
-          const SizedBox(width: 8),
-          const Text('Darut Tauhid Masjid'),
-        ]),
-        centerTitle: true,
-        elevation: 0,
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        actions: [
-          IconButton(icon: const Icon(Icons.settings), onPressed: _openSettings, tooltip: 'Settings'),
-          if (_adminMode)
-            IconButton(
-              icon: const Icon(Icons.logout),
-              onPressed: _signOutAdmin,
-              tooltip: 'Sign out',
-            )
-        ],
-      ),
-      body: SafeArea(
-        child: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : RefreshIndicator(
-                onRefresh: _determinePositionAndFetch,
-                child: SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      GestureDetector(onLongPress: _enterAdminMode, child: _buildHeader(context)),
-                      const SizedBox(height: 16),
-                      _buildCountdownCard(context),
-                      const SizedBox(height: 16),
-                      PrayerTable(
-                        timings: _timings,
-                        iqama: _iqama,
-                        adminMode: _adminMode,
-                        onEditIqama: _editIqama,
+    // Stack to overlay fullscreen countdown/blackout above the app
+    return Stack(
+      children: [
+        Scaffold(
+          appBar: AppBar(
+            // Use the asset at its native/original size (no width/height override)
+            title: Row(mainAxisSize: MainAxisSize.min, children: [
+              Image.asset('images/mosque.png', width: 36, height: 36, fit: BoxFit.contain),
+              const SizedBox(width: 8),
+              const Text('Darut Tauhid Masjid'),
+            ]),
+            centerTitle: true,
+            elevation: 0,
+            backgroundColor: Theme.of(context).colorScheme.surface,
+            actions: [
+              IconButton(icon: const Icon(Icons.settings), onPressed: _openSettings, tooltip: 'Settings'),
+              if (_adminMode)
+                IconButton(
+                  icon: const Icon(Icons.logout),
+                  onPressed: _signOutAdmin,
+                  tooltip: 'Sign out',
+                )
+            ],
+          ),
+          body: SafeArea(
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : RefreshIndicator(
+                    onRefresh: _determinePositionAndFetch,
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          GestureDetector(onLongPress: _enterAdminMode, child: _buildHeader(context)),
+                          const SizedBox(height: 16),
+                          _buildCountdownCard(context),
+                          const SizedBox(height: 16),
+                          PrayerTable(
+                            timings: _timings,
+                            iqama: _iqama,
+                            adminMode: _adminMode,
+                            onEditIqama: _editIqama,
+                          ),
+                          const SizedBox(height: 20),
+                          _buildInfoRow(context),
+                        ],
                       ),
-                      const SizedBox(height: 20),
-                      _buildInfoRow(context),
-                    ],
+                    ),
+                  ),
+          ),
+        ),
+
+        // Full-screen countdown overlay (shown when iqama T in (60..5])
+        if (_showFullScreenCountdown && !_blackoutActive)
+          Positioned.fill(
+            child: AbsorbPointer(
+              absorbing: true,
+              child: Container(
+                color: Colors.black.withOpacity(0.85),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 420),
+                    child: Card(
+                      color: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 22.0, horizontal: 20.0),
+                        child: Column(mainAxisSize: MainAxisSize.min, children: [
+                          // Prayer name
+                          if (_nextPrayer.isNotEmpty)
+                            Text(
+                              _nextPrayer,
+                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    color: Theme.of(context).colorScheme.primary,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.6,
+                                  ),
+                            ),
+                          if (_nextPrayer.isNotEmpty) const SizedBox(height: 8),
+                          Text(
+                            'Iqama in',
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.black87),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            _formatDurationForCountdown(_timeToNext),
+                            style: Theme.of(context).textTheme.displaySmall?.copyWith(fontSize: 48, color: Colors.black),
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            'Please prepare — line up quietly',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.black54),
+                          ),
+                        ]),
+                      ),
+                    ),
                   ),
                 ),
               ),
-      ),
+            ),
+          ),
+
+        // Blackout overlay (softened but still high-contrast)
+        if (_blackoutActive)
+          Positioned.fill(
+            child: AbsorbPointer(
+              absorbing: true,
+              child: Container(
+                // subtle gradient to avoid a flat, harsh black
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF000000), Color(0xFF050505)],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                ),
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 28.0),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 26.0, horizontal: 20.0),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.03), // very slight panel to reduce glare
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        // icon to reinforce "silent"
+                        Icon(Icons.volume_off, size: 48, color: Colors.white70),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Please put your phone in silent mode',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.amiri(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w600,
+                            height: 1.25,
+                            letterSpacing: 0.6,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          'The screen will resume automatically.',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.white70, fontSize: 14),
+                        ),
+                        const SizedBox(height: 8),
+                        if (_blackoutEndsAt != null)
+                          Text(
+                            'Ends ${DateFormat('hh:mm a').format(_blackoutEndsAt!)}',
+                            style: const TextStyle(color: Colors.white54, fontSize: 13),
+                          ),
+                      ]),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
     );
+  }
+
+  String _formatDurationForCountdown(Duration d) {
+    final s = d.inSeconds;
+    if (s <= 0) return '0s';
+    if (s < 60) return '${s}s';
+    final mm = d.inMinutes.toString().padLeft(2, '0');
+    return '${mm}m';
   }
 
   Widget _buildHeader(BuildContext context) {
@@ -755,7 +939,6 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 6),
               Row(children: [
                 Expanded(child: Text(_adminMode ? 'Enabled' : 'Long-press header to enter', overflow: TextOverflow.ellipsis)),
-                // --- FIX: Use _enterAdminMode to ensure UI updates on sign-in ---
                 if (!_adminMode)
                   TextButton(onPressed: _enterAdminMode, child: const Text('Sign in')),
                 if (_adminMode)
@@ -768,12 +951,10 @@ class _HomePageState extends State<HomePage> {
     ]);
   }
 
-  /// Try reverse-geocoding via Nominatim (OpenStreetMap).
   Future<void> _reverseGeocodeNominatim(double lat, double lon) async {
     try {
       final uri = Uri.parse('https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=$lat&lon=$lon&accept-language=en');
       final res = await http.get(uri, headers: {
-        // Please change the contact to a real email/domain for production
         'User-Agent': 'PrayerApp/1.0 (contact@example.com)'
       }).timeout(const Duration(seconds: 8));
 
@@ -796,7 +977,6 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  /// Fallback: use an IP-based geolocation when GPS/permissions are unavailable.
   Future<void> _ipLookupFallback() async {
     try {
       final uri = Uri.parse('https://ipapi.co/json/');
@@ -814,7 +994,7 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-// --- PrayerTable & PrayerRow classes are below (fixed names) ---
+// --- PrayerTable & PrayerRow classes are below (unchanged) ---
 
 class PrayerTable extends StatelessWidget {
   final Map<String, String> timings;
