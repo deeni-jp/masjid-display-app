@@ -85,4 +85,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'dticc-app.firebasestorage.app',
     measurementId: 'G-NSR9S67KLL',
   );
+
 }
