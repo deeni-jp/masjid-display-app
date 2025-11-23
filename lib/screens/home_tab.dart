@@ -7,6 +7,8 @@ import '../models/notification_model.dart';
 import '../models/user_model.dart';
 import '../services/location_service.dart';
 import '../utils/constants.dart';
+import '../widgets/notification_card.dart';
+import '../widgets/news_ticker.dart';
 import 'profile_screen.dart';
 
 class HomeTab extends StatelessWidget {
@@ -14,11 +16,12 @@ class HomeTab extends StatelessWidget {
   final PrayerSchedule? prayerSchedule;
   final PrayerTime? nextPrayer;
   final Duration timeToNext;
-  final MosqueNotification notification;
+  final List<MosqueNotification> notifications;
   final bool darkMode;
   final Future<void> Function() onRefresh;
   final AppUser currentUser;
   final void Function(AppUser?) onUserChanged;
+  final VoidCallback? onNotificationTap;
 
   const HomeTab({
     super.key,
@@ -26,32 +29,61 @@ class HomeTab extends StatelessWidget {
     required this.prayerSchedule,
     required this.nextPrayer,
     required this.timeToNext,
-    required this.notification,
+    required this.notifications,
     required this.darkMode,
     required this.onRefresh,
     required this.currentUser,
     required this.onUserChanged,
+    this.onNotificationTap,
   });
+
+  // Get high priority notifications sorted by expiry
+  List<MosqueNotification> get _highPriorityNotifications {
+    return notifications.highPriorityOnly.sortedByExpiry;
+  }
+
+  // Get notifications for ticker (non-high priority)
+  List<MosqueNotification> get _tickerNotifications {
+    return notifications.excludingHighPriority;
+  }
 
   @override
   Widget build(BuildContext context) {
-    return RefreshIndicator(
-      onRefresh: onRefresh,
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildHeader(context),
-            _buildNextPrayerCard(context),
-            if (notification.shouldShow) ...[
-              _buildQuickNotification(context),
-            ],
-            _buildQuickPrayerTimes(context),
-            const SizedBox(height: 80),
-          ],
+    return Column(
+      children: [
+        // Main scrollable content
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: onRefresh,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildHeader(context),
+                  _buildNextPrayerCard(context),
+
+                  // High priority notifications
+                  if (_highPriorityNotifications.isNotEmpty)
+                    _buildHighPrioritySection(context),
+
+                  _buildQuickPrayerTimes(context),
+                  const SizedBox(height: 20),
+                ],
+              ),
+            ),
+          ),
         ),
-      ),
+
+        // News ticker at bottom (for non-high priority notifications)
+        if (_tickerNotifications.isNotEmpty)
+          NewsTicker(
+            notifications: _tickerNotifications,
+            onTap: onNotificationTap,
+            darkMode: darkMode,
+            rotationInterval: AppConstants.tickerRotationInterval,
+          ),
+      ],
     );
   }
 
@@ -402,137 +434,55 @@ class HomeTab extends StatelessWidget {
     );
   }
 
-  Widget _buildQuickNotification(BuildContext context) {
-    final preview = notification.getPreview();
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppStyles.paddingLarge,
-        AppStyles.paddingLarge,
-        AppStyles.paddingLarge,
-        0,
-      ),
-      child: InkWell(
-        onTap: () => _showFullNotification(context),
-        borderRadius: BorderRadius.circular(AppStyles.radiusLarge),
-        child: Container(
-          padding: const EdgeInsets.all(AppStyles.paddingMedium),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.secondaryContainer,
-            borderRadius: BorderRadius.circular(AppStyles.radiusLarge),
-            border: Border.all(
-              color: Theme.of(context).colorScheme.secondary.withOpacity(0.3),
-              width: 1,
-            ),
+  Widget _buildHighPrioritySection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Section header
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppStyles.paddingLarge,
+            AppStyles.paddingLarge,
+            AppStyles.paddingLarge,
+            0,
           ),
           child: Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.secondary,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.notifications,
-                  color: Colors.white,
-                  size: 20,
+              Icon(
+                Icons.priority_high,
+                color: AppColors.priorityHigh,
+                size: 20,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'Important',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.priorityHigh,
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (notification.title.isNotEmpty)
-                      Text(
-                        notification.title,
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    Text(
-                      preview,
-                      style: GoogleFonts.poppins(fontSize: 13),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+              const Spacer(),
+              if (_highPriorityNotifications.length > 1)
+                Text(
+                  '${_highPriorityNotifications.length} alerts',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: Colors.grey,
+                  ),
                 ),
-              ),
-              const Icon(Icons.chevron_right, size: 20),
             ],
           ),
         ),
-      ),
-    );
-  }
 
-  void _showFullNotification(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return Padding(
-          padding:
-              MediaQuery.of(context).viewInsets.add(const EdgeInsets.all(20)),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  if (notification.title.isNotEmpty)
-                    Expanded(
-                      child: Text(
-                        notification.title,
-                        style:
-                            Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                      ),
-                    ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Posted ${DateFormat.yMMMd().add_jm().format(notification.timestamp)}',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.grey,
-                    ),
-              ),
-              const SizedBox(height: 16),
-              SingleChildScrollView(
-                child: Text(
-                  notification.message,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Close'),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
+        // Rotating high priority card
+        RotatingHighPriorityCard(
+          notifications: _highPriorityNotifications,
+          onTap: onNotificationTap,
+          darkMode: darkMode,
+          rotationInterval: AppConstants.notificationRotationInterval,
+        ),
+      ],
     );
   }
 

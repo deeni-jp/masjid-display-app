@@ -1,6 +1,7 @@
 // lib/screens/home_page.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../models/prayer_time.dart';
 import '../models/notification_model.dart';
 import '../models/user_model.dart';
@@ -50,13 +51,16 @@ class _HomePageState extends State<HomePage> {
   PrayerTime? _nextPrayer;
   Duration _timeToNext = Duration.zero;
 
-  // Notification data
-  MosqueNotification _notification = MosqueNotification.empty();
+  // Notification data (new list-based)
+  List<MosqueNotification> _notifications = [];
   bool _notifLoaded = false;
 
   // Firestore listeners
   StreamSubscription<Map<String, String>>? _iqamaSub;
-  StreamSubscription<MosqueNotification>? _notifSub;
+  StreamSubscription<List<MosqueNotification>>? _notifSub;
+
+  // Notification cleanup timer
+  Timer? _cleanupTimer;
 
   // Full-screen overlays
   bool _showFullScreenCountdown = false;
@@ -82,6 +86,7 @@ class _HomePageState extends State<HomePage> {
     _countdownTimer?.cancel();
     _iqamaSub?.cancel();
     _notifSub?.cancel();
+    _cleanupTimer?.cancel();
     _blackoutTimer?.cancel();
     super.dispose();
   }
@@ -99,6 +104,12 @@ class _HomePageState extends State<HomePage> {
 
     // Start countdown
     _startCountdownLoop();
+
+    // Start notification cleanup timer
+    _startCleanupTimer();
+
+    // Migrate legacy notification if exists
+    _migrateLegacyData();
   }
 
   // ============ DATA LOADING ============
@@ -106,7 +117,7 @@ class _HomePageState extends State<HomePage> {
   Future<void> _loadCachedData() async {
     try {
       final cachedIqama = await StorageService.getIqamaTimes();
-      final cachedNotif = await StorageService.getNotification();
+      final cachedNotifications = await StorageService.getNotifications();
 
       setState(() {
         if (cachedIqama.isNotEmpty) {
@@ -115,11 +126,23 @@ class _HomePageState extends State<HomePage> {
             iqamaMap: cachedIqama,
           );
         }
-        _notification = cachedNotif;
+        _notifications = cachedNotifications;
         _notifLoaded = true;
       });
     } catch (e) {
       debugPrint('Failed to load cached data: $e');
+    }
+  }
+
+  Future<void> _migrateLegacyData() async {
+    try {
+      // Migrate legacy local notification
+      await StorageService.migrateLegacyNotification();
+
+      // Migrate legacy Firestore notification
+      await FirebaseService.migrateLegacyNotification();
+    } catch (e) {
+      debugPrint('Legacy migration failed (non-critical): $e');
     }
   }
 
@@ -225,18 +248,76 @@ class _HomePageState extends State<HomePage> {
 
   void _startNotificationListener() {
     try {
-      _notifSub = FirebaseService.listenToNotification().listen(
-        (notification) async {
+      _notifSub = FirebaseService.listenToNotifications().listen(
+        (notifications) async {
           setState(() {
-            _notification = notification;
+            _notifications = notifications;
             _notifLoaded = true;
           });
-          await StorageService.saveNotification(notification);
+          await StorageService.saveNotifications(notifications);
+
+          // Check for high priority alerts and trigger vibration
+          _checkForAlerts(notifications);
         },
         onError: (e) => debugPrint('Notification listener error: $e'),
       );
     } catch (e) {
       debugPrint('Failed to start notification listener: $e');
+    }
+  }
+
+  void _checkForAlerts(List<MosqueNotification> notifications) {
+    // Check if there are any new high-priority alerts
+    final alerts = notifications
+        .where((n) => n.isAlert && n.isHighPriority && n.shouldShow)
+        .toList();
+
+    if (alerts.isNotEmpty) {
+      // Vibrate for alerts
+      HapticFeedback.vibrate();
+    }
+  }
+
+  // ============ NOTIFICATION CLEANUP ============
+
+  void _startCleanupTimer() {
+    _cleanupTimer?.cancel();
+    _cleanupTimer = Timer.periodic(
+      AppConstants.notificationCleanupInterval,
+      (_) => _cleanupExpiredNotifications(),
+    );
+
+    // Also run cleanup immediately
+    _cleanupExpiredNotifications();
+  }
+
+  Future<void> _cleanupExpiredNotifications() async {
+    try {
+      // Clean up local cache
+      final localCleaned = await StorageService.cleanupExpiredNotifications();
+      if (localCleaned > 0) {
+        debugPrint('Cleaned up $localCleaned expired notifications from cache');
+      }
+
+      // Clean up Firestore (only if admin/moderator)
+      if (canManageAnnouncements) {
+        final remoteCleaned =
+            await FirebaseService.cleanupExpiredNotifications();
+        if (remoteCleaned > 0) {
+          debugPrint(
+              'Cleaned up $remoteCleaned expired notifications from Firestore');
+        }
+      }
+
+      // Refresh local state
+      final freshNotifications = await StorageService.getNotifications();
+      if (mounted && freshNotifications.length != _notifications.length) {
+        setState(() {
+          _notifications = freshNotifications;
+        });
+      }
+    } catch (e) {
+      debugPrint('Notification cleanup failed: $e');
     }
   }
 
@@ -348,6 +429,19 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> onRefresh() async {
     await _fetchPrayerTimes();
+    await _refreshNotifications();
+  }
+
+  Future<void> _refreshNotifications() async {
+    try {
+      final notifications = await FirebaseService.getNotifications();
+      setState(() {
+        _notifications = notifications;
+      });
+      await StorageService.saveNotifications(notifications);
+    } catch (e) {
+      debugPrint('Failed to refresh notifications: $e');
+    }
   }
 
   void onIqamaUpdated(String prayerName, String newIqama) {
@@ -357,9 +451,15 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  void onNotificationUpdated(MosqueNotification notification) {
+  void onNotificationsUpdated(List<MosqueNotification> notifications) {
     setState(() {
-      _notification = notification;
+      _notifications = notifications;
+    });
+  }
+
+  void _navigateToNotificationsTab() {
+    setState(() {
+      _selectedIndex = 2; // Notifications tab index
     });
   }
 
@@ -382,11 +482,12 @@ class _HomePageState extends State<HomePage> {
                         prayerSchedule: _prayerSchedule,
                         nextPrayer: _nextPrayer,
                         timeToNext: _timeToNext,
-                        notification: _notification,
+                        notifications: _notifications,
                         darkMode: widget.darkMode,
                         onRefresh: onRefresh,
                         currentUser: widget.currentUser,
                         onUserChanged: widget.onUserChanged,
+                        onNotificationTap: _navigateToNotificationsTab,
                       ),
                       PrayersTab(
                         prayerSchedule: _prayerSchedule,
@@ -396,10 +497,10 @@ class _HomePageState extends State<HomePage> {
                         onIqamaUpdated: onIqamaUpdated,
                       ),
                       NotificationsTab(
-                        notification: _notification,
+                        notifications: _notifications,
                         notifLoaded: _notifLoaded,
                         adminMode: canManageAnnouncements, // Admin & Moderator
-                        onNotificationUpdated: onNotificationUpdated,
+                        onNotificationsUpdated: onNotificationsUpdated,
                       ),
                       MoreTab(
                         locationData: _locationData,
@@ -432,6 +533,10 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildBottomNav() {
+    // Count active notifications for badge
+    final activeCount = _notifications.activeOnly.length;
+    final hasHighPriority = _notifications.highPriorityOnly.isNotEmpty;
+
     return Container(
       decoration: BoxDecoration(
         boxShadow: [
@@ -446,23 +551,37 @@ class _HomePageState extends State<HomePage> {
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) =>
             setState(() => _selectedIndex = index),
-        destinations: const [
-          NavigationDestination(
+        destinations: [
+          const NavigationDestination(
             icon: Icon(Icons.home_outlined),
             selectedIcon: Icon(Icons.home),
             label: 'Home',
           ),
-          NavigationDestination(
+          const NavigationDestination(
             icon: Icon(Icons.access_time_outlined),
             selectedIcon: Icon(Icons.access_time),
             label: 'Prayers',
           ),
           NavigationDestination(
-            icon: Icon(Icons.notifications_outlined),
-            selectedIcon: Icon(Icons.notifications),
+            icon: Badge(
+              isLabelVisible: activeCount > 0,
+              label: Text(activeCount.toString()),
+              backgroundColor: hasHighPriority
+                  ? AppColors.priorityHigh
+                  : Theme.of(context).colorScheme.primary,
+              child: const Icon(Icons.notifications_outlined),
+            ),
+            selectedIcon: Badge(
+              isLabelVisible: activeCount > 0,
+              label: Text(activeCount.toString()),
+              backgroundColor: hasHighPriority
+                  ? AppColors.priorityHigh
+                  : Theme.of(context).colorScheme.primary,
+              child: const Icon(Icons.notifications),
+            ),
             label: 'Notices',
           ),
-          NavigationDestination(
+          const NavigationDestination(
             icon: Icon(Icons.menu),
             selectedIcon: Icon(Icons.menu),
             label: 'More',

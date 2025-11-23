@@ -90,38 +90,194 @@ class StorageService {
     await prefs.remove(AppConstants.keyIqamaMap);
   }
 
-  // ============ NOTIFICATIONS ============
+  // ============ NOTIFICATIONS (NEW - LIST BASED) ============
 
-  /// Get cached notification
-  static Future<MosqueNotification> getNotification() async {
+  /// Get all cached notifications
+  static Future<List<MosqueNotification>> getNotifications() async {
+    final prefs = await _getPrefs();
+    final raw = prefs.getString(AppConstants.keyNotifications);
+
+    if (raw == null || raw.isEmpty) {
+      // Try to migrate from legacy single notification
+      final legacyNotification = await _getLegacyNotification();
+      if (legacyNotification != null && legacyNotification.hasContent) {
+        return [legacyNotification];
+      }
+      return [];
+    }
+
+    try {
+      final parsed = json.decode(raw) as List<dynamic>;
+      final notifications = parsed
+          .map((item) =>
+              MosqueNotification.fromMap(item as Map<String, dynamic>))
+          .where((n) => !n.isExpired) // Filter out expired
+          .toList();
+
+      return notifications;
+    } catch (e) {
+      // Invalid JSON, return empty list
+      return [];
+    }
+  }
+
+  /// Get active (non-expired) notifications
+  static Future<List<MosqueNotification>> getActiveNotifications() async {
+    final notifications = await getNotifications();
+    return notifications.activeOnly;
+  }
+
+  /// Get high priority notifications
+  static Future<List<MosqueNotification>> getHighPriorityNotifications() async {
+    final notifications = await getNotifications();
+    return notifications.highPriorityOnly.sortedByExpiry;
+  }
+
+  /// Get notifications for ticker (excluding high priority)
+  static Future<List<MosqueNotification>> getTickerNotifications() async {
+    final notifications = await getNotifications();
+    return notifications.excludingHighPriority;
+  }
+
+  /// Get the priority notification (high priority, closest to expiry)
+  static Future<MosqueNotification?> getPriorityNotification() async {
+    final notifications = await getNotifications();
+    return notifications.priorityNotification;
+  }
+
+  /// Save notifications list to cache
+  static Future<void> saveNotifications(
+      List<MosqueNotification> notifications) async {
+    final prefs = await _getPrefs();
+
+    // Filter out expired notifications before saving
+    final activeNotifications =
+        notifications.where((n) => !n.isExpired).toList();
+
+    final jsonList = activeNotifications.map((n) => n.toMap()).toList();
+    await prefs.setString(AppConstants.keyNotifications, json.encode(jsonList));
+  }
+
+  /// Add a single notification to cache
+  static Future<void> addNotification(MosqueNotification notification) async {
+    final notifications = await getNotifications();
+
+    // Check if notification already exists
+    final existingIndex =
+        notifications.indexWhere((n) => n.id == notification.id);
+    if (existingIndex >= 0) {
+      notifications[existingIndex] = notification;
+    } else {
+      notifications.add(notification);
+    }
+
+    await saveNotifications(notifications);
+  }
+
+  /// Update a notification in cache
+  static Future<void> updateNotification(
+      MosqueNotification notification) async {
+    final notifications = await getNotifications();
+
+    final index = notifications.indexWhere((n) => n.id == notification.id);
+    if (index >= 0) {
+      notifications[index] = notification;
+      await saveNotifications(notifications);
+    }
+  }
+
+  /// Remove a notification from cache
+  static Future<void> removeNotification(String id) async {
+    final notifications = await getNotifications();
+    notifications.removeWhere((n) => n.id == id);
+    await saveNotifications(notifications);
+  }
+
+  /// Clear all cached notifications
+  static Future<void> clearNotifications() async {
+    final prefs = await _getPrefs();
+    await prefs.remove(AppConstants.keyNotifications);
+  }
+
+  /// Clean up expired notifications from cache
+  static Future<int> cleanupExpiredNotifications() async {
+    final notifications = await getNotifications();
+    final activeCount = notifications.activeOnly.length;
+    final totalCount = notifications.length;
+
+    // Save only active notifications
+    await saveNotifications(notifications.activeOnly);
+
+    return totalCount - activeCount;
+  }
+
+  /// Get notification by ID
+  static Future<MosqueNotification?> getNotificationById(String id) async {
+    final notifications = await getNotifications();
+    try {
+      return notifications.firstWhere((n) => n.id == id);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // ============ LEGACY NOTIFICATION SUPPORT ============
+
+  /// Get legacy cached notification (single document)
+  static Future<MosqueNotification?> _getLegacyNotification() async {
     final prefs = await _getPrefs();
     final raw = prefs.getString(AppConstants.keyNotificationDoc);
 
     if (raw == null || raw.isEmpty) {
-      return MosqueNotification.empty();
+      return null;
     }
 
     try {
-      return MosqueNotification.fromJsonString(raw);
+      final notification = MosqueNotification.fromJsonString(raw);
+      return notification;
     } catch (e) {
-      // Invalid JSON, return empty notification
-      return MosqueNotification.empty();
+      return null;
     }
   }
 
-  /// Save notification to cache
-  static Future<void> saveNotification(MosqueNotification notification) async {
-    final prefs = await _getPrefs();
-    await prefs.setString(
-      AppConstants.keyNotificationDoc,
-      notification.toJsonString(),
-    );
+  /// Migrate legacy notification to new list format
+  static Future<void> migrateLegacyNotification() async {
+    try {
+      final legacy = await _getLegacyNotification();
+      if (legacy != null && legacy.hasContent) {
+        // Add to new list
+        await addNotification(legacy.copyWith(
+          id: 'legacy_${DateTime.now().millisecondsSinceEpoch}',
+          type: NotificationType.announcement,
+          priority: NotificationPriority.regular,
+          expiresAt: DateTime.now().add(AppConstants.defaultAnnouncementExpiry),
+        ));
+
+        // Clear legacy storage
+        final prefs = await _getPrefs();
+        await prefs.remove(AppConstants.keyNotificationDoc);
+      }
+    } catch (e) {
+      // Ignore migration errors
+    }
   }
 
-  /// Clear cached notification
-  static Future<void> clearNotification() async {
-    final prefs = await _getPrefs();
-    await prefs.remove(AppConstants.keyNotificationDoc);
+  /// Get legacy notification (deprecated - for backward compatibility)
+  @Deprecated('Use getNotifications or getPriorityNotification instead')
+  static Future<MosqueNotification> getNotification() async {
+    final priority = await getPriorityNotification();
+    if (priority != null) return priority;
+
+    final notifications = await getNotifications();
+    if (notifications.isNotEmpty) return notifications.first;
+
+    return MosqueNotification.empty();
+  }
+
+  /// Save legacy notification (deprecated - redirects to new system)
+  @Deprecated('Use saveNotifications or addNotification instead')
+  static Future<void> saveNotification(MosqueNotification notification) async {
+    await addNotification(notification);
   }
 
   // ============ GENERIC HELPERS ============

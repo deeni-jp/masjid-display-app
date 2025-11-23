@@ -39,12 +39,28 @@ class AppConstants {
   static const String keyDarkModeManual = 'dark_mode_manual';
   static const String keyDefaultLocation = 'default_location';
   static const String keyIqamaMap = 'iqama_map';
-  static const String keyNotificationDoc = 'notification_doc';
+  static const String keyNotifications =
+      'notifications_list'; // Updated key for list
+  static const String keyNotificationDoc =
+      'notification_doc'; // Legacy - keeping for migration
 
   // Firestore Collections
   static const String collectionMosque = 'mosque';
+  static const String collectionNotifications =
+      'notifications'; // New collection
   static const String docIqama = 'iqama';
-  static const String docNotification = 'notification';
+  static const String docNotification = 'notification'; // Legacy single doc
+
+  // Notification Settings
+  static const Duration notificationRotationInterval = Duration(seconds: 5);
+  static const Duration tickerRotationInterval = Duration(seconds: 4);
+  static const Duration notificationCleanupInterval = Duration(minutes: 15);
+  static const int maxActiveNotifications = 50;
+
+  // Default Expiration Durations
+  static const Duration defaultAnnouncementExpiry = Duration(days: 7);
+  static const Duration defaultEventExpiry = Duration(days: 1); // After event
+  static const Duration defaultAlertExpiry = Duration(hours: 24);
 
   // Local Admin Credentials (for testing)
   static const String localAdminEmail = 'blank999@gmail.com';
@@ -67,6 +83,22 @@ class AppColors {
   static const Color maghribColor = Color(0xFFFF5722);
   static const Color ishaColor = Color(0xFF673AB7);
 
+  // Notification Priority Colors
+  static const Color priorityHigh = Color(0xFFE53935);
+  static const Color priorityHighBg = Color(0xFFFFEBEE);
+  static const Color priorityRegular = Color(0xFF1E88E5);
+  static const Color priorityRegularBg = Color(0xFFE3F2FD);
+  static const Color priorityLow = Color(0xFF757575);
+  static const Color priorityLowBg = Color(0xFFF5F5F5);
+
+  // Notification Type Colors
+  static const Color typeAnnouncement = Color(0xFF2196F3);
+  static const Color typeAnnouncementBg = Color(0xFFE3F2FD);
+  static const Color typeEvent = Color(0xFF4CAF50);
+  static const Color typeEventBg = Color(0xFFE8F5E9);
+  static const Color typeAlert = Color(0xFFFF9800);
+  static const Color typeAlertBg = Color(0xFFFFF3E0);
+
   // Gradient Colors
   static const List<Color> headerGradientLight = [
     primaryGreen,
@@ -87,6 +119,12 @@ class AppColors {
     Color(0xFF3D2F1F),
     Color(0xFF5C4A2F),
   ];
+
+  // Ticker Colors
+  static const Color tickerBackground = Color(0xFF1A1A2E);
+  static const Color tickerBackgroundLight = Color(0xFFF5F5F5);
+  static const Color tickerText = Colors.white;
+  static const Color tickerTextLight = Color(0xFF333333);
 
   // Helper method to get prayer color
   static Color getPrayerColor(String prayerName) {
@@ -113,6 +151,30 @@ class AppColors {
     if (lowerName.contains('isha')) return Icons.nightlight_round;
     return Icons.access_time;
   }
+
+  // Helper method to get notification type color
+  static Color getNotificationTypeColor(String typeName) {
+    final lowerName = typeName.toLowerCase();
+    if (lowerName.contains('event')) return typeEvent;
+    if (lowerName.contains('alert')) return typeAlert;
+    return typeAnnouncement;
+  }
+
+  // Helper method to get notification type background color
+  static Color getNotificationTypeBgColor(String typeName) {
+    final lowerName = typeName.toLowerCase();
+    if (lowerName.contains('event')) return typeEventBg;
+    if (lowerName.contains('alert')) return typeAlertBg;
+    return typeAnnouncementBg;
+  }
+
+  // Helper method to get notification type icon
+  static IconData getNotificationTypeIcon(String typeName) {
+    final lowerName = typeName.toLowerCase();
+    if (lowerName.contains('event')) return Icons.event;
+    if (lowerName.contains('alert')) return Icons.warning_amber_rounded;
+    return Icons.campaign;
+  }
 }
 
 class AppStyles {
@@ -134,6 +196,9 @@ class AppStyles {
   static const double iconLarge = 32.0;
   static const double iconXLarge = 48.0;
 
+  // Ticker Height
+  static const double tickerHeight = 40.0;
+
   // Card Shadows
   static List<BoxShadow> cardShadow = [
     BoxShadow(
@@ -150,4 +215,66 @@ class AppStyles {
       offset: const Offset(0, 2),
     ),
   ];
+
+  // Notification Badge Style
+  static BoxDecoration priorityBadgeDecoration(Color color) {
+    return BoxDecoration(
+      color: color.withOpacity(0.1),
+      borderRadius: BorderRadius.circular(radiusSmall),
+      border: Border.all(
+        color: color.withOpacity(0.5),
+        width: 1,
+      ),
+    );
+  }
+
+  // Ticker Decoration
+  static BoxDecoration tickerDecoration(bool darkMode) {
+    return BoxDecoration(
+      color: darkMode
+          ? AppColors.tickerBackground
+          : AppColors.tickerBackgroundLight,
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.1),
+          blurRadius: 4,
+          offset: const Offset(0, -2),
+        ),
+      ],
+    );
+  }
+}
+
+/// Notification filter options for the notifications tab
+enum NotificationFilter {
+  all,
+  announcements,
+  events,
+  alerts;
+
+  String get displayName {
+    switch (this) {
+      case NotificationFilter.all:
+        return 'All';
+      case NotificationFilter.announcements:
+        return 'Announcements';
+      case NotificationFilter.events:
+        return 'Events';
+      case NotificationFilter.alerts:
+        return 'Alerts';
+    }
+  }
+
+  IconData get icon {
+    switch (this) {
+      case NotificationFilter.all:
+        return Icons.all_inbox;
+      case NotificationFilter.announcements:
+        return Icons.campaign;
+      case NotificationFilter.events:
+        return Icons.event;
+      case NotificationFilter.alerts:
+        return Icons.warning_amber_rounded;
+    }
+  }
 }
