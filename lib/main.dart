@@ -23,19 +23,6 @@ Future<void> main() async {
   // Initialize local storage
   await StorageService.init();
 
-  // Preload Google fonts
-  try {
-    await GoogleFonts.pendingFonts([
-      GoogleFonts.poppins(),
-      GoogleFonts.poppins(fontWeight: FontWeight.w600),
-      GoogleFonts.poppins(fontWeight: FontWeight.w700),
-      GoogleFonts.amiri(),
-      GoogleFonts.amiri(fontWeight: FontWeight.w700),
-    ]).timeout(const Duration(seconds: 5));
-  } catch (_) {
-    // If font fetch is slow or fails, continue with system fallback
-  }
-
   runApp(const PrayerApp());
 }
 

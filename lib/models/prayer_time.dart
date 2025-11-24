@@ -52,7 +52,7 @@ class PrayerTime {
 
     final cleaned = raw.replaceAll(RegExp(r"\(.*?\)"), '').trim();
 
-    final timeMatch = RegExp(r'([0-9]{1,2}:[0-9]{2}(?:\s*[apAP][\.]?m[\.]?)?)')
+    final timeMatch = RegExp(r'([0-9]{1,2}:[0-9]{2}(?:\s*[apAP][\.]?[mM][\.]?)?)')
         .firstMatch(cleaned);
     String? timeToken = timeMatch?.group(1)?.trim();
     if (timeToken == null) {
@@ -96,7 +96,7 @@ class PrayerTime {
   /// Trim time string to show only the time part
   static String trimTime(String raw) {
     final m =
-        RegExp(r'([0-9]{1,2}:[0-9]{2}(?:\s*[APMapm]{0,4})?)').firstMatch(raw);
+        RegExp(r'([0-9]{1,2}:[0-9]{2}(?:\s*[APMapm\.]{0,5})?)').firstMatch(raw);
     return m?.group(1) ?? raw;
   }
 

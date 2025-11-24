@@ -644,9 +644,6 @@ class _NotificationsTabState extends State<NotificationsTab> {
       expiresAt: expiresAt,
     );
 
-    titleController.dispose();
-    messageController.dispose();
-
     // Save
     try {
       MosqueNotification savedNotification;
@@ -657,6 +654,13 @@ class _NotificationsTabState extends State<NotificationsTab> {
       } else {
         savedNotification =
             await FirebaseService.createNotification(newNotification);
+      }
+
+      // Check if still mounted after async operation
+      if (!mounted) {
+        titleController.dispose();
+        messageController.dispose();
+        return;
       }
 
       // Update local list
@@ -675,20 +679,30 @@ class _NotificationsTabState extends State<NotificationsTab> {
       // Update cache
       await StorageService.saveNotifications(updatedList);
 
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          content:
-              Text(isEditing ? 'Notification updated' : 'Notification created'),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
+      // Check if still mounted before showing snackbar
+      if (mounted) {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text(
+                isEditing ? 'Notification updated' : 'Notification created'),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
+            ),
           ),
-        ),
-      );
+        );
+      }
     } catch (e) {
-      scaffoldMessenger.showSnackBar(
-        SnackBar(content: Text('Failed to save: $e')),
-      );
+      // Check if still mounted before showing error
+      if (mounted) {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(content: Text('Failed to save: $e')),
+        );
+      }
+    } finally {
+      // Dispose controllers at the very end
+      titleController.dispose();
+      messageController.dispose();
     }
   }
 
