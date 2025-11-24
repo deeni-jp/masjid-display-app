@@ -120,7 +120,7 @@ jobs:
         run: |
           cat > .env << EOF
           # CI Environment Configuration
-          ALADHAN_API_METHOD=2
+          ALADHAN_API_METHOD=3
           EOF
 
       - name: Install dependencies
