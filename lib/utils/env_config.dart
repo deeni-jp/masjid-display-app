@@ -17,9 +17,9 @@ class EnvConfig {
   }
 
   /// Get Aladhan API method
-  /// Default is 2 (Islamic Society of North America - ISNA)
+  /// Default is 3 (Muslim World League)
   static int get aladhanApiMethod {
     final methodStr = dotenv.env['ALADHAN_API_METHOD'];
-    return int.tryParse(methodStr ?? '2') ?? 2;
+    return int.tryParse(methodStr ?? '3') ?? 3;
   }
 }
