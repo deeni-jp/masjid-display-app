@@ -11,12 +11,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      
+
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.27.1'
           channel: 'stable'
-      
+
+      - name: Create .env file
+        run: |
+          cat > .env << EOF
+          # CI Environment Configuration
+          ALADHAN_API_METHOD=2
+          EOF
+
       - name: Install dependencies
         run: flutter pub get
       
@@ -46,10 +53,17 @@ jobs:
         with:
           flutter-version: '3.27.1'
           channel: 'stable'
-      
+
+      - name: Create .env file
+        run: |
+          cat > .env << EOF
+          # CI Environment Configuration
+          ALADHAN_API_METHOD=2
+          EOF
+
       - name: Install dependencies
         run: flutter pub get
-      
+
       # Decode keystore from base64
       - name: Decode keystore
         run: |
@@ -101,10 +115,17 @@ jobs:
         with:
           flutter-version: '3.27.1'
           channel: 'stable'
-      
+
+      - name: Create .env file
+        run: |
+          cat > .env << EOF
+          # CI Environment Configuration
+          ALADHAN_API_METHOD=2
+          EOF
+
       - name: Install dependencies
         run: flutter pub get
-      
+
       - name: Build iOS (no codesign)
         run: flutter build ios --release --no-codesign
       

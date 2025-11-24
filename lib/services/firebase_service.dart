@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/notification_model.dart';
 import '../utils/constants.dart';
+import 'prayer_service.dart';
 
 class FirebaseService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -42,6 +43,9 @@ class FirebaseService {
   /// Save iqama times to Firestore
   static Future<void> saveIqamaTimes(Map<String, String> iqamaMap) async {
     try {
+      // Validate iqama times before saving
+      PrayerService.validateIqamaTimes(iqamaMap);
+
       final user = _auth.currentUser;
       if (user == null) {
         throw FirebaseServiceException('User not authenticated');
@@ -52,6 +56,8 @@ class FirebaseService {
           .doc(AppConstants.docIqama);
 
       await docRef.set(iqamaMap, SetOptions(merge: true));
+    } on PrayerServiceException catch (e) {
+      throw FirebaseServiceException('Invalid iqama times: ${e.message}');
     } catch (e) {
       throw FirebaseServiceException('Failed to save iqama times: $e');
     }
@@ -400,13 +406,6 @@ class FirebaseService {
     required String password,
   }) async {
     try {
-      // Check for local admin credentials
-      if (email == AppConstants.localAdminEmail &&
-          password == AppConstants.localAdminPassword) {
-        // Local admin doesn't actually sign in to Firebase
-        return null;
-      }
-
       final credential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
@@ -461,12 +460,6 @@ class FirebaseService {
   /// Listen to auth state changes
   static Stream<User?> authStateChanges() {
     return _auth.authStateChanges();
-  }
-
-  /// Check if email is local admin
-  static bool isLocalAdmin(String email, String password) {
-    return email == AppConstants.localAdminEmail &&
-        password == AppConstants.localAdminPassword;
   }
 
   // ============ HELPER METHODS ============

@@ -5,12 +5,62 @@ import '../models/prayer_time.dart';
 import '../utils/constants.dart';
 
 class PrayerService {
+  /// Validate prayer time format (HH:MM or HH:MM AM/PM)
+  static bool isValidPrayerTime(String time) {
+    if (time.isEmpty || time.length > 20) {
+      return false;
+    }
+
+    // Basic regex for time formats: HH:MM or HH:MM AM/PM
+    final timeRegex = RegExp(
+      r'^([0-1]?[0-9]|2[0-3]):[0-5][0-9](\s?(AM|PM|am|pm))?$',
+    );
+    return timeRegex.hasMatch(time.trim());
+  }
+
+  /// Validate iqama times map
+  static void validateIqamaTimes(Map<String, String> iqamaTimes) {
+    if (iqamaTimes.isEmpty) {
+      throw PrayerServiceException('Iqama times cannot be empty');
+    }
+
+    for (final entry in iqamaTimes.entries) {
+      if (entry.key.isEmpty) {
+        throw PrayerServiceException('Prayer name cannot be empty');
+      }
+      if (!isValidPrayerTime(entry.value)) {
+        throw PrayerServiceException(
+          'Invalid time format for ${entry.key}: ${entry.value}',
+        );
+      }
+    }
+  }
+
   /// Fetch prayer times by coordinates from Aladhan API
   static Future<PrayerSchedule> fetchByCoordinates({
     required double latitude,
     required double longitude,
     int? method,
   }) async {
+    // Validate coordinates
+    if (latitude < -90 || latitude > 90) {
+      throw PrayerServiceException(
+        'Invalid latitude: must be between -90 and 90',
+      );
+    }
+    if (longitude < -180 || longitude > 180) {
+      throw PrayerServiceException(
+        'Invalid longitude: must be between -180 and 180',
+      );
+    }
+
+    // Validate calculation method
+    if (method != null && (method < 0 || method > 23)) {
+      throw PrayerServiceException(
+        'Invalid calculation method: must be between 0 and 23',
+      );
+    }
+
     final apiMethod = method ?? AppConstants.aladhanApiMethod;
 
     final url = Uri.parse(
@@ -64,6 +114,27 @@ class PrayerService {
     required String country,
     int? method,
   }) async {
+    // Validate city and country
+    if (city.trim().isEmpty) {
+      throw PrayerServiceException('City name cannot be empty');
+    }
+    if (country.trim().isEmpty) {
+      throw PrayerServiceException('Country name cannot be empty');
+    }
+    if (city.length > 100) {
+      throw PrayerServiceException('City name is too long');
+    }
+    if (country.length > 100) {
+      throw PrayerServiceException('Country name is too long');
+    }
+
+    // Validate calculation method
+    if (method != null && (method < 0 || method > 23)) {
+      throw PrayerServiceException(
+        'Invalid calculation method: must be between 0 and 23',
+      );
+    }
+
     final apiMethod = method ?? AppConstants.aladhanApiMethod;
 
     final url = Uri.parse(

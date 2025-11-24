@@ -61,10 +61,6 @@ class AppConstants {
   static const Duration defaultAnnouncementExpiry = Duration(days: 7);
   static const Duration defaultEventExpiry = Duration(days: 1); // After event
   static const Duration defaultAlertExpiry = Duration(hours: 24);
-
-  // Local Admin Credentials (for testing)
-  static const String localAdminEmail = 'blank999@gmail.com';
-  static const String localAdminPassword = 'qweasdzxc123';
 }
 
 class AppColors {
