@@ -11,9 +11,13 @@ import 'services/user_service.dart';
 import 'screens/auth_screen.dart';
 import 'screens/home_page.dart';
 import 'utils/constants.dart';
+import 'utils/env_config.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize environment configuration
+  await EnvConfig.initialize();
 
   // Initialize Firebase
   await Firebase.initializeApp(

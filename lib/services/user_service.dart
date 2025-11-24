@@ -190,20 +190,6 @@ class UserService {
     required String password,
   }) async {
     try {
-      // Check for local admin credentials
-      if (email == AppConstants.localAdminEmail &&
-          password == AppConstants.localAdminPassword) {
-        // Return a local admin user (not saved to Firestore)
-        return AppUser(
-          uid: 'local_admin',
-          email: AppConstants.localAdminEmail,
-          displayName: 'Local Admin',
-          role: UserRole.admin,
-          createdAt: DateTime.now(),
-          lastLogin: DateTime.now(),
-        );
-      }
-
       final credential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
