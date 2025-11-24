@@ -5,6 +5,13 @@ import 'package:geocoding/geocoding.dart';
 import 'package:http/http.dart' as http;
 
 class LocationService {
+  // Default location: Nagatsuta, Yokohama
+  static const String defaultLocation = 'Nagatsuta, Yokohama';
+  static const double defaultLatitude = 35.5456;
+  static const double defaultLongitude = 139.5089;
+  static const String defaultCity = 'Nagatsuta';
+  static const String defaultCountry = 'Japan';
+
   /// Get current device location
   static Future<LocationData> getCurrentLocation() async {
     try {
@@ -56,10 +63,40 @@ class LocationService {
         country: country,
       );
     } catch (e) {
-      if (e is LocationServiceException) {
-        rethrow;
-      }
-      throw LocationServiceException('Failed to get location: $e');
+      // If any error occurs (permission denied, service disabled, etc.),
+      // return default Nagatsuta location
+      print('Location error: $e. Using default location: $defaultLocation');
+      return getDefaultLocation();
+    }
+  }
+
+  /// Get default location (Nagatsuta, Yokohama)
+  /// Use this when location permission is denied or location services are disabled
+  static LocationData getDefaultLocation() {
+    return LocationData(
+      latitude: defaultLatitude,
+      longitude: defaultLongitude,
+      city: defaultCity,
+      country: defaultCountry,
+      isDefault: true,
+    );
+  }
+
+  /// Get current location with explicit fallback handling
+  /// Returns a tuple indicating if default location was used
+  static Future<LocationResult> getCurrentLocationWithFallback() async {
+    try {
+      final location = await getCurrentLocation();
+      return LocationResult(
+        data: location,
+        usedDefault: location.isDefault,
+      );
+    } catch (e) {
+      print('Failed to get location: $e. Using default.');
+      return LocationResult(
+        data: getDefaultLocation(),
+        usedDefault: true,
+      );
     }
   }
 
@@ -184,12 +221,14 @@ class LocationData {
   final double longitude;
   final String city;
   final String country;
+  final bool isDefault;
 
   LocationData({
     required this.latitude,
     required this.longitude,
     required this.city,
     required this.country,
+    this.isDefault = false,
   });
 
   /// Get formatted location string
@@ -206,7 +245,7 @@ class LocationData {
 
   @override
   String toString() =>
-      'LocationData(lat: $latitude, lon: $longitude, city: $city, country: $country)';
+      'LocationData(lat: $latitude, lon: $longitude, city: $city, country: $country, isDefault: $isDefault)';
 }
 
 /// Location info from geocoding
@@ -229,6 +268,20 @@ class LocationInfo {
 
   @override
   String toString() => 'LocationInfo(city: $city, country: $country)';
+}
+
+/// Result wrapper for location with fallback indication
+class LocationResult {
+  final LocationData data;
+  final bool usedDefault;
+
+  LocationResult({
+    required this.data,
+    required this.usedDefault,
+  });
+
+  @override
+  String toString() => 'LocationResult(data: $data, usedDefault: $usedDefault)';
 }
 
 /// Custom exception for location service errors

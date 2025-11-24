@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../models/prayer_time.dart';
 import '../models/notification_model.dart';
 import '../models/user_model.dart';
@@ -38,6 +39,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
   bool _loading = true;
+  bool _showLoadingOverlay = false;
 
   // Location data
   LocationData? _locationData;
@@ -147,7 +149,10 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _fetchPrayerTimes() async {
-    setState(() => _loading = true);
+    setState(() {
+      _loading = true;
+      _showLoadingOverlay = true;
+    });
 
     try {
       // Get location
@@ -170,6 +175,7 @@ class _HomePageState extends State<HomePage> {
         _locationData = locationData;
         _prayerSchedule = mergedSchedule;
         _loading = false;
+        _showLoadingOverlay = false;
       });
 
       // Save to cache
@@ -178,7 +184,10 @@ class _HomePageState extends State<HomePage> {
       // Apply theme based on sunset
       await _applyThemeBySunset();
     } catch (e) {
-      setState(() => _loading = false);
+      setState(() {
+        _loading = false;
+        _showLoadingOverlay = false;
+      });
 
       // Try fallback location
       await _tryFallbackLocation();
@@ -341,11 +350,12 @@ class _HomePageState extends State<HomePage> {
       final remainingSeconds = timeToNext.inSeconds;
 
       // Check if we should show countdown overlay (60s before iqama)
-      if (remainingSeconds <= 60 && remainingSeconds > 5 && !_blackoutActive) {
+      // Don't show if loading overlay is active
+      if (remainingSeconds <= 60 && remainingSeconds > 5 && !_blackoutActive && !_showLoadingOverlay) {
         if (!_showFullScreenCountdown) {
           setState(() => _showFullScreenCountdown = true);
         }
-      } else if (remainingSeconds <= 5 && !_blackoutActive) {
+      } else if (remainingSeconds <= 5 && !_blackoutActive && !_showLoadingOverlay) {
         // Start blackout mode
         setState(() {
           _showFullScreenCountdown = false;
@@ -516,15 +526,19 @@ class _HomePageState extends State<HomePage> {
           bottomNavigationBar: _buildBottomNav(),
         ),
 
+        // Loading overlay (shown during location fetch and data loading)
+        if (_showLoadingOverlay)
+          _LoadingOverlay(),
+
         // Full-screen countdown overlay
-        if (_showFullScreenCountdown && !_blackoutActive && _nextPrayer != null)
+        if (_showFullScreenCountdown && !_blackoutActive && _nextPrayer != null && !_showLoadingOverlay)
           CountdownOverlay(
             prayerName: _nextPrayer!.name,
             timeRemaining: _timeToNext,
           ),
 
         // Blackout overlay
-        if (_blackoutActive)
+        if (_blackoutActive && !_showLoadingOverlay)
           BlackoutOverlay(
             endsAt: _blackoutEndsAt,
           ),
@@ -587,6 +601,201 @@ class _HomePageState extends State<HomePage> {
             label: 'More',
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Modern loading overlay with animation
+class _LoadingOverlay extends StatefulWidget {
+  const _LoadingOverlay();
+
+  @override
+  State<_LoadingOverlay> createState() => _LoadingOverlayState();
+}
+
+class _LoadingOverlayState extends State<_LoadingOverlay>
+    with TickerProviderStateMixin {
+  late AnimationController _rotationController;
+  late AnimationController _shimmerController;
+  late Animation<double> _shimmerAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Rotation controller for the circular progress
+    _rotationController = AnimationController(
+      duration: const Duration(milliseconds: 2000),
+      vsync: this,
+    )..repeat();
+
+    // Shimmer controller for text
+    _shimmerController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _shimmerAnimation = Tween<double>(begin: 0.7, end: 1.0).animate(
+      CurvedAnimation(parent: _shimmerController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _rotationController.dispose();
+    _shimmerController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: Material(
+        type: MaterialType.transparency,
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColors.primaryGreenDark.withOpacity(0.96),
+                AppColors.primaryGreen.withOpacity(0.96),
+                AppColors.primaryGreenLight.withOpacity(0.96),
+              ],
+            ),
+          ),
+          child: Center(
+            child: TweenAnimationBuilder(
+              tween: Tween<double>(begin: 0.0, end: 1.0),
+              duration: const Duration(milliseconds: 800),
+              curve: Curves.easeOutCubic,
+              builder: (context, double value, child) {
+                return Opacity(
+                  opacity: value,
+                  child: Transform.scale(
+                    scale: 0.8 + (0.2 * value),
+                    child: child,
+                  ),
+                );
+              },
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Rotating circular progress with mosque icon
+                  SizedBox(
+                    width: 140,
+                    height: 140,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // Rotating circular progress indicator
+                        AnimatedBuilder(
+                          animation: _rotationController,
+                          builder: (context, child) {
+                            return Transform.rotate(
+                              angle: _rotationController.value * 2 * 3.14159,
+                              child: SizedBox(
+                                width: 140,
+                                height: 140,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 3,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white.withOpacity(0.9),
+                                  ),
+                                  backgroundColor: Colors.white.withOpacity(0.2),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        // Mosque icon in center
+                        Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white.withOpacity(0.15),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.white.withOpacity(0.2),
+                                blurRadius: 30,
+                                spreadRadius: 5,
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.mosque,
+                            size: 60,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 48),
+
+                  // Loading text with shimmer effect
+                  AnimatedBuilder(
+                    animation: _shimmerAnimation,
+                    builder: (context, child) {
+                      return Opacity(
+                        opacity: _shimmerAnimation.value,
+                        child: Column(
+                          children: [
+                            Text(
+                              'Loading Prayer Times',
+                              style: GoogleFonts.poppins(
+                                color: Colors.white,
+                                fontSize: 24,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.8,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 10,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(25),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.25),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.location_on_outlined,
+                                    color: Colors.white,
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Getting your location...',
+                                    style: GoogleFonts.poppins(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

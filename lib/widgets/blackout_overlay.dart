@@ -1,10 +1,11 @@
 // lib/widgets/blackout_overlay.dart
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../utils/constants.dart';
 
-class BlackoutOverlay extends StatelessWidget {
+class BlackoutOverlay extends StatefulWidget {
   final DateTime? endsAt;
 
   const BlackoutOverlay({
@@ -13,196 +14,224 @@ class BlackoutOverlay extends StatelessWidget {
   });
 
   @override
+  State<BlackoutOverlay> createState() => _BlackoutOverlayState();
+}
+
+class _BlackoutOverlayState extends State<BlackoutOverlay>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _breathController;
+  late Animation<double> _breathAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _breathController = AnimationController(
+      duration: const Duration(milliseconds: 2000),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _breathAnimation = Tween<double>(begin: 0.95, end: 1.05).animate(
+      CurvedAnimation(parent: _breathController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _breathController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Positioned.fill(
       child: AbsorbPointer(
         absorbing: true,
-        child: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Color(0xFF000000),
-                Color(0xFF0A0A0A),
-                Color(0xFF000000),
-              ],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
-          ),
-          child: SafeArea(
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 32.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Silent Icon with glow effect
-                    _buildSilentIcon(),
-                    const SizedBox(height: 32),
+        child: Material(
+          type: MaterialType.transparency,
+          child: Container(
+            color: Colors.black,
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              child: SafeArea(
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(40.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Mosque icon with breathing animation and glow
+                        TweenAnimationBuilder(
+                          tween: Tween<double>(begin: 0.0, end: 1.0),
+                          duration: const Duration(milliseconds: 1000),
+                          curve: Curves.easeOutCubic,
+                          builder: (context, double fadeValue, child) {
+                            return AnimatedBuilder(
+                              animation: _breathAnimation,
+                              builder: (context, breathChild) {
+                                return Transform.scale(
+                                  scale: fadeValue * _breathAnimation.value,
+                                  child: Opacity(
+                                    opacity: fadeValue,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(36),
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: AppColors.primaryGreen
+                                                .withOpacity(0.3),
+                                            blurRadius: 60,
+                                            spreadRadius: 10,
+                                          ),
+                                        ],
+                                        gradient: RadialGradient(
+                                          colors: [
+                                            AppColors.primaryGreen
+                                                .withOpacity(0.2),
+                                            Colors.transparent,
+                                          ],
+                                        ),
+                                      ),
+                                      child: const Icon(
+                                        Icons.mosque_outlined,
+                                        size: 80,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        ),
 
-                    // Main Message
-                    _buildMainMessage(),
-                    const SizedBox(height: 16),
+                        const SizedBox(height: 56),
 
-                    // Sub Message
-                    Text(
-                      'The screen will resume automatically',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.poppins(
-                        color: Colors.white54,
-                        fontSize: 14,
-                      ),
+                        // Main message with staggered animation
+                        TweenAnimationBuilder(
+                          tween: Tween<double>(begin: 0.0, end: 1.0),
+                          duration: const Duration(milliseconds: 1000),
+                          curve: Curves.easeOutCubic,
+                          builder: (context, double value, child) {
+                            return Opacity(
+                              opacity: value,
+                              child: Transform.translate(
+                                offset: Offset(0, 30 * (1 - value)),
+                                child: child,
+                              ),
+                            );
+                          },
+                          child: Column(
+                            children: [
+                              Text(
+                                'Prayer Time',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.poppins(
+                                  color: Colors.white,
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 1,
+                                  height: 1.2,
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 14,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(30),
+                                  border: Border.all(
+                                    color: Colors.white.withOpacity(0.15),
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.volume_off_rounded,
+                                      color: Colors.white70,
+                                      size: 22,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      'Keep your phone silent',
+                                      style: GoogleFonts.poppins(
+                                        color: Colors.white70,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        if (widget.endsAt != null) ...[
+                          const SizedBox(height: 56),
+                          TweenAnimationBuilder(
+                            tween: Tween<double>(begin: 0.0, end: 1.0),
+                            duration: const Duration(milliseconds: 1200),
+                            curve: Curves.easeOutCubic,
+                            builder: (context, double value, child) {
+                              return Opacity(
+                                opacity: value,
+                                child: Transform.scale(
+                                  scale: 0.8 + (0.2 * value),
+                                  child: child,
+                                ),
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 14,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.08),
+                                borderRadius: BorderRadius.circular(25),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.12),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.schedule_outlined,
+                                    color: Colors.white60,
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    'Resumes at ${DateFormat('h:mm a').format(widget.endsAt!)}',
+                                    style: GoogleFonts.poppins(
+                                      color: Colors.white70,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      letterSpacing: 0.3,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                    const SizedBox(height: 24),
-
-                    // End Time
-                    if (endsAt != null) _buildEndTime(),
-
-                    const SizedBox(height: 40),
-
-                    // Decorative line
-                    _buildDecorativeLine(),
-                  ],
+                  ),
                 ),
               ),
             ),
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildSilentIcon() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: Colors.white.withOpacity(0.05),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.1),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.white.withOpacity(0.05),
-            blurRadius: 30,
-            spreadRadius: 5,
-          ),
-        ],
-      ),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: Colors.white.withOpacity(0.05),
-        ),
-        child: const Icon(
-          Icons.volume_off_rounded,
-          size: 56,
-          color: Colors.white70,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMainMessage() {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        vertical: 20,
-        horizontal: 24,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.03),
-        borderRadius: BorderRadius.circular(AppStyles.radiusLarge),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.05),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        children: [
-          // Arabic-style text using Amiri font
-          Text(
-            'Please put your phone',
-            textAlign: TextAlign.center,
-            style: GoogleFonts.amiri(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.w600,
-              height: 1.4,
-            ),
-          ),
-          Text(
-            'in silent mode',
-            textAlign: TextAlign.center,
-            style: GoogleFonts.amiri(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.w600,
-              height: 1.4,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEndTime() {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 8,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(
-            Icons.access_time,
-            color: Colors.white38,
-            size: 16,
-          ),
-          const SizedBox(width: 8),
-          Text(
-            'Ends at ${DateFormat('hh:mm a').format(endsAt!)}',
-            style: GoogleFonts.poppins(
-              color: Colors.white54,
-              fontSize: 13,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDecorativeLine() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Container(
-          width: 30,
-          height: 1,
-          color: Colors.white12,
-        ),
-        const SizedBox(width: 8),
-        Container(
-          width: 6,
-          height: 6,
-          decoration: BoxDecoration(
-            color: Colors.white24,
-            shape: BoxShape.circle,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Container(
-          width: 30,
-          height: 1,
-          color: Colors.white12,
-        ),
-      ],
     );
   }
 }
