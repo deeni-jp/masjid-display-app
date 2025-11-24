@@ -65,6 +65,8 @@ A beautiful, modern Flutter application for displaying prayer times, managing mo
 - **Local Storage**: SharedPreferences
 - **Location**: Geolocator, Geocoding
 - **UI**: Material Design 3, Google Fonts
+- **Configuration**: flutter_dotenv for environment variables
+- **CI/CD**: GitHub Actions
 
 ---
 
@@ -106,7 +108,8 @@ lib/
 │   └── news_ticker.dart           # Bottom ticker for announcements
 │
 └── utils/
-    └── constants.dart             # App constants, colors, & enums
+    ├── constants.dart             # App constants, colors, & enums
+    └── env_config.dart            # Environment configuration manager
 ```
 
 ---
@@ -135,7 +138,25 @@ cd darut-tauhid-masjid
 flutter pub get
 ```
 
-#### 3. Firebase Setup
+#### 3. Environment Configuration
+
+Create a `.env` file in the project root:
+
+```bash
+cp .env.example .env
+```
+
+The `.env` file contains configuration variables:
+
+```env
+# API Configuration
+# Aladhan API calculation method (default: 3 for Muslim World League)
+ALADHAN_API_METHOD=3
+```
+
+**Important**: The `.env` file is gitignored and should never be committed. Use `.env.example` as a template.
+
+#### 4. Firebase Setup
 
 1. Create a new project in [Firebase Console](https://console.firebase.google.com/)
 
@@ -157,7 +178,7 @@ flutterfire configure
    - **Authentication** → Enable Email/Password
    - **Firestore Database** → Create database (Start in production mode)
 
-#### 4. Firestore Structure
+#### 5. Firestore Structure
 
 The app uses the following Firestore structure:
 
@@ -194,7 +215,7 @@ users/
     └── lastLogin: Timestamp
 ```
 
-#### 5. Firestore Rules
+#### 6. Firestore Rules
 
 Go to Firestore → Rules and paste:
 
@@ -253,7 +274,7 @@ service cloud.firestore {
 }
 ```
 
-#### 6. Firestore Indexes
+#### 7. Firestore Indexes
 
 Create composite indexes for efficient queries:
 
@@ -280,14 +301,14 @@ Create composite indexes for efficient queries:
 
 You can create these in Firebase Console → Firestore → Indexes or wait for the error messages when running queries, which will provide direct links to create the indexes.
 
-#### 7. Create First Admin
+#### 8. Create First Admin
 
 1. Run the app and create an account
 2. Go to Firebase Console → Firestore → `users` collection
 3. Find your user document
 4. Change `role` field from `public` to `admin`
 
-#### 8. Run the app
+#### 9. Run the app
 
 ```bash
 flutter run
@@ -303,21 +324,26 @@ dependencies:
     sdk: flutter
 
   # Firebase
-  firebase_core: ^2.24.2
-  cloud_firestore: ^4.14.0
-  firebase_auth: ^4.16.0
+  firebase_core: ^4.0.0
+  cloud_firestore: ^6.0.0
+  firebase_auth: ^6.0.1
 
   # Location
-  geolocator: ^10.1.0
-  geocoding: ^2.1.1
+  geolocator: ^14.0.2
+  geocoding: ^4.0.0
+  permission_handler: ^11.0.0
 
   # Storage & Utils
-  shared_preferences: ^2.2.2
-  http: ^1.1.0
-  intl: ^0.18.1
+  shared_preferences: ^2.5.3
+  http: ^1.5.0
+  intl: ^0.20.2
+
+  # Configuration
+  flutter_dotenv: ^5.2.1
 
   # UI
-  google_fonts: ^6.1.0
+  google_fonts: ^5.0.0
+  win32: ^5.15.0
 ```
 
 ---
@@ -408,6 +434,30 @@ static const Color priorityHigh = Color(0xFFE53935);
 static const Color priorityRegular = Color(0xFF1E88E5);
 ```
 
+### Environment Variables
+
+Configure in `.env` file (see `.env.example` for template):
+
+```env
+# Aladhan API calculation method
+# 0 = Shia Ithna-Ashari
+# 1 = University of Islamic Sciences, Karachi
+# 2 = Islamic Society of North America (ISNA)
+# 3 = Muslim World League (default)
+# 4 = Umm Al-Qura University, Makkah
+# 5 = Egyptian General Authority of Survey
+ALADHAN_API_METHOD=3
+```
+
+Access in code via `EnvConfig`:
+
+```dart
+import 'package:prayer_app/utils/env_config.dart';
+
+// Get API method (defaults to 3 if not set)
+final method = EnvConfig.aladhanApiMethod;
+```
+
 ---
 
 ## 🖼️ UI Features
@@ -485,23 +535,63 @@ static const Color priorityRegular = Color(0xFF1E88E5);
 - Verify Firestore rules allow write access for moderators/admins
 - Check user role permissions
 
+**7. Environment file error on startup**
+
+- Ensure `.env` file exists in project root
+- Copy `.env.example` to `.env`
+- Verify `.env` is listed in `pubspec.yaml` assets
+- Check environment variables are correctly formatted
+
+**8. CI/CD build failures**
+
+- Review [CI_CD_SETUP.md](CI_CD_SETUP.md) for detailed troubleshooting
+- Ensure all GitHub Secrets are configured
+- Verify `.env` file is created in CI workflow
+- Check `firebase_options.dart` is committed to repository
+
 ---
 
 ## 🚀 Deployment
 
-### Android
+For detailed CI/CD setup and deployment instructions, see [CI_CD_SETUP.md](CI_CD_SETUP.md).
+
+### Manual Builds
+
+#### Android
 
 ```bash
+# Ensure .env file exists
+cp .env.example .env
+
+# Build release
 flutter build apk --release
 # or for app bundle
 flutter build appbundle --release
 ```
 
-### iOS
+#### iOS
 
 ```bash
+# Ensure .env file exists
+cp .env.example .env
+
+# Build release
 flutter build ios --release
 ```
+
+### Automated Deployment (GitHub Actions)
+
+The project includes CI/CD pipeline that automatically:
+- Runs tests and code analysis
+- Builds Android APK and App Bundle
+- Builds iOS app
+- Deploys Firestore rules to Firebase
+- Creates GitHub releases on version tags
+
+See [CI_CD_SETUP.md](CI_CD_SETUP.md) for:
+- Setting up GitHub Secrets
+- Configuring Firebase deployment
+- Troubleshooting build issues
 
 ### Raspberry Pi (Kiosk Mode)
 
@@ -538,14 +628,96 @@ Add Crashlytics for error tracking and stability monitoring.
 
 ---
 
-## 🔐 Security Best Practices
+## 🔐 Security
 
-1. **Never commit** `firebase_options.dart` to public repos
-2. **Use environment variables** for sensitive data
-3. **Regular updates** - Keep dependencies updated
-4. **Role verification** - Always verify user roles on server-side
-5. **Input validation** - Validate all user inputs
-6. **Rate limiting** - Consider rate limiting for write operations
+### Security Measures Implemented
+
+This application implements multiple layers of security:
+
+#### 1. **No Hardcoded Credentials**
+- All hardcoded credentials have been removed from the codebase
+- Authentication is exclusively handled through Firebase
+- No local admin backdoors or testing credentials
+
+#### 2. **Environment Configuration**
+- Sensitive configuration stored in `.env` file (gitignored)
+- Environment variables managed through `flutter_dotenv`
+- `.env.example` provided as a template without real credentials
+- Configuration loaded at app initialization
+
+#### 3. **Input Validation**
+All user inputs are validated before processing:
+
+**Prayer Service Validation:**
+- Coordinates: Latitude (-90 to 90), Longitude (-180 to 180)
+- Calculation method: 0-23 (Aladhan API methods)
+- City/Country: Non-empty, max 100 characters
+- Prayer times: HH:MM or HH:MM AM/PM format validation
+- Iqama times: Format and completeness validation before saving
+
+**User Input Validation:**
+- Email format validation
+- Password strength requirements
+- Display name length limits
+- Role changes restricted to admins
+
+#### 4. **Firebase Security**
+- **Authentication**: Email/password with Firebase Auth
+- **Firestore Rules**: Role-based access control (RBAC)
+- **Security Rules**: Server-side validation of all operations
+- **API Keys**: Client API keys are public (as designed by Firebase)
+- **Backend Protection**: Firestore Security Rules protect data access
+
+#### 5. **CI/CD Security**
+- Secrets managed through GitHub Secrets
+- Keystore files never committed to repository
+- Automatic cleanup of sensitive files after builds
+- Environment files created dynamically in CI pipeline
+- Firebase deployment tokens secured
+
+### Security Best Practices
+
+1. **Never commit** the `.env` file to version control
+2. **Rotate credentials** regularly if compromised
+3. **Keep dependencies updated** - Run `flutter pub upgrade` periodically
+4. **Role verification** - Always verify user roles server-side through Firestore rules
+5. **Input validation** - All inputs are validated both client and server-side
+6. **Rate limiting** - Consider implementing rate limiting for write operations
+7. **Monitor Firebase** - Regularly check Firebase Console for suspicious activity
+8. **Audit logs** - Review Firestore operations in Firebase Console
+9. **Use strong passwords** - Enforce password policies for user accounts
+10. **Review security rules** - Periodically audit Firestore security rules
+
+### What's Protected
+
+✅ **Protected:**
+- User credentials (Firebase Authentication)
+- Role-based permissions (Firestore Rules)
+- Prayer time modifications (Moderator/Admin only)
+- User management (Admin only)
+- Notification management (Moderator/Admin only)
+
+✅ **Public (By Design):**
+- Firebase client API keys (protected by Security Rules)
+- Prayer times (read-only for public)
+- Active notifications (read-only for public)
+
+### Incident Response
+
+If you suspect a security issue:
+1. Immediately rotate affected credentials
+2. Review Firebase Console audit logs
+3. Check Firestore Security Rules are properly configured
+4. Update the app if necessary
+5. Report the issue to: dardticcjp@gmail.com
+
+### Security Audits
+
+Regular security audits should include:
+- Firestore Security Rules review
+- Dependency vulnerability scanning (`flutter pub outdated`)
+- User access patterns monitoring
+- Authentication logs review
 
 ---
 
@@ -596,7 +768,32 @@ For support and questions:
 
 ## 📝 Changelog
 
-### Version 1.0.0 (Current)
+### Version 1.1.0 (Current)
+
+#### Security Enhancements 🔐
+
+- ✅ **Removed all hardcoded credentials** - No local admin backdoors
+- ✅ **Environment configuration** - Added `flutter_dotenv` for secure config management
+- ✅ **Comprehensive input validation** - All prayer times, coordinates, and user inputs validated
+- ✅ **Firebase-only authentication** - Exclusively using Firebase Auth (no local auth)
+- ✅ **CI/CD security improvements** - Dynamic `.env` creation, secure secret management
+- ✅ **Gitignore updates** - Proper exclusion of sensitive files
+- ✅ **Security documentation** - Comprehensive security practices documented
+
+#### Bug Fixes
+
+- Fixed CI/CD dependency installation failures
+- Fixed environment configuration loading
+- Fixed input validation edge cases
+
+#### Documentation
+
+- Added detailed security section in README
+- Created CI_CD_SETUP.md for deployment guide
+- Updated installation instructions with environment setup
+- Added troubleshooting for environment issues
+
+### Version 1.0.0
 
 #### New Features
 
