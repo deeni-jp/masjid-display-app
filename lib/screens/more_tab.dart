@@ -473,7 +473,7 @@ class MoreTab extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel', style: GoogleFonts.poppins()),
+            child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
@@ -481,10 +481,7 @@ class MoreTab extends StatelessWidget {
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
             ),
-            child: Text(
-              'Sign Out',
-              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-            ),
+            child: const Text('Sign Out'),
           ),
         ],
       ),
@@ -510,7 +507,7 @@ class MoreTab extends StatelessWidget {
 
     if (!context.mounted) return;
 
-    showModalBottomSheet(
+    await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
@@ -576,7 +573,7 @@ class MoreTab extends StatelessWidget {
                       children: [
                         TextButton(
                           onPressed: () => Navigator.pop(context),
-                          child: Text('Cancel', style: GoogleFonts.poppins()),
+                          child: const Text('Cancel'),
                         ),
                         const SizedBox(width: 8),
                         ElevatedButton(
@@ -590,11 +587,7 @@ class MoreTab extends StatelessWidget {
                               );
                             }
                           },
-                          child: Text(
-                            'Save',
-                            style: GoogleFonts.poppins(
-                                fontWeight: FontWeight.w600),
-                          ),
+                          child: const Text('Save'),
                         ),
                       ],
                     ),
@@ -607,6 +600,9 @@ class MoreTab extends StatelessWidget {
         );
       },
     );
+
+    // Dispose controller after bottom sheet closes
+    controller.dispose();
   }
 
   void _showAboutDialog(BuildContext context) {
@@ -671,7 +667,7 @@ class MoreTab extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Close', style: GoogleFonts.poppins()),
+            child: const Text('Close'),
           ),
         ],
       ),

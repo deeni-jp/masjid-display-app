@@ -240,10 +240,7 @@ class PrayersTab extends StatelessWidget {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: Text(
-                    'Cancel',
-                    style: GoogleFonts.poppins(),
-                  ),
+                  child: const Text('Cancel'),
                 ),
                 ElevatedButton(
                   onPressed: () {
@@ -255,10 +252,7 @@ class PrayersTab extends StatelessWidget {
                       borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
                     ),
                   ),
-                  child: Text(
-                    'Save',
-                    style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-                  ),
+                  child: const Text('Save'),
                 ),
               ],
             );

@@ -27,6 +27,23 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^4.0.0
 
+  # Mocking
+  mockito: ^5.4.4
+  build_runner: ^2.4.13
+
+  # Firebase Testing (Note: We'll use mockito for Firebase mocking instead)
+  # fake_cloud_firestore has version conflicts with Firebase 4+
+
+  # Integration Testing
+  integration_test:
+    sdk: flutter
+
+  # HTTP Testing
+  http_mock_adapter: ^0.6.1
+
+  # Coverage
+  coverage: ^1.9.2
+
 flutter:
   uses-material-design: true
   assets:

@@ -471,7 +471,7 @@ class _RoleSelectionDialog extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: Text('Cancel', style: GoogleFonts.poppins()),
+          child: const Text('Cancel'),
         ),
       ],
     );

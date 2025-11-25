@@ -61,23 +61,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('Cancel', style: GoogleFonts.poppins()),
+              child: const Text('Cancel'),
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(context, controller.text.trim()),
-              child: Text(
-                'Save',
-                style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-              ),
+              child: const Text('Save'),
             ),
           ],
         );
       },
     );
 
+    // Dispose controller after dialog closes
     controller.dispose();
 
     if (result == null) return;
+
+    // Extract value
+    final newName = result;
 
     setState(() => _isLoading = true);
 
@@ -85,7 +86,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       // Update Firebase Auth display name
       final authUser = FirebaseAuth.instance.currentUser;
       if (authUser != null) {
-        await authUser.updateDisplayName(result);
+        await authUser.updateDisplayName(newName);
       }
 
       // Update Firestore
@@ -206,14 +207,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context, false),
-                  child: Text('Cancel', style: GoogleFonts.poppins()),
+                  child: const Text('Cancel'),
                 ),
                 ElevatedButton(
                   onPressed: () => Navigator.pop(context, true),
-                  child: Text(
-                    'Change',
-                    style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-                  ),
+                  child: const Text('Change'),
                 ),
               ],
             );
@@ -222,20 +220,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
       },
     );
 
-    if (result != true) {
-      currentPasswordController.dispose();
-      newPasswordController.dispose();
-      confirmPasswordController.dispose();
-      return;
-    }
-
+    // Extract values before disposing
     final currentPassword = currentPasswordController.text.trim();
     final newPassword = newPasswordController.text.trim();
     final confirmPassword = confirmPasswordController.text.trim();
 
+    // Dispose controllers after dialog closes
     currentPasswordController.dispose();
     newPasswordController.dispose();
     confirmPasswordController.dispose();
+
+    if (result != true) return;
 
     // Validation
     if (currentPassword.isEmpty ||
@@ -325,7 +320,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel', style: GoogleFonts.poppins()),
+            child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
@@ -333,10 +328,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
             ),
-            child: Text(
-              'Sign Out',
-              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-            ),
+            child: const Text('Sign Out'),
           ),
         ],
       ),
