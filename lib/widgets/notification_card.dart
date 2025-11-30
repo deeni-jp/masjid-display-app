@@ -10,7 +10,7 @@ import '../utils/constants.dart';
 class NotificationCard extends StatelessWidget {
   final MosqueNotification notification;
   final bool adminMode;
-  final VoidCallback? onTap;
+  final void Function(MosqueNotification)? onTap;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
@@ -26,7 +26,11 @@ class NotificationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: onTap,
+      onTap: () {
+        if (onTap != null) {
+          onTap!(notification);
+        }
+      },
       borderRadius: BorderRadius.circular(AppStyles.radiusLarge),
       child: Container(
         padding: const EdgeInsets.all(AppStyles.paddingMedium),
@@ -337,7 +341,7 @@ class NotificationCard extends StatelessWidget {
 /// Compact notification card for home tab (high priority only)
 class HighPriorityNotificationCard extends StatelessWidget {
   final MosqueNotification notification;
-  final VoidCallback? onTap;
+  final void Function(MosqueNotification)? onTap;
   final bool darkMode;
 
   const HighPriorityNotificationCard({
@@ -357,7 +361,11 @@ class HighPriorityNotificationCard extends StatelessWidget {
         0,
       ),
       child: InkWell(
-        onTap: onTap,
+        onTap: () {
+          if (onTap != null) {
+            onTap!(notification);
+          }
+        },
         borderRadius: BorderRadius.circular(AppStyles.radiusLarge),
         child: Container(
           padding: const EdgeInsets.all(AppStyles.paddingMedium),
@@ -504,7 +512,7 @@ class HighPriorityNotificationCard extends StatelessWidget {
 /// Rotating high priority notification card for multiple notifications
 class RotatingHighPriorityCard extends StatefulWidget {
   final List<MosqueNotification> notifications;
-  final VoidCallback? onTap;
+  final void Function(MosqueNotification)? onTap;
   final bool darkMode;
   final Duration rotationInterval;
 
@@ -978,7 +986,7 @@ class NotificationDetailSheet extends StatelessWidget {
 /// Quick notification banner for home tab (legacy support)
 class NotificationBanner extends StatelessWidget {
   final MosqueNotification notification;
-  final VoidCallback? onTap;
+  final void Function(MosqueNotification)? onTap;
 
   const NotificationBanner({
     super.key,

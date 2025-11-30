@@ -9,7 +9,7 @@ import '../utils/constants.dart';
 /// with fade transitions. Tapping navigates to the notifications tab.
 class NewsTicker extends StatefulWidget {
   final List<MosqueNotification> notifications;
-  final VoidCallback? onTap;
+  final void Function(MosqueNotification)? onTap;
   final bool darkMode;
   final Duration rotationInterval;
 
@@ -116,7 +116,11 @@ class _NewsTickerState extends State<NewsTicker>
         widget.darkMode ? AppColors.tickerText : AppColors.tickerTextLight;
 
     return GestureDetector(
-      onTap: widget.onTap,
+      onTap: () {
+        if (widget.onTap != null) {
+          widget.onTap!(notification);
+        }
+      },
       child: Container(
         height: AppStyles.tickerHeight,
         decoration: BoxDecoration(

@@ -1,0 +1,81 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper function to get user role
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return request.auth != null && getUserRole() == 'admin';
+    }
+
+    // Helper function to check if user is moderator
+    function isModerator() {
+      return request.auth != null && getUserRole() == 'moderator';
+    }
+
+    // Helper function to check if user is moderator or admin
+    function isModeratorOrAdmin() {
+      return request.auth != null && (getUserRole() == 'admin' || getUserRole() == 'moderator');
+    }
+
+    // Users collection
+    match /users/{userId} {
+      // Anyone authenticated can read user documents (needed for role checks)
+      allow read: if request.auth != null;
+
+      // Users can create their own document on sign-up
+      allow create: if request.auth != null && request.auth.uid == userId;
+
+      // Users can update their own profile, but NOT their role
+      // Admins can update any user (including role changes)
+      allow update: if request.auth != null && (
+        (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])) ||
+        isAdmin()
+      );
+
+      // Only admins can delete users (protects against unauthorized deletion)
+      allow delete: if isAdmin();
+    }
+
+    // Notifications collection (root level)
+    match /notifications/{notificationId} {
+      // Anyone authenticated can read notifications
+      allow read: if request.auth != null;
+
+      // Only moderators and admins can create, update, or delete notifications
+      allow create: if isModeratorOrAdmin();
+      allow update: if isModeratorOrAdmin();
+      allow delete: if isModeratorOrAdmin();
+    }
+
+    // Mosque collection - iqama times
+    match /mosque/iqama {
+      allow read: if true;
+      allow write: if isModeratorOrAdmin();
+    }
+
+    // Mosque collection - legacy single notification (kept for backward compatibility)
+    match /mosque/notification {
+      allow read: if true;
+      allow write: if isModeratorOrAdmin();
+    }
+
+    // Mosque data subcollection - notifications (legacy path, if still used)
+    match /mosque/data/notifications/{notificationId} {
+      allow read: if true;
+      allow create: if isModeratorOrAdmin();
+      allow update: if isModeratorOrAdmin();
+      allow delete: if isModeratorOrAdmin();
+    }
+
+    // Mosque collection - other documents (fallback)
+    match /mosque/{document} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+  }
+}

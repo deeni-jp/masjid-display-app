@@ -30,8 +30,8 @@ class AppConstants {
   static const Duration blackoutDuration = Duration(minutes: 7);
 
   // API Configuration
-  static const int aladhanApiMethod =
-      2; // Islamic Society of North America (ISNA)
+  // NOTE: Method and School are now configured in .env
+  // See EnvConfig.aladhanApiMethod and EnvConfig.aladhanSchool
   static const Duration apiTimeout = Duration(seconds: 10);
 
   // SharedPreferences Keys
@@ -78,6 +78,7 @@ class AppColors {
   static const Color asrColor = Color(0xFFFFC107);
   static const Color maghribColor = Color(0xFFFF5722);
   static const Color ishaColor = Color(0xFF673AB7);
+  static const Color jummahColor = Color(0xFF4CAF50);
 
   // Notification Priority Colors
   static const Color priorityHigh = Color(0xFFE53935);
@@ -132,6 +133,8 @@ class AppColors {
     if (lowerName.contains('asr')) return asrColor;
     if (lowerName.contains('maghrib')) return maghribColor;
     if (lowerName.contains('isha')) return ishaColor;
+    if (lowerName.contains('jummah') || lowerName.contains('jumuah'))
+      return jummahColor;
     return primaryGreen;
   }
 
@@ -145,6 +148,8 @@ class AppColors {
     if (lowerName.contains('asr')) return Icons.wb_sunny_outlined;
     if (lowerName.contains('maghrib')) return Icons.wb_twilight;
     if (lowerName.contains('isha')) return Icons.nightlight_round;
+    if (lowerName.contains('jummah') || lowerName.contains('jumuah'))
+      return Icons.people;
     return Icons.access_time;
   }
 

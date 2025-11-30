@@ -1,4 +1,5 @@
 // lib/main.dart
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -8,6 +9,7 @@ import 'firebase_options.dart';
 import 'models/user_model.dart';
 import 'services/storage_service.dart';
 import 'services/user_service.dart';
+import 'services/push_notification_service.dart';
 import 'screens/auth_screen.dart';
 import 'screens/home_page.dart';
 import 'utils/constants.dart';
@@ -213,6 +215,9 @@ class _AuthWrapperState extends State<AuthWrapper> {
         final user = await UserService.getCurrentUser();
 
         if (user != null) {
+          // Initialize push notifications after successful authentication
+          await _initializePushNotifications();
+
           setState(() {
             _currentUser = user;
             _isLoading = false;
@@ -234,13 +239,43 @@ class _AuthWrapperState extends State<AuthWrapper> {
     }
   }
 
-  void _onAuthSuccess(AppUser user) {
+  Future<void> _initializePushNotifications() async {
+    try {
+      final pushService = PushNotificationService();
+      await pushService.initialize();
+
+      // Subscribe to mosque-wide notifications topic (not supported on web)
+      if (!kIsWeb) {
+        await pushService.subscribeToTopic('mosque_notifications');
+      }
+
+      debugPrint('Push notifications initialized successfully');
+    } catch (e) {
+      debugPrint('Failed to initialize push notifications: $e');
+    }
+  }
+
+  void _onAuthSuccess(AppUser user) async {
+    // Initialize push notifications after successful login
+    await _initializePushNotifications();
+
     setState(() {
       _currentUser = user;
     });
   }
 
-  void _onSignOut() {
+  void _onSignOut() async {
+    // Clean up push notification token on sign out
+    if (!kIsWeb) {
+      try {
+        final pushService = PushNotificationService();
+        await pushService.unsubscribeFromTopic('mosque_notifications');
+        await pushService.deleteToken();
+      } catch (e) {
+        debugPrint('Failed to clean up push notifications: $e');
+      }
+    }
+
     setState(() {
       _currentUser = null;
     });

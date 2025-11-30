@@ -151,12 +151,23 @@ class PrayerSchedule {
         iqamaMap: iqamaMap,
       ));
     }
+
+    // Add Jummah prayer with Dhuhr waqt and custom iqama
+    final dhuhrWaqt = timings['Dhuhr'];
+    if (dhuhrWaqt != null) {
+      prayers.add(PrayerTime(
+        name: 'Jummah',
+        waqt: dhuhrWaqt,
+        iqama: iqamaMap['Jummah'] ?? '12:30',
+      ));
+    }
+
     return prayers;
   }
 
   /// Get only main prayers (exclude Sunrise, etc.)
   List<PrayerTime> getMainPrayers() {
-    final mainNames = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+    final mainNames = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha', 'Jummah'];
     return getAllPrayers().where((p) => mainNames.contains(p.name)).toList();
   }
 
@@ -173,16 +184,30 @@ class PrayerSchedule {
         ));
       }
     }
+    // Add Jummah at the end (uses Dhuhr waqt)
+    if (timings.containsKey('Dhuhr')) {
+      prayers.add(PrayerTime(
+        name: 'Jummah',
+        waqt: timings['Dhuhr']!,
+        iqama: iqamaMap['Jummah'] ?? '12:30',
+      ));
+    }
     return prayers;
   }
 
   /// Find the next prayer
   PrayerTime? getNextPrayer() {
     final now = DateTime.now();
+    final isFriday = now.weekday == DateTime.friday;
     final prayers = getPrayersInOrder();
 
     // Find next prayer today
     for (final prayer in prayers) {
+      // On Fridays, skip Dhuhr in next prayer calculation
+      if (isFriday && prayer.name == 'Dhuhr') {
+        continue;
+      }
+
       final nextTime = prayer.getNextTime();
       if (nextTime != null &&
           (nextTime.isAfter(now) || _isSameMinute(nextTime, now))) {

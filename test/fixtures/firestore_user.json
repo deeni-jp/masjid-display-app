@@ -1,0 +1,8 @@
+{
+  "uid": "test_user_123",
+  "email": "testuser@example.com",
+  "displayName": "Test User",
+  "role": "public",
+  "createdAt": "2024-01-01T00:00:00.000Z",
+  "lastLogin": "2024-01-15T12:30:00.000Z"
+}

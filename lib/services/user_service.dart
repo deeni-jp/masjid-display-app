@@ -2,12 +2,14 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import '../models/user_model.dart';
 import '../utils/constants.dart';
 
 class UserService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static final FirebaseAuth _auth = FirebaseAuth.instance;
+  static final FirebaseFunctions _functions = FirebaseFunctions.instance;
 
   static const String _usersCollection = 'users';
 
@@ -73,6 +75,17 @@ class UserService {
       final doc = await docRef.get();
 
       if (doc.exists) {
+        final userData = doc.data();
+
+        // Check if user has been deleted
+        if (userData?['deleted'] == true) {
+          // Sign out the user
+          await _auth.signOut();
+          throw UserServiceException(
+            'This account has been deleted. Please contact an administrator.',
+          );
+        }
+
         // Update last login
         await docRef.update({
           'lastLogin': FieldValue.serverTimestamp(),
@@ -123,12 +136,22 @@ class UserService {
   // ============ USER LISTING & SEARCH ============
 
   /// Get all users (Admin only)
+  /// Excludes deleted users
   static Future<List<AppUser>> getAllUsers() async {
     try {
-      final query =
-          await _firestore.collection(_usersCollection).orderBy('email').get();
+      final query = await _firestore
+          .collection(_usersCollection)
+          .orderBy('email')
+          .get();
 
-      return query.docs.map((doc) => AppUser.fromFirestore(doc)).toList();
+      // Filter out deleted users (handles both deleted: true and missing field)
+      return query.docs
+          .where((doc) {
+            final data = doc.data();
+            return data['deleted'] != true;
+          })
+          .map((doc) => AppUser.fromFirestore(doc))
+          .toList();
     } catch (e) {
       throw UserServiceException('Failed to get users: $e');
     }
@@ -265,6 +288,134 @@ class UserService {
   static Future<bool> canManageIqama() async {
     final user = await getCurrentUser();
     return user?.canManageIqama ?? false;
+  }
+
+  // ============ ADMIN USER MANAGEMENT ============
+
+  /// Send password reset email to user (Admin only)
+  static Future<void> sendPasswordResetEmail({
+    required String email,
+  }) async {
+    try {
+      // Verify current user is admin
+      final currentUser = await getCurrentUser();
+      if (currentUser == null || !currentUser.isAdmin) {
+        throw UserServiceException('Only admins can reset user passwords');
+      }
+
+      // Send password reset email via Firebase Auth
+      await _auth.sendPasswordResetEmail(email: email);
+    } on FirebaseAuthException catch (e) {
+      String message = 'Failed to send password reset email';
+
+      switch (e.code) {
+        case 'user-not-found':
+          message = 'No account found with this email';
+          break;
+        case 'invalid-email':
+          message = 'Invalid email address';
+          break;
+        case 'too-many-requests':
+          message = 'Too many attempts. Please try again later';
+          break;
+        default:
+          message = e.message ?? message;
+      }
+
+      throw UserServiceException(message);
+    } catch (e) {
+      if (e is UserServiceException) rethrow;
+      throw UserServiceException('Failed to send password reset email: $e');
+    }
+  }
+
+  /// Check if user can be safely deleted
+  /// Returns error message if cannot delete, null if can delete
+  static Future<String?> canDeleteUser(String uid) async {
+    final currentUser = await getCurrentUser();
+
+    if (currentUser == null || !currentUser.isAdmin) {
+      return 'Only admins can delete users';
+    }
+
+    if (currentUser.uid == uid) {
+      return 'You cannot delete your own account';
+    }
+
+    // Check if deleting last admin
+    final admins = await getUsersByRole(UserRole.admin);
+    if (admins.length == 1 && admins.first.uid == uid) {
+      return 'Cannot delete the last admin user';
+    }
+
+    return null; // Can delete
+  }
+
+  /// Delete user (Soft delete for Spark plan compatibility)
+  /// Marks user as deleted in Firestore and disables their account
+  /// NOTE: For full deletion (Auth + Firestore), upgrade to Blaze plan
+  /// and use Cloud Functions
+  static Future<void> deleteUser({
+    required String uid,
+    required String email,
+  }) async {
+    try {
+      // Safety checks
+      final canDelete = await canDeleteUser(uid);
+      if (canDelete != null) {
+        throw UserServiceException(canDelete);
+      }
+
+      // Soft delete: Mark user as deleted in Firestore
+      // This prevents them from accessing the app
+      await _firestore.collection(_usersCollection).doc(uid).update({
+        'deleted': true,
+        'deletedAt': FieldValue.serverTimestamp(),
+        'deletedBy': _auth.currentUser?.uid,
+        'active': false,
+      });
+
+      // Note: Firebase Auth account remains (can't delete from client)
+      // To fully delete Auth account, upgrade to Blaze plan and use Cloud Functions
+    } catch (e) {
+      if (e is UserServiceException) rethrow;
+      throw UserServiceException('Failed to delete user: $e');
+    }
+  }
+
+  /// Hard delete user (Firestore + Auth) via Cloud Function
+  /// Only works on Blaze plan after deploying the deleteUser Cloud Function
+  static Future<void> hardDeleteUser({
+    required String uid,
+    required String email,
+  }) async {
+    try {
+      // Safety checks
+      final canDelete = await canDeleteUser(uid);
+      if (canDelete != null) {
+        throw UserServiceException(canDelete);
+      }
+
+      // Call Cloud Function to delete user
+      final callable = _functions.httpsCallable('deleteUser');
+      final result = await callable.call({
+        'uid': uid,
+        'email': email,
+      });
+
+      if (result.data['success'] != true) {
+        throw UserServiceException(
+          result.data['error'] ?? 'Failed to delete user',
+        );
+      }
+    } on FirebaseFunctionsException catch (e) {
+      throw UserServiceException(
+        'Server error: ${e.message ?? 'Failed to delete user'}',
+      );
+    } catch (e) {
+      if (e is UserServiceException) rethrow;
+      throw UserServiceException('Failed to delete user: $e');
+    }
   }
 }
 
