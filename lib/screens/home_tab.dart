@@ -21,7 +21,7 @@ class HomeTab extends StatelessWidget {
   final Future<void> Function() onRefresh;
   final AppUser currentUser;
   final void Function(AppUser?) onUserChanged;
-  final VoidCallback? onNotificationTap;
+  final void Function(MosqueNotification)? onNotificationTap;
 
   const HomeTab({
     super.key,
@@ -534,9 +534,10 @@ class HomeTab extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            flex: 3,
+            flex: 2,
             child: Text(
-              'Prayer',
+              'Waqt',
+              textAlign: TextAlign.center,
               style: GoogleFonts.poppins(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -545,9 +546,9 @@ class HomeTab extends StatelessWidget {
             ),
           ),
           Expanded(
-            flex: 2,
+            flex: 3,
             child: Text(
-              'Waqt',
+              'Prayer',
               textAlign: TextAlign.center,
               style: GoogleFonts.poppins(
                 fontSize: 12,
@@ -596,8 +597,20 @@ class HomeTab extends StatelessWidget {
         child: Row(
           children: [
             Expanded(
+              flex: 2,
+              child: Text(
+                PrayerTime.trimTime(prayer.waqt),
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Expanded(
               flex: 3,
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Container(
                     width: 32,
@@ -615,11 +628,15 @@ class HomeTab extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 10),
-                  Text(
-                    prayer.name,
-                    style: GoogleFonts.poppins(
-                      fontSize: 15,
-                      fontWeight: isNext ? FontWeight.w600 : FontWeight.w500,
+                  SizedBox(
+                    width: 80,
+                    child: Text(
+                      prayer.name,
+                      textAlign: TextAlign.left,
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: isNext ? FontWeight.w600 : FontWeight.w500,
+                      ),
                     ),
                   ),
                 ],
@@ -628,18 +645,10 @@ class HomeTab extends StatelessWidget {
             Expanded(
               flex: 2,
               child: Text(
-                PrayerTime.trimTime(prayer.waqt),
-                textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(fontSize: 14),
-              ),
-            ),
-            Expanded(
-              flex: 2,
-              child: Text(
                 PrayerTime.trimTime(prayer.iqama),
                 textAlign: TextAlign.center,
                 style: GoogleFonts.poppins(
-                  fontSize: 14,
+                  fontSize: 22,
                   fontWeight: FontWeight.w600,
                 ),
               ),

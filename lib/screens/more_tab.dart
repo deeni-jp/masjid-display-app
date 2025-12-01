@@ -503,7 +503,6 @@ class MoreTab extends StatelessWidget {
 
   Future<void> _openSettings(BuildContext context) async {
     final defaultLocation = await StorageService.getDefaultLocation();
-    final controller = TextEditingController(text: defaultLocation);
 
     if (!context.mounted) return;
 
@@ -513,96 +512,12 @@ class MoreTab extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) {
-        bool localDarkMode = darkMode;
-
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            return Padding(
-              padding: MediaQuery.of(context).viewInsets,
-              child: Container(
-                padding: const EdgeInsets.all(AppStyles.paddingLarge),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Settings',
-                          style: GoogleFonts.poppins(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    SwitchListTile(
-                      title: Text('Dark Mode', style: GoogleFonts.poppins()),
-                      value: localDarkMode,
-                      onChanged: (v) {
-                        setSheetState(() => localDarkMode = v);
-                        onToggleTheme(v, manual: true);
-                      },
-                      shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppStyles.radiusMedium),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: controller,
-                      decoration: InputDecoration(
-                        labelText: 'Default Location',
-                        hintText: 'Enter city name',
-                        border: OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppStyles.radiusMedium),
-                        ),
-                        prefixIcon: const Icon(Icons.location_city),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('Cancel'),
-                        ),
-                        const SizedBox(width: 8),
-                        ElevatedButton(
-                          onPressed: () async {
-                            await StorageService.setDefaultLocation(
-                                controller.text.trim());
-                            if (context.mounted) {
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Settings saved')),
-                              );
-                            }
-                          },
-                          child: const Text('Save'),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
+      builder: (context) => _SettingsBottomSheet(
+        initialDarkMode: darkMode,
+        onToggleTheme: onToggleTheme,
+        defaultLocation: defaultLocation,
+      ),
     );
-
-    // Dispose controller after bottom sheet closes
-    controller.dispose();
   }
 
   void _showAboutDialog(BuildContext context) {
@@ -670,6 +585,120 @@ class MoreTab extends StatelessWidget {
             child: const Text('Close'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Settings Bottom Sheet with proper state management for dark mode toggle
+class _SettingsBottomSheet extends StatefulWidget {
+  final bool initialDarkMode;
+  final Future<void> Function(bool, {bool manual}) onToggleTheme;
+  final String defaultLocation;
+
+  const _SettingsBottomSheet({
+    required this.initialDarkMode,
+    required this.onToggleTheme,
+    required this.defaultLocation,
+  });
+
+  @override
+  State<_SettingsBottomSheet> createState() => _SettingsBottomSheetState();
+}
+
+class _SettingsBottomSheetState extends State<_SettingsBottomSheet> {
+  late bool _darkMode;
+  late TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _darkMode = widget.initialDarkMode;
+    _controller = TextEditingController(text: widget.defaultLocation);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: MediaQuery.of(context).viewInsets,
+      child: Container(
+        padding: const EdgeInsets.all(AppStyles.paddingLarge),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Settings',
+                  style: GoogleFonts.poppins(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            SwitchListTile(
+              title: Text('Dark Mode', style: GoogleFonts.poppins()),
+              value: _darkMode,
+              onChanged: (v) {
+                setState(() => _darkMode = v);
+                widget.onToggleTheme(v, manual: true);
+              },
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _controller,
+              decoration: InputDecoration(
+                labelText: 'Default Location',
+                hintText: 'Enter city name',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
+                ),
+                prefixIcon: const Icon(Icons.location_city),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: () async {
+                    await StorageService.setDefaultLocation(
+                        _controller.text.trim());
+                    if (context.mounted) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Settings saved')),
+                      );
+                    }
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+          ],
+        ),
       ),
     );
   }

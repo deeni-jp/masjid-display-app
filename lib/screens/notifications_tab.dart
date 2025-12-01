@@ -1,4 +1,5 @@
 // lib/screens/notifications_tab.dart
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -7,6 +8,7 @@ import '../models/user_model.dart';
 import '../services/firebase_service.dart';
 import '../services/storage_service.dart';
 import '../services/user_service.dart';
+import '../services/fcm_notification_sender.dart';
 import '../utils/constants.dart';
 import '../widgets/notification_card.dart';
 
@@ -224,7 +226,7 @@ class _NotificationsTabState extends State<NotificationsTab> {
             child: NotificationCard(
               notification: notification,
               adminMode: widget.adminMode,
-              onTap: () => _showNotificationDetail(context, notification),
+              onTap: (n) => _showNotificationDetail(context, n),
               onEdit: () =>
                   _showCreateEditDialog(context, notification: notification),
               onDelete: () => _confirmDelete(context, notification),
@@ -652,6 +654,24 @@ class _NotificationsTabState extends State<NotificationsTab> {
             await FirebaseService.createNotification(newNotification);
       }
 
+      // Send push notification if the notification is active
+      if (savedNotification.active && !savedNotification.isExpired) {
+        if (kDebugMode) {
+          print('Sending push notification for: ${savedNotification.title}');
+        }
+
+        // Send push notification to all users
+        final sent = await FCMNotificationSender.sendNotificationToTopic(
+          notification: savedNotification,
+        );
+
+        if (kDebugMode) {
+          print(sent
+              ? '✅ Push notification sent successfully'
+              : '❌ Failed to send push notification');
+        }
+      }
+
       // Check if still mounted after async operation
       if (!mounted) {
         titleController.dispose();
@@ -668,7 +688,11 @@ class _NotificationsTabState extends State<NotificationsTab> {
           updatedList[index] = savedNotification;
         }
       } else {
-        updatedList.add(savedNotification);
+        // Check if notification already exists (to prevent duplicates from Firestore listener)
+        final exists = updatedList.any((n) => n.id == savedNotification.id);
+        if (!exists) {
+          updatedList.add(savedNotification);
+        }
       }
       widget.onNotificationsUpdated(updatedList);
 

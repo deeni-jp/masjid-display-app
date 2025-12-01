@@ -17,6 +17,7 @@ import 'notifications_tab.dart';
 import 'more_tab.dart';
 import '../widgets/countdown_overlay.dart';
 import '../widgets/blackout_overlay.dart';
+import '../widgets/notification_card.dart';
 
 class HomePage extends StatefulWidget {
   final Future<void> Function(bool, {bool manual}) onToggleTheme;
@@ -478,9 +479,28 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  void _navigateToNotificationsTab() {
+  void _navigateToNotificationsTab(MosqueNotification notification) {
+    // First, switch to notifications tab
     setState(() {
       _selectedIndex = 2; // Notifications tab index
+    });
+
+    // Then show the detail sheet for the specific notification
+    // Use post-frame callback to ensure tab switch completes first
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      NotificationDetailSheet.show(
+        context,
+        notification,
+        adminMode: widget.currentUser.isAdmin || widget.currentUser.isModerator,
+        onEdit: () {
+          // After editing, refresh notifications
+          onRefresh();
+        },
+        onDelete: () {
+          // After deleting, refresh notifications
+          onRefresh();
+        },
+      );
     });
   }
 

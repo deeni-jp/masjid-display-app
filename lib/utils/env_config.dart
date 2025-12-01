@@ -22,4 +22,12 @@ class EnvConfig {
     final methodStr = dotenv.env['ALADHAN_API_METHOD'];
     return int.tryParse(methodStr ?? '3') ?? 3;
   }
+
+  /// Get Aladhan API school (Asr calculation method)
+  /// 0 = Shafi/Standard, 1 = Hanafi
+  /// Default is 1 (Hanafi)
+  static int get aladhanSchool {
+    final schoolStr = dotenv.env['ALADHAN_SCHOOL'];
+    return int.tryParse(schoolStr ?? '1') ?? 1;
+  }
 }

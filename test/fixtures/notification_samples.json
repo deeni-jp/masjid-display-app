@@ -1,0 +1,63 @@
+{
+  "announcement": {
+    "id": "notif_announcement_1",
+    "title": "Jumuah Khutbah Topic",
+    "message": "This Friday's khutbah will discuss the importance of patience and gratitude in difficult times.",
+    "type": "announcement",
+    "priority": "regular",
+    "active": true,
+    "createdAt": "2024-01-10T10:00:00.000Z",
+    "expiresAt": "2024-01-17T23:59:59.000Z",
+    "postedBy": "admin@mosque.com",
+    "postedByRole": "admin"
+  },
+  "event": {
+    "id": "notif_event_1",
+    "title": "Community Iftar",
+    "message": "Join us for a community iftar this Saturday evening. All are welcome!",
+    "type": "event",
+    "priority": "high",
+    "active": true,
+    "eventTime": "2024-01-20T19:00:00.000Z",
+    "createdAt": "2024-01-15T09:00:00.000Z",
+    "expiresAt": "2024-01-21T00:00:00.000Z",
+    "postedBy": "events@mosque.com",
+    "postedByRole": "moderator"
+  },
+  "alert": {
+    "id": "notif_alert_1",
+    "title": "Prayer Hall Closure",
+    "message": "The main prayer hall will be closed tomorrow for maintenance. Please use the side hall.",
+    "type": "alert",
+    "priority": "high",
+    "active": true,
+    "createdAt": "2024-01-15T14:00:00.000Z",
+    "expiresAt": "2024-01-16T23:59:59.000Z",
+    "postedBy": "admin@mosque.com",
+    "postedByRole": "admin"
+  },
+  "expired": {
+    "id": "notif_expired_1",
+    "title": "Past Event",
+    "message": "This notification has expired and should not be displayed.",
+    "type": "announcement",
+    "priority": "low",
+    "active": true,
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "expiresAt": "2024-01-07T23:59:59.000Z",
+    "postedBy": "admin@mosque.com",
+    "postedByRole": "admin"
+  },
+  "inactive": {
+    "id": "notif_inactive_1",
+    "title": "Inactive Notification",
+    "message": "This notification is marked as inactive and should not be displayed.",
+    "type": "announcement",
+    "priority": "regular",
+    "active": false,
+    "createdAt": "2024-01-10T00:00:00.000Z",
+    "expiresAt": "2024-02-01T23:59:59.000Z",
+    "postedBy": "admin@mosque.com",
+    "postedByRole": "admin"
+  }
+}

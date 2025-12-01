@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/prayer_time.dart';
 import '../utils/constants.dart';
+import '../utils/env_config.dart';
 
 class PrayerService {
   /// Validate prayer time format (HH:MM or HH:MM AM/PM)
@@ -41,6 +42,7 @@ class PrayerService {
     required double latitude,
     required double longitude,
     int? method,
+    int? school,
   }) async {
     // Validate coordinates
     if (latitude < -90 || latitude > 90) {
@@ -61,10 +63,11 @@ class PrayerService {
       );
     }
 
-    final apiMethod = method ?? AppConstants.aladhanApiMethod;
+    final apiMethod = method ?? EnvConfig.aladhanApiMethod;
+    final apiSchool = school ?? EnvConfig.aladhanSchool;
 
     final url = Uri.parse(
-        'https://api.aladhan.com/v1/timings?latitude=$latitude&longitude=$longitude&method=$apiMethod');
+        'https://api.aladhan.com/v1/timings?latitude=$latitude&longitude=$longitude&method=$apiMethod&school=$apiSchool');
 
     try {
       final response = await http.get(url).timeout(AppConstants.apiTimeout);
@@ -113,6 +116,7 @@ class PrayerService {
     required String city,
     required String country,
     int? method,
+    int? school,
   }) async {
     // Validate city and country
     if (city.trim().isEmpty) {
@@ -135,10 +139,11 @@ class PrayerService {
       );
     }
 
-    final apiMethod = method ?? AppConstants.aladhanApiMethod;
+    final apiMethod = method ?? EnvConfig.aladhanApiMethod;
+    final apiSchool = school ?? EnvConfig.aladhanSchool;
 
     final url = Uri.parse(
-        'https://api.aladhan.com/v1/timingsByCity?city=$city&country=$country&method=$apiMethod');
+        'https://api.aladhan.com/v1/timingsByCity?city=$city&country=$country&method=$apiMethod&school=$apiSchool');
 
     try {
       final response = await http.get(url).timeout(AppConstants.apiTimeout);

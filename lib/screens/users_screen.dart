@@ -68,6 +68,27 @@ class _UsersScreenState extends State<UsersScreen> {
     });
   }
 
+  Future<void> _showUserManagementDialog(AppUser user) async {
+    await showDialog(
+      context: context,
+      builder: (context) => _UserManagementDialog(
+        user: user,
+        onRoleChange: () {
+          Navigator.pop(context);
+          _changeUserRole(user);
+        },
+        onPasswordReset: () {
+          Navigator.pop(context);
+          _handlePasswordReset(user);
+        },
+        onDelete: () {
+          Navigator.pop(context);
+          _handleDeleteUser(user);
+        },
+      ),
+    );
+  }
+
   Future<void> _changeUserRole(AppUser user) async {
     final currentUser = await UserService.getCurrentUser();
 
@@ -114,6 +135,117 @@ class _UsersScreenState extends State<UsersScreen> {
           SnackBar(
             content: Text('Failed to update role: $e'),
             behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _handlePasswordReset(AppUser user) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppStyles.radiusLarge),
+        ),
+        title: Text(
+          'Send Password Reset Email?',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+        ),
+        content: Text(
+          'A password reset email will be sent to:\n${user.email}',
+          style: GoogleFonts.poppins(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Send Email'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await UserService.sendPasswordResetEmail(email: user.email);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Password reset email sent to ${user.email}'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to send email: $e'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleDeleteUser(AppUser user) async {
+    // Check if user can be deleted
+    final errorMessage = await UserService.canDeleteUser(user.uid);
+
+    if (errorMessage != null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Show delete confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => _DeleteConfirmationDialog(user: user),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await UserService.deleteUser(uid: user.uid, email: user.email);
+
+      // Remove from local list
+      setState(() {
+        _users.removeWhere((u) => u.uid == user.uid);
+        _filterUsers(_searchController.text);
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('User ${user.email} deleted successfully'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to delete user: $e'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.red,
           ),
         );
       }
@@ -292,7 +424,7 @@ class _UsersScreenState extends State<UsersScreen> {
           final user = _filteredUsers[index];
           return _UserCard(
             user: user,
-            onChangeRole: () => _changeUserRole(user),
+            onManage: () => _showUserManagementDialog(user),
           );
         },
       ),
@@ -302,11 +434,11 @@ class _UsersScreenState extends State<UsersScreen> {
 
 class _UserCard extends StatelessWidget {
   final AppUser user;
-  final VoidCallback onChangeRole;
+  final VoidCallback onManage;
 
   const _UserCard({
     required this.user,
-    required this.onChangeRole,
+    required this.onManage,
   });
 
   @override
@@ -377,11 +509,11 @@ class _UserCard extends StatelessWidget {
               ),
             ),
 
-            // Change Role Button
+            // Manage User Button
             IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: onChangeRole,
-              tooltip: 'Change Role',
+              icon: const Icon(Icons.settings),
+              onPressed: onManage,
+              tooltip: 'Manage User',
             ),
           ],
         ),
@@ -420,6 +552,323 @@ class _UserCard extends StatelessWidget {
       case UserRole.public:
         return Colors.green;
     }
+  }
+}
+
+class _UserManagementDialog extends StatelessWidget {
+  final AppUser user;
+  final VoidCallback onRoleChange;
+  final VoidCallback onPasswordReset;
+  final VoidCallback onDelete;
+
+  const _UserManagementDialog({
+    required this.user,
+    required this.onRoleChange,
+    required this.onPasswordReset,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppStyles.radiusLarge),
+      ),
+      title: Text(
+        'Manage User',
+        style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // User Info Card
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
+              border: Border.all(
+                color: Colors.grey.shade300,
+                width: 1,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  user.displayName ?? user.email,
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                  ),
+                ),
+                if (user.displayName != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    user.email,
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 8),
+                _buildRoleBadge(user.role, context),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Change Role Button
+          ElevatedButton.icon(
+            onPressed: onRoleChange,
+            icon: const Icon(Icons.admin_panel_settings),
+            label: const Text('Change Role'),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.all(16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Send Password Reset Button
+          OutlinedButton.icon(
+            onPressed: onPasswordReset,
+            icon: const Icon(Icons.lock_reset),
+            label: const Text('Send Password Reset'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.all(16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Delete User Button
+          OutlinedButton.icon(
+            onPressed: onDelete,
+            icon: const Icon(Icons.delete_forever),
+            label: const Text('Delete User'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.red,
+              side: const BorderSide(color: Colors.red),
+              padding: const EdgeInsets.all(16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
+              ),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Close'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRoleBadge(UserRole role, BuildContext context) {
+    Color color;
+    switch (role) {
+      case UserRole.admin:
+        color = Colors.red;
+        break;
+      case UserRole.moderator:
+        color = Colors.orange;
+        break;
+      case UserRole.public:
+        color = Colors.green;
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(AppStyles.radiusSmall),
+        border: Border.all(
+          color: color.withOpacity(0.5),
+          width: 1,
+        ),
+      ),
+      child: Text(
+        role.displayName,
+        style: GoogleFonts.poppins(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
+      ),
+    );
+  }
+}
+
+class _DeleteConfirmationDialog extends StatefulWidget {
+  final AppUser user;
+
+  const _DeleteConfirmationDialog({required this.user});
+
+  @override
+  State<_DeleteConfirmationDialog> createState() =>
+      _DeleteConfirmationDialogState();
+}
+
+class _DeleteConfirmationDialogState extends State<_DeleteConfirmationDialog> {
+  final TextEditingController _emailController = TextEditingController();
+  bool _acknowledged = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  bool get _canDelete {
+    return _acknowledged &&
+        _emailController.text.trim().toLowerCase() ==
+            widget.user.email.toLowerCase();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppStyles.radiusLarge),
+      ),
+      title: Row(
+        children: [
+          const Icon(Icons.warning, color: Colors.red, size: 28),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Delete User',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w600,
+                color: Colors.red,
+              ),
+            ),
+          ),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Warning Text
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.red.shade50,
+              borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
+              border: Border.all(color: Colors.red.shade200),
+            ),
+            child: Text(
+              'This action is permanent and cannot be undone. The user will be deleted from both Firebase Authentication and Firestore.',
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                color: Colors.red.shade900,
+                height: 1.4,
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // User Email Display
+          Text(
+            'User to delete:',
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              color: Colors.grey.shade700,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.email, size: 20, color: Colors.grey),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    widget.user.email,
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Email Confirmation Field
+          Text(
+            'Type the email address to confirm:',
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _emailController,
+            decoration: InputDecoration(
+              hintText: 'Enter email address',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
+              ),
+              filled: true,
+              fillColor: Theme.of(context).cardColor,
+            ),
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: 20),
+
+          // Acknowledgment Checkbox
+          CheckboxListTile(
+            value: _acknowledged,
+            onChanged: (value) => setState(() => _acknowledged = value ?? false),
+            controlAffinity: ListTileControlAffinity.leading,
+            contentPadding: EdgeInsets.zero,
+            title: Text(
+              'I understand this action is permanent',
+              style: GoogleFonts.poppins(fontSize: 13),
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _canDelete ? () => Navigator.pop(context, true) : null,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red,
+            foregroundColor: Colors.white,
+            disabledBackgroundColor: Colors.grey.shade300,
+          ),
+          child: const Text('Delete User'),
+        ),
+      ],
+    );
   }
 }
 

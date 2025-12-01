@@ -1,0 +1,60 @@
+{
+  "code": 200,
+  "status": "OK",
+  "data": {
+    "timings": {
+      "Fajr": "05:30",
+      "Sunrise": "06:45",
+      "Dhuhr": "13:00",
+      "Asr": "16:30",
+      "Sunset": "19:15",
+      "Maghrib": "19:15",
+      "Isha": "20:45",
+      "Imsak": "05:20",
+      "Midnight": "00:30"
+    },
+    "date": {
+      "readable": "01 Jan 2024",
+      "timestamp": "1704067200",
+      "gregorian": {
+        "date": "01-01-2024",
+        "format": "DD-MM-YYYY",
+        "day": "01",
+        "weekday": {
+          "en": "Monday"
+        },
+        "month": {
+          "number": 1,
+          "en": "January"
+        },
+        "year": "2024"
+      }
+    },
+    "meta": {
+      "latitude": 35.531,
+      "longitude": 139.565,
+      "timezone": "Asia/Tokyo",
+      "method": {
+        "id": 2,
+        "name": "Islamic Society of North America (ISNA)",
+        "params": {
+          "Fajr": 15,
+          "Isha": 15
+        }
+      },
+      "latitudeAdjustmentMethod": "ANGLE_BASED",
+      "midnightMode": "STANDARD",
+      "school": "STANDARD",
+      "offset": {
+        "Fajr": 0,
+        "Sunrise": 0,
+        "Dhuhr": 0,
+        "Asr": 0,
+        "Maghrib": 0,
+        "Sunset": 0,
+        "Isha": 0,
+        "Midnight": 0
+      }
+    }
+  }
+}

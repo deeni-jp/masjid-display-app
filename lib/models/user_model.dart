@@ -139,6 +139,8 @@ class AppUser {
       'role': role.toFirestore(),
       'createdAt': FieldValue.serverTimestamp(),
       'lastLogin': FieldValue.serverTimestamp(),
+      'deleted': false,
+      'active': true,
     };
   }
 
