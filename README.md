@@ -6,6 +6,50 @@ A beautiful, modern Flutter application for displaying prayer times, managing mo
 ![Firebase](https://img.shields.io/badge/Firebase-Firestore-orange.svg)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
 
+## Table of Contents
+
+### Getting Started
+- [Features](#features)
+- [Screenshots](#screenshots)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Installation](#getting-started)
+- [Quick Reference](#quick-reference) ⭐
+
+### Setup & Configuration
+- [Dependencies](#dependencies)
+- [Push Notifications Setup](#push-notifications-setup) ⭐
+  - [Quick Start (5 min)](#quick-start-push-notifications)
+  - [Detailed Setup](#detailed-push-notifications-setup)
+  - [Android](#android-configuration-push)
+  - [iOS](#ios-configuration-push)
+  - [FCM HTTP v1 API](#fcm-http-v1-api-setup)
+  - [Testing](#testing-push-notifications)
+  - [Troubleshooting](#troubleshooting-push-notifications)
+- [CI/CD Pipeline Setup](#cicd-pipeline-setup) ⭐
+- [Firebase Setup](#firebase-setup)
+- [Environment Variables](#environment-variables)
+
+### Development
+- [User Roles & Permissions](#user-roles--permissions)
+- [Notification System](#notification-system)
+- [Configuration](#configuration)
+- [UI Features](#ui-features)
+
+### Deployment & Operations
+- [Troubleshooting](#troubleshooting)
+- [Deployment](#deployment)
+- [CI/CD Automation](#cicd-pipeline-setup)
+- [Security](#security)
+
+### Reference
+- [License](#license)
+- [Contributing](#contributing)
+- [Support](#support)
+- [Changelog](#changelog)
+
+---
+
 ## ✨ Features
 
 ### For All Users
@@ -316,6 +360,30 @@ flutter run
 
 ---
 
+## Quick Reference
+[↑ Back to Top](#table-of-contents)
+
+### I want to...
+- **Get started quickly** → [Installation](#getting-started)
+- **Set up push notifications** → [Quick Start (5 min)](#quick-start-push-notifications)
+- **Configure CI/CD** → [CI/CD Pipeline Setup](#cicd-pipeline-setup)
+- **Deploy the app** → [Deployment](#deployment)
+- **Fix an issue** → [Troubleshooting](#troubleshooting)
+- **Configure prayer times** → [Configuration](#configuration)
+- **Manage users** → [User Roles](#user-roles--permissions)
+
+### Platform-Specific Guides
+- **Android Setup** → [Android Configuration](#android-configuration-push)
+- **iOS Setup** → [iOS Configuration](#ios-configuration-push)
+
+### Advanced Topics
+- **FCM HTTP v1 API** → [FCM Setup](#fcm-http-v1-api-setup)
+- **Cloud Functions** → [Push Notifications](#push-notifications-setup)
+- **Environment Variables** → [Environment Variables](#environment-variables)
+- **Security Best Practices** → [Security](#security)
+
+---
+
 ## 📦 Dependencies
 
 ```yaml
@@ -345,6 +413,536 @@ dependencies:
   google_fonts: ^5.0.0
   win32: ^5.15.0
 ```
+
+---
+---
+
+## Push Notifications Setup
+[↑ Back to Top](#table-of-contents)
+
+> **Quick Links:** [Quick Start (5 min)](#quick-start-push-notifications) | [Android](#android-configuration-push) | [iOS](#ios-configuration-push) | [FCM Setup](#fcm-http-v1-api-setup) | [Testing](#testing-push-notifications) | [Troubleshooting](#troubleshooting-push-notifications)
+
+This app uses **Firebase Cloud Messaging (FCM) HTTP v1 API** to send push notifications to users when admins create or activate announcements.
+
+### Overview
+
+**What it does:**
+- 📱 Sends push notifications when admins create/activate notifications
+- 🔔 Works in foreground, background, and when app is terminated
+- 🎯 Subscribes users to topic-based notifications
+- ✅ Automatic permission requests on login
+- 🧹 Cleans up on logout
+
+**Why FCM HTTP v1 API?**
+
+| Feature | Legacy API | HTTP v1 API ✅ |
+|---------|-----------|----------------|
+| **Status** | ❌ Deprecated (June 2024) | ✅ Current |
+| **Authentication** | Server Key | OAuth 2.0 |
+| **Security** | Lower | Higher |
+| **Features** | Limited | Full featured |
+
+---
+
+### Quick Start (5 Minutes)
+**For users who want to get started quickly**
+
+> 💡 For detailed explanations and troubleshooting, see [Detailed Setup](#detailed-push-notifications-setup) below
+
+#### 1. Install Dependencies
+
+```bash
+flutter pub get
+```
+
+#### 2. Android Setup (3 minutes)
+
+1. Update `android/app/build.gradle`:
+   ```gradle
+   minSdkVersion 21  // Make sure this is at least 21
+   ```
+
+2. Add to `android/app/src/main/AndroidManifest.xml` inside `<application>` tag:
+   ```xml
+   <meta-data
+       android:name="com.google.firebase.messaging.default_notification_channel_id"
+       android:value="high_importance_channel" />
+   ```
+
+3. Add permissions before `<application>` tag:
+   ```xml
+   <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+   <uses-permission android:name="android.permission.VIBRATE" />
+   ```
+
+#### 3. iOS Setup (5 minutes)
+
+1. Open `ios/Runner.xcworkspace` in Xcode
+2. Select Runner → Signing & Capabilities
+3. Click "+ Capability" → Add "Push Notifications"
+4. Click "+ Capability" → Add "Background Modes"
+5. Check "Remote notifications" and "Background fetch"
+6. Upload APNs key to Firebase Console (Project Settings → Cloud Messaging)
+
+#### 4. FCM HTTP v1 API Setup (10 minutes)
+
+See [FCM HTTP v1 API Setup](#fcm-http-v1-api-setup) below for complete instructions.
+
+Quick version:
+1. Generate service account credentials from Firebase Console
+2. Add credentials to `.env` file (see section below)
+3. Enable Firebase Cloud Messaging API in Google Cloud Console
+
+#### 5. Deploy Cloud Functions (2 minutes)
+
+```bash
+cd functions
+npm install
+firebase login
+firebase use --add  # Select your project
+firebase deploy --only functions
+```
+
+#### 6. Test It!
+
+1. Run the app: `flutter run`
+2. Log in as a user
+3. Check console for "FCM Token: ..."
+4. Create a notification as admin
+5. Check if you receive the push notification! 🎉
+
+---
+
+### Detailed Push Notifications Setup
+
+#### 1. Install Dependencies
+
+The dependencies have already been added to `pubspec.yaml`. Run:
+
+```bash
+flutter pub get
+```
+
+This will install:
+- `firebase_messaging: ^15.1.5` - Firebase Cloud Messaging
+- `flutter_local_notifications: ^18.0.1` - Local notifications for foreground messages
+
+---
+
+#### 2. Android Configuration (DETAILED)
+<a id="android-configuration-push"></a>
+
+##### Update `android/app/build.gradle`
+
+Make sure your `minSdkVersion` is at least 21:
+
+```gradle
+android {
+    defaultConfig {
+        minSdkVersion 21  // Changed from 19 if needed
+        targetSdkVersion flutter.targetSdkVersion
+    }
+}
+```
+
+##### Update `android/app/src/main/AndroidManifest.xml`
+
+Add the following permissions and intent filter:
+
+```xml
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Add these permissions -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+
+    <application
+        android:label="Prayer App"
+        android:name="${applicationName}"
+        android:icon="@mipmap/ic_launcher">
+
+        <activity
+            android:name=".MainActivity"
+            <!-- ... existing config ... -->
+
+            <!-- Add this intent filter inside the MainActivity -->
+            <intent-filter>
+                <action android:name="FLUTTER_NOTIFICATION_CLICK" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- Add FCM default channel -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="high_importance_channel" />
+
+        <!-- Don't delete the meta-data below. This is used by the Flutter tool -->
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2" />
+    </application>
+</manifest>
+```
+
+##### Verify `google-services.json`
+
+Ensure `google-services.json` is in `android/app/` directory and contains your Firebase configuration.
+
+---
+
+#### 3. iOS Configuration (DETAILED)
+<a id="ios-configuration-push"></a>
+
+##### Enable Push Notifications Capability
+
+1. Open your iOS project in Xcode (`ios/Runner.xcworkspace`)
+2. Select the `Runner` project in the navigator
+3. Go to **Signing & Capabilities** tab
+4. Click **+ Capability**
+5. Add **Push Notifications**
+6. Add **Background Modes** and check:
+   - Remote notifications
+   - Background fetch
+
+##### Update `ios/Runner/Info.plist`
+
+Add notification permissions:
+
+```xml
+<dict>
+    <!-- Add these keys -->
+    <key>UIBackgroundModes</key>
+    <array>
+        <string>fetch</string>
+        <string>remote-notification</string>
+    </array>
+
+    <!-- Existing keys... -->
+</dict>
+```
+
+##### APNs Certificate
+
+1. Go to [Apple Developer Portal](https://developer.apple.com/account/)
+2. Navigate to **Certificates, Identifiers & Profiles**
+3. Create an APNs authentication key or certificate
+4. Upload the key/certificate to your Firebase Project:
+   - Go to Firebase Console → Project Settings → Cloud Messaging
+   - Upload APNs Authentication Key or APNs Certificate
+
+The app will automatically request notification permissions when the user logs in.
+
+---
+
+#### 4. FCM HTTP v1 API Setup
+<a id="fcm-http-v1-api-setup"></a>
+
+The app uses the modern **FCM HTTP v1 API** with OAuth2 authentication for enhanced security.
+
+##### Step 1: Get Service Account Credentials
+
+1. Go to [Firebase Console](https://console.firebase.google.com/)
+2. Select your project
+3. Click ⚙️ gear icon → **Project settings**
+4. Go to the **Service accounts** tab
+5. Click **Generate new private key**
+6. Click **Generate key** (a JSON file will download)
+7. **IMPORTANT**: Keep this file secure! Don't commit it to Git
+
+The downloaded file will look like this:
+```json
+{
+  "type": "service_account",
+  "project_id": "your-project-id",
+  "private_key_id": "abc123...",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIE...\n-----END PRIVATE KEY-----\n",
+  "client_email": "firebase-adminsdk-xxxxx@your-project.iam.gserviceaccount.com",
+  ...
+}
+```
+
+##### Step 2: Add Credentials to .env File
+
+The app uses environment variables for FCM credentials (managed by `lib/services/fcm_notification_sender.dart`). Add the service account details to your `.env` file:
+
+```env
+# FCM Service Account Credentials
+FCM_PROJECT_ID=your-project-id
+FCM_PRIVATE_KEY_ID=your-private-key-id
+FCM_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYOUR_PRIVATE_KEY_HERE\n-----END PRIVATE KEY-----\n"
+FCM_CLIENT_EMAIL=firebase-adminsdk-xxxxx@your-project.iam.gserviceaccount.com
+FCM_CLIENT_ID=your-client-id
+FCM_AUTH_URI=https://accounts.google.com/o/oauth2/auth
+FCM_TOKEN_URI=https://oauth2.googleapis.com/token
+FCM_AUTH_PROVIDER_CERT_URL=https://www.googleapis.com/oauth2/v1/certs
+FCM_CLIENT_CERT_URL=https://www.googleapis.com/robot/v1/metadata/x509/...
+FCM_UNIVERSE_DOMAIN=googleapis.com
+```
+
+**IMPORTANT Notes:**
+- Make sure `.env` is in `.gitignore` (it already is)
+- The `fcm_notification_sender.dart` service reads from these environment variables
+- Keep newlines in the private key properly escaped with `\n`
+- Copy values exactly from the downloaded JSON file
+
+##### Step 3: Enable Firebase Cloud Messaging API
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Select your project
+3. Go to **APIs & Services** → **Library**
+4. Search for "Firebase Cloud Messaging API"
+5. Click on it and click **Enable**
+
+**This step is required** - the app will return a 403 error if this API is not enabled.
+
+---
+
+#### 5. Cloud Functions Setup
+
+Cloud Functions automatically send push notifications when admins create or activate notifications.
+
+##### Initialize and Deploy
+
+```bash
+cd functions
+npm install
+firebase login
+firebase use --add  # Select your project
+firebase deploy --only functions
+```
+
+This deploys three functions:
+- `sendNotificationOnCreate` - Sends push notification when a notification is created
+- `sendNotificationOnUpdate` - Sends push notification when a notification is activated
+- `sendTargetedNotification` - Allows admins to send targeted notifications to specific users
+
+##### Verify Deployment
+
+Check the Firebase Console → Functions to verify the functions are deployed successfully.
+
+**Note:** Cloud Functions require a Blaze (pay-as-you-go) plan, but costs are minimal (~$0.40 per million invocations).
+
+---
+
+### Testing Push Notifications
+<a id="testing-push-notifications"></a>
+
+#### Test 1: Foreground Notification
+
+1. Launch the app and log in as a user
+2. Keep the app in the foreground
+3. As an admin, create a new notification from the Notifications tab
+4. You should see a local notification appear at the top of the screen
+
+#### Test 2: Background Notification
+
+1. Launch the app and log in as a user
+2. Press home button to send app to background
+3. As an admin, create a new notification
+4. You should receive a system notification
+
+#### Test 3: Terminated App Notification
+
+1. Log in as a user
+2. Force-quit the app completely
+3. As an admin, create a new notification
+4. You should receive a system notification
+5. Tap the notification to open the app
+
+#### Test 4: Firebase Console Test
+
+1. Go to Firebase Console → Cloud Messaging
+2. Click "Send your first message"
+3. Enter title and text
+4. Click "Send test message"
+5. Enter your FCM token (from app console logs)
+6. Click "Test"
+
+#### Expected Behavior
+
+**When notification is received:**
+- ✅ System notification appears with title and message
+- ✅ App badge updates (iOS)
+- ✅ Sound plays (based on priority)
+- ✅ Notification stored in Firestore
+- ✅ Console logs show: "✅ Push notification sent successfully"
+
+**Success Indicators:**
+- FCM token is printed in console on login: "FCM Token: ..."
+- Firestore `users` collection has `fcmToken` field populated
+- Console shows "Push notifications initialized successfully"
+- Notifications appear on device within 1-2 seconds
+- Cloud Functions logs show successful execution (Firebase Console → Functions → Logs)
+
+---
+
+### Troubleshooting Push Notifications
+<a id="troubleshooting-push-notifications"></a>
+
+#### Common Error Codes
+
+| Error Code | Issue | Solution |
+|------------|-------|----------|
+| **403 Permission Denied** | FCM API not enabled | Enable Firebase Cloud Messaging API in Google Cloud Console → APIs & Services → Library |
+| **401 Unauthorized** | Invalid service account credentials | Verify FCM credentials in `.env` file match the downloaded JSON exactly. Check for extra spaces or newline issues in `FCM_PRIVATE_KEY` |
+| **404 Not Found** | Wrong project ID or endpoint | Check `FCM_PROJECT_ID` in `.env` matches your Firebase project. Verify you're using v1 API endpoint |
+| **Missing credentials** | Service account not configured | Ensure all `FCM_*` variables are set in `.env` file. Run `flutter clean` and rebuild |
+
+#### General Issues
+
+**Not receiving notifications?**
+1. Check FCM token is printed in console on login
+2. Verify Cloud Functions are deployed (Firebase Console → Functions)
+3. Make sure notification is `active: true` in Firestore
+4. Check notification hasn't expired (`expiryDate` field)
+5. Verify user's `fcmToken` field exists in Firestore `users` collection
+6. Check Firebase Console → Functions → Logs for errors
+
+**Console shows "⚠️ FCM credentials not configured"?**
+1. Make sure `.env` file exists in project root directory
+2. Verify all `FCM_*` variables are set with correct values
+3. Check private key format: must include `\n` for newlines
+4. Run `flutter clean` and rebuild the app
+5. Restart your IDE/editor to reload environment variables
+
+**Notifications working inconsistently?**
+- Check device battery optimization settings (Android)
+- Verify app is not in "Do Not Disturb" mode
+- Check notification permission is granted in device Settings
+- Ensure stable internet connection
+
+#### Android-Specific Issues
+
+**Notification not showing?**
+- Grant notification permission: Settings → Apps → Prayer App → Permissions → Notifications
+- Check notification channels are enabled
+- Verify `minSdkVersion 21` or higher in `build.gradle`
+- Check `google-services.json` is in `android/app/` directory
+- Clear app data and re-login to re-request permissions
+
+**Android Priority Error (Fixed)?**
+- The latest version uses `_getAndroidPriority()` which returns "HIGH" or "NORMAL"
+- These values comply with FCM v1 API requirements
+- If you see "max" or "default" in logs, update to the latest code
+
+**Web warnings in console?**
+- These are expected when running on Android/iOS
+- The app gracefully handles platform-specific initialization
+- Safe to ignore warnings about web configuration
+
+#### iOS-Specific Issues
+
+**Not receiving notifications?**
+- Upload APNs key to Firebase Console: Project Settings → Cloud Messaging → iOS app → APNs Authentication Key
+- Check Push Notifications capability is added in Xcode (Runner → Signing & Capabilities)
+- Verify Background Modes are enabled with "Remote notifications" and "Background fetch" checked
+- Grant notification permission when prompted on first login
+- Check `Info.plist` has `UIBackgroundModes` array with correct values
+
+**Notifications work in simulator but not on device?**
+- Simulator has limited push notification support
+- Always test on a physical iOS device for accurate results
+- Ensure device has internet connection
+- Check device is not in Low Power Mode (can delay notifications)
+
+**APNs certificate/key issues?**
+- Use APNs Authentication Key (recommended) instead of certificate
+- Ensure the key is uploaded for the correct bundle identifier
+- Verify the key hasn't expired
+- Check the key has the correct permissions in Apple Developer Portal
+
+#### Cloud Functions Issues
+
+**Functions not deploying?**
+- Run `firebase login` and ensure you're logged in with correct account
+- Check you've selected the correct project: `firebase use --add`
+- Verify you're on a Blaze (pay-as-you-go) plan (required for Cloud Functions)
+- Check for syntax errors in `functions/index.js`
+- Try deploying individual functions: `firebase deploy --only functions:sendNotificationOnCreate`
+
+**Functions deployed but notifications not sending?**
+- Check Firebase Console → Functions → Logs for errors
+- Verify the function is triggered when creating notifications (check logs timestamp)
+- Ensure FCM credentials are configured in `.env`
+- Check Firestore rules allow Cloud Functions to read user tokens
+- Verify notification document has required fields: `title`, `message`, `active: true`
+
+**Cloud Functions timeout errors?**
+- Increase timeout in `functions/index.js`: `{ timeoutSeconds: 60 }`
+- Check if too many users are being notified at once
+- Consider batching notifications for large user bases
+
+---
+
+### Security Best Practices
+
+#### Environment Variables (Current Approach) ✅
+
+The app uses environment variables for FCM credentials, managed by `lib/services/fcm_notification_sender.dart`.
+
+**Advantages:**
+- ✅ Credentials not in source code
+- ✅ `.env` is gitignored automatically
+- ✅ Easy to manage different credentials per environment
+- ✅ No risk of accidentally committing secrets
+- ✅ Simple OAuth2 token management with automatic refresh
+
+**Security Checklist:**
+- [ ] `.env` file is in `.gitignore`
+- [ ] FCM credentials are in `.env` file (not in source code)
+- [ ] `.env.example` documents required variables without actual values
+- [ ] Production `.env` is never committed to Git
+- [ ] Team members have their own `.env` files
+- [ ] Service account JSON file is stored securely (not in project directory)
+- [ ] Access to Firebase Console is restricted to authorized personnel
+
+#### Alternative: Firestore Storage
+
+For maximum security in production environments, you can store credentials server-side:
+
+**Approach:**
+1. Store service account JSON in Firestore with admin-only access rules
+2. Fetch credentials on app startup (requires admin authentication)
+3. Cache credentials securely in memory
+4. Refresh OAuth2 tokens as needed
+
+**Trade-offs:**
+- ✅ More secure (credentials server-side only)
+- ✅ Centralized credential management
+- ❌ More complex setup and maintenance
+- ❌ Requires admin login before sending notifications
+- ❌ Additional Firestore reads
+
+**When to use:**
+- Production apps with high security requirements
+- Apps with multiple admins needing credential rotation
+- Environments where client-side credentials are prohibited
+
+#### Cost Comparison
+
+**Using FCM Direct (Current Approach):**
+- ✅ Free tier: Unlimited notifications
+- ✅ No Cloud Functions required for sending (can send from app)
+- ✅ OAuth2 authentication from app
+- ✅ Minimal infrastructure costs
+
+**Using Cloud Functions Only:**
+- Cloud Functions required (Blaze plan)
+- Small cost per function invocation (~$0.40 per million invocations)
+- Better for complex notification logic and server-side validation
+- Separates notification logic from client app
+
+**Hybrid Approach (Recommended - Current Implementation):**
+- Direct FCM for immediate, user-triggered notifications (free)
+- Cloud Functions for automatic triggers on Firestore changes (minimal cost)
+- Best balance of cost, security, and functionality
+
+**Estimated Monthly Costs:**
+- Up to 1,000 users: ~$0 (within free tier)
+- 1,000-10,000 users: ~$1-5/month
+- 10,000+ users: ~$5-20/month
 
 ---
 
@@ -544,7 +1142,7 @@ final method = EnvConfig.aladhanApiMethod;
 
 **8. CI/CD build failures**
 
-- Review [CI_CD_SETUP.md](CI_CD_SETUP.md) for detailed troubleshooting
+- Review [CI/CD Pipeline Setup](#cicd-pipeline-setup) for detailed troubleshooting
 - Ensure all GitHub Secrets are configured
 - Verify `.env` file is created in CI workflow
 - Check `firebase_options.dart` is committed to repository
@@ -553,7 +1151,7 @@ final method = EnvConfig.aladhanApiMethod;
 
 ## 🚀 Deployment
 
-For detailed CI/CD setup and deployment instructions, see [CI_CD_SETUP.md](CI_CD_SETUP.md).
+For detailed CI/CD setup and deployment instructions, see [CI/CD Pipeline Setup](#cicd-pipeline-setup).
 
 ### Manual Builds
 
@@ -588,7 +1186,7 @@ The project includes CI/CD pipeline that automatically:
 - Deploys Firestore rules to Firebase
 - Creates GitHub releases on version tags
 
-See [CI_CD_SETUP.md](CI_CD_SETUP.md) for:
+See [CI/CD Pipeline Setup](#cicd-pipeline-setup) for:
 - Setting up GitHub Secrets
 - Configuring Firebase deployment
 - Troubleshooting build issues
@@ -610,6 +1208,385 @@ The app is designed to run as a kiosk display on Raspberry Pi:
 - Systemd service for auto-start
 
 ---
+---
+
+## CI/CD Pipeline Setup
+[↑ Back to Top](#table-of-contents)
+
+This project uses GitHub Actions for continuous integration and continuous deployment, automating builds, tests, and deployments.
+
+### Overview
+
+The CI/CD pipeline automatically:
+- ✅ Runs code analysis and tests
+- ✅ Builds Android APK and App Bundle
+- ✅ Builds iOS app
+- ✅ Deploys Firestore rules and Cloud Functions
+- ✅ Creates GitHub releases on version tags
+
+### Fixes Applied
+
+#### 1. Environment File Issue ✅
+**Problem**: The `.env` file is required as an asset but gitignored, causing CI builds to fail.
+
+**Solution**: CI now automatically creates a `.env` file during builds with default values.
+
+#### 2. Firebase Configuration ✅
+**Problem**: `firebase_options.dart` was gitignored, making it unavailable in CI.
+
+**Solution**: Removed `firebase_options.dart` from `.gitignore`. This is safe because:
+- Firebase client API keys are meant to be public
+- Firebase Security Rules protect your backend
+- This is the recommended approach by Google/Firebase
+
+---
+
+### Required GitHub Secrets
+
+Set these secrets in your GitHub repository: **Settings** → **Secrets and variables** → **Actions**
+
+#### Android Build Secrets
+
+| Secret Name | Description | How to Get |
+|-------------|-------------|------------|
+| `ANDROID_KEYSTORE_BASE64` | Base64-encoded keystore file | See instructions below |
+| `KEYSTORE_PASSWORD` | Keystore password | Created when generating keystore |
+| `KEY_PASSWORD` | Key password | Created when generating keystore |
+| `KEY_ALIAS` | Key alias | Created when generating keystore |
+
+#### Firebase Deployment Secret
+
+| Secret Name | Description | How to Get |
+|-------------|-------------|------------|
+| `FIREBASE_TOKEN` | Firebase CLI token for deployments | Run `firebase login:ci` |
+
+---
+
+### Generating Required Secrets
+
+#### 1. Android Keystore
+
+**Create Keystore** (if you don't have one):
+```bash
+keytool -genkey -v -keystore upload-keystore.jks \
+  -keyalg RSA -keysize 2048 -validity 10000 \
+  -alias upload
+```
+
+Follow the prompts to set:
+- Keystore password
+- Key password
+- Your name and organization details
+
+**Convert to Base64**:
+```bash
+# On Linux/Mac
+base64 upload-keystore.jks | tr -d '\n'
+
+# On Windows (PowerShell)
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("upload-keystore.jks"))
+```
+
+Copy the output and add it as `ANDROID_KEYSTORE_BASE64` secret in GitHub.
+
+**⚠️ Important**: Store the keystore file securely - you'll need it for all future app updates!
+
+#### 2. Firebase Token
+
+```bash
+# Login to Firebase CLI
+firebase login:ci
+```
+
+This will:
+1. Open your browser for authentication
+2. Generate a token
+3. Print the token in your terminal
+
+Copy the token and add it as `FIREBASE_TOKEN` secret in GitHub.
+
+---
+
+### Workflow Jobs
+
+#### 1. Analyze Job
+**Triggers**: Every push and pull request
+
+**Steps**:
+- Creates `.env` file with default values
+- Installs Flutter dependencies
+- Verifies code formatting
+- Runs static analysis (`flutter analyze`)
+- Executes tests with coverage
+
+**Purpose**: Ensure code quality before building
+
+#### 2. Build Android Job
+**Triggers**: After analyze succeeds on `main` or `develop` branches
+
+**Steps**:
+- Creates `.env` file
+- Decodes keystore from base64
+- Configures signing properties
+- Builds release APK: `flutter build apk --release`
+- Builds App Bundle: `flutter build appbundle --release`
+- Uploads build artifacts
+- Cleans up sensitive files (keystore, signing configs)
+
+**Outputs**:
+- `app-release.apk`
+- `app-release.aab`
+
+#### 3. Build iOS Job
+**Triggers**: After analyze succeeds on `main` or `develop` branches
+
+**Steps**:
+- Creates `.env` file
+- Installs CocoaPods dependencies
+- Builds iOS without code signing: `flutter build ios --release --no-codesign`
+- Uploads build artifacts
+
+**Note**: Code signing for iOS typically requires a macOS runner and Apple Developer certificates.
+
+#### 4. Deploy Firebase Job
+**Triggers**: After successful Android build on `main` branch only
+
+**Steps**:
+- Installs Firebase CLI
+- Authenticates using `FIREBASE_TOKEN`
+- Deploys Firestore security rules: `firebase deploy --only firestore:rules`
+- Deploys Firestore indexes: `firebase deploy --only firestore:indexes`
+
+**Purpose**: Keep Firestore configuration in sync with production
+
+#### 5. Release Job (Optional)
+**Triggers**: When you push a version tag (e.g., `v1.0.0`, `v1.1.0`)
+
+**Steps**:
+- Creates GitHub release
+- Attaches APK and App Bundle to release
+- Generates release notes from tag
+
+**Usage**:
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+---
+
+### Local Development Setup
+
+#### Initial Setup
+
+1. **Copy environment template**:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. **Generate Firebase configuration** (if not already done):
+   ```bash
+   flutterfire configure
+   ```
+   This creates/updates `firebase_options.dart`
+
+3. **Install dependencies**:
+   ```bash
+   flutter pub get
+   ```
+
+#### Environment Files
+
+**`.env` file** (gitignored):
+- Contains environment-specific configuration
+- Never commit this file
+- Required for local development and CI builds
+- Example variables: `ALADHAN_API_METHOD`, `ALADHAN_SCHOOL`, `FCM_*` credentials
+
+**`firebase_options.dart`** (committed):
+- Contains Firebase project configuration
+- Public API keys (safe to commit)
+- Generated by FlutterFire CLI
+- Protected by Firebase Security Rules
+
+---
+
+### Troubleshooting
+
+#### Build Fails with "No file found for asset: .env"
+
+**Solution**: The CI workflow creates this file automatically. Locally:
+```bash
+cp .env.example .env
+```
+
+#### Firebase Initialization Fails
+
+**Solutions**:
+1. Ensure `firebase_options.dart` is committed to repository
+2. Run `flutterfire configure` to regenerate
+3. Verify Firebase project ID matches
+
+#### Android Build Fails in CI
+
+**Common issues**:
+1. **Keystore secret malformed**: Ensure base64 encoding has no line breaks
+2. **Wrong password**: Double-check `KEYSTORE_PASSWORD` and `KEY_PASSWORD`
+3. **Missing secret**: Verify all 4 Android secrets are set
+
+**Debug steps**:
+```bash
+# Verify your keystore locally
+keytool -list -v -keystore upload-keystore.jks
+```
+
+#### Firebase Deployment Fails
+
+**Common issues**:
+1. **Invalid token**: Run `firebase login:ci` again to get a new token
+2. **Wrong project**: Check Firebase project ID in `.firebaserc`
+3. **Insufficient permissions**: Ensure Firebase account has deployment permissions
+
+**Debug steps**:
+```bash
+# Test deployment locally
+firebase deploy --only firestore:rules --token YOUR_TOKEN
+```
+
+#### iOS Build Fails
+
+**Common issues**:
+1. **CocoaPods errors**: The workflow handles pod installation automatically
+2. **Code signing**: iOS builds in CI use `--no-codesign` flag
+3. **Platform version**: Ensure `ios/Podfile` has correct platform version
+
+---
+
+### Environment Variables in CI
+
+The workflow automatically creates a `.env` file with these variables:
+
+```env
+# API Configuration
+ALADHAN_API_METHOD=3
+ALADHAN_SCHOOL=1
+
+# FCM credentials would go here (if needed for CI builds)
+# For security, consider using GitHub Secrets for sensitive values
+```
+
+To add more environment variables to CI:
+1. Add them to the workflow file's "Create .env file" step
+2. Or, add them as GitHub Secrets and reference them in the workflow
+
+---
+
+### Workflow Customization
+
+The workflow file is located at: `.github/workflows/flutter_ci.yml`
+
+**Common customizations**:
+
+#### Change Trigger Branches
+```yaml
+on:
+  push:
+    branches: [ main, develop, staging ]  # Add more branches
+```
+
+#### Add Slack/Discord Notifications
+```yaml
+- name: Notify on success
+  if: success()
+  run: |
+    curl -X POST -H 'Content-type: application/json' \
+    --data '{"text":"Build succeeded!"}' \
+    ${{ secrets.SLACK_WEBHOOK }}
+```
+
+#### Deploy Cloud Functions
+Add to the deploy job:
+```yaml
+- name: Deploy Cloud Functions
+  run: firebase deploy --only functions --token ${{ secrets.FIREBASE_TOKEN }}
+```
+
+---
+
+### Best Practices
+
+#### Security
+- ✅ Never commit `.env` file
+- ✅ Store all secrets in GitHub Secrets
+- ✅ Rotate Firebase tokens periodically
+- ✅ Keep keystore file backed up securely
+- ✅ Use different keystores for debug/release builds
+
+#### Performance
+- ✅ Cache Flutter dependencies to speed up builds
+- ✅ Run jobs in parallel when possible
+- ✅ Only deploy on `main` branch to avoid unnecessary deployments
+
+#### Maintenance
+- ✅ Keep GitHub Actions versions updated
+- ✅ Monitor build times and optimize slow steps
+- ✅ Review workflow logs for warnings
+- ✅ Test workflow changes on a separate branch first
+
+---
+
+### CI/CD Pipeline Flow
+
+```
+Push to GitHub
+    ↓
+[Analyze Job]
+    ├── Create .env
+    ├── Install dependencies
+    ├── Run flutter analyze
+    └── Run tests
+    ↓
+┌───────────────────┐
+│ On main/develop   │
+└───────────────────┘
+    ↓
+[Build Android]          [Build iOS]
+    ├── Decode keystore      ├── Create .env
+    ├── Build APK            ├── Pod install
+    ├── Build AAB            └── Build iOS
+    └── Upload artifacts         ↓
+    ↓                         Upload artifacts
+[Deploy Firebase]
+(main branch only)
+    ├── Deploy rules
+    └── Deploy indexes
+    ↓
+[Create Release]
+(on version tag)
+    ├── Create GitHub release
+    └── Attach build artifacts
+```
+
+---
+
+### Monitoring Builds
+
+**View build status**:
+- Go to your GitHub repository
+- Click "Actions" tab
+- See all workflow runs and their status
+
+**Build badges** (add to README):
+```markdown
+![CI](https://github.com/YOUR_USERNAME/YOUR_REPO/workflows/Flutter%20CI/badge.svg)
+```
+
+**Email notifications**:
+- GitHub sends emails on build failures by default
+- Configure in: GitHub Settings → Notifications
+
+---
+
 
 ## 📊 Analytics & Monitoring
 
