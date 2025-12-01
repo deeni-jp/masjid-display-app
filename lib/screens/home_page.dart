@@ -158,17 +158,28 @@ class _HomePageState extends State<HomePage> {
       // Get location
       final locationData = await LocationService.getCurrentLocation();
 
-      // Fetch prayer times
+      // Fetch prayer times (Waqt times from API)
       final schedule = await PrayerService.fetchByCoordinates(
         latitude: locationData.latitude,
         longitude: locationData.longitude,
       );
 
-      // Merge with cached iqama times if available
-      final cachedIqama = await StorageService.getIqamaTimes();
+      // Try to fetch iqama times from Firebase (source of truth)
+      Map<String, String> iqamaMap = {};
+      try {
+        iqamaMap = await FirebaseService.getIqamaTimes();
+        debugPrint('Fetched iqama from Firebase: ${iqamaMap.length} prayers');
+      } catch (e) {
+        debugPrint('Failed to fetch iqama from Firebase: $e');
+      }
+
+      // If DB is empty (first boot), use waqt times as initial iqama
+      // Otherwise, use the fetched iqama times from DB
+      final finalIqamaMap = iqamaMap.isNotEmpty ? iqamaMap : schedule.timings;
+
       final mergedSchedule = PrayerSchedule(
         timings: schedule.timings,
-        iqamaMap: cachedIqama.isNotEmpty ? cachedIqama : schedule.iqamaMap,
+        iqamaMap: finalIqamaMap,
       );
 
       setState(() {
@@ -178,8 +189,8 @@ class _HomePageState extends State<HomePage> {
         _showLoadingOverlay = false;
       });
 
-      // Save to cache
-      await StorageService.saveIqamaTimes(mergedSchedule.iqamaMap);
+      // Save iqama times to cache
+      await StorageService.saveIqamaTimes(finalIqamaMap);
 
       // Apply theme based on sunset
       await _applyThemeBySunset();

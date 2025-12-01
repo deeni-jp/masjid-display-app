@@ -128,6 +128,183 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
+  Future<void> _showForgotPasswordDialog() async {
+    final emailController = TextEditingController(
+      text: _emailController.text.trim(),
+    );
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        bool isLoading = false;
+        String? errorMsg;
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppStyles.radiusLarge),
+              ),
+              title: Text(
+                'Reset Password',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Enter your email address and we\'ll send you a link to reset your password.',
+                    style:
+                        GoogleFonts.poppins(fontSize: 14, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Error message
+                  if (errorMsg != null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.red.withOpacity(0.3)),
+                      ),
+                      child: Text(
+                        errorMsg!,
+                        style: GoogleFonts.poppins(
+                            fontSize: 12, color: Colors.red),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+
+                  // Email field
+                  TextField(
+                    controller: emailController,
+                    decoration: InputDecoration(
+                      labelText: 'Email',
+                      prefixIcon: const Icon(Icons.email_outlined),
+                      border: OutlineInputBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppStyles.radiusMedium),
+                      ),
+                    ),
+                    keyboardType: TextInputType.emailAddress,
+                    autocorrect: false,
+                    enabled: !isLoading,
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isLoading
+                      ? null
+                      : () => Navigator.pop(dialogContext, false),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                          final email = emailController.text.trim();
+
+                          // Validation
+                          if (email.isEmpty) {
+                            setDialogState(
+                                () => errorMsg = 'Please enter your email');
+                            return;
+                          }
+                          if (!email.contains('@') || !email.contains('.')) {
+                            setDialogState(
+                                () => errorMsg = 'Please enter a valid email');
+                            return;
+                          }
+
+                          // Send reset email
+                          setDialogState(() {
+                            isLoading = true;
+                            errorMsg = null;
+                          });
+
+                          try {
+                            await FirebaseAuth.instance
+                                .sendPasswordResetEmail(email: email);
+                            if (dialogContext.mounted) {
+                              Navigator.pop(dialogContext, true);
+                            }
+                          } on FirebaseAuthException catch (e) {
+                            String message = 'Failed to send reset email';
+
+                            switch (e.code) {
+                              case 'user-not-found':
+                                message = 'No account found with this email';
+                                break;
+                              case 'invalid-email':
+                                message = 'Invalid email address';
+                                break;
+                              case 'too-many-requests':
+                                message =
+                                    'Too many attempts. Please try again later';
+                                break;
+                              default:
+                                message = e.message ?? message;
+                            }
+
+                            setDialogState(() {
+                              isLoading = false;
+                              errorMsg = message;
+                            });
+                          } catch (e) {
+                            setDialogState(() {
+                              isLoading = false;
+                              errorMsg = 'An error occurred. Please try again';
+                            });
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryGreen,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: isLoading
+                      ? const SizedBox(
+                          height: 16,
+                          width: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Text('Send Reset Link'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    // Dispose controller after dialog closes
+    emailController.dispose();
+
+    // Show success message if email was sent
+    if (result == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Password reset email sent! Check your inbox',
+            style: GoogleFonts.poppins(),
+          ),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -295,6 +472,30 @@ class _AuthScreenState extends State<AuthScreen> {
               return null;
             },
           ),
+
+          // Forgot Password Link (Login only)
+          if (_isLogin) ...[
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: _isLoading ? null : _showForgotPasswordDialog,
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(0, 0),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  'Forgot Password?',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    color: AppColors.primaryGreen,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ),
+          ],
 
           // Confirm Password (Sign Up only)
           if (!_isLogin) ...[

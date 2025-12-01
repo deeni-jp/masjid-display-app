@@ -280,7 +280,7 @@ class _NotificationsTabState extends State<NotificationsTab> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text('Cancel', style: GoogleFonts.poppins()),
+            child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(dialogContext, true),
@@ -288,10 +288,7 @@ class _NotificationsTabState extends State<NotificationsTab> {
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
             ),
-            child: Text(
-              'Delete',
-              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-            ),
+            child: const Text('Delete'),
           ),
         ],
       ),
@@ -572,7 +569,7 @@ class _NotificationsTabState extends State<NotificationsTab> {
                           TextButton(
                             onPressed: () =>
                                 Navigator.pop(dialogContext, false),
-                            child: Text('Cancel', style: GoogleFonts.poppins()),
+                            child: const Text('Cancel'),
                           ),
                           const SizedBox(width: 8),
                           ElevatedButton(
@@ -595,8 +592,6 @@ class _NotificationsTabState extends State<NotificationsTab> {
                             ),
                             child: Text(
                               isEditing ? 'Update' : 'Create',
-                              style: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.w600),
                             ),
                           ),
                         ],
@@ -612,6 +607,7 @@ class _NotificationsTabState extends State<NotificationsTab> {
     );
 
     if (result != true) {
+      // Dispose controllers after dialog closes
       titleController.dispose();
       messageController.dispose();
       return;

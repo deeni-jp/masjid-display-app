@@ -101,12 +101,14 @@ class PrayerTime {
   }
 
   /// Create PrayerTime from raw timings map
+  /// If iqamaMap is empty or doesn't have the prayer, fallback to waqt (for initial setup)
   factory PrayerTime.fromMaps({
     required String name,
     required Map<String, String> timings,
     required Map<String, String> iqamaMap,
   }) {
     final waqt = timings[name] ?? '-';
+    // Fallback to waqt only if iqamaMap doesn't have this prayer (initial setup)
     final iqama = iqamaMap[name] ?? waqt;
     return PrayerTime(name: name, waqt: waqt, iqama: iqama);
   }
