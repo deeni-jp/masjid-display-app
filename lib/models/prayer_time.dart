@@ -70,13 +70,23 @@ class PrayerTime {
 
     try {
       if (timeToken.contains(RegExp(r'[AP]M'))) {
-        final parsed = DateFormat.jm().parse(timeToken);
+        final parsed = DateFormat('h:mm a').parse(timeToken);
         hour = parsed.hour;
         minute = parsed.minute;
       } else {
         final parts = timeToken.split(':');
         hour = int.parse(parts[0]);
         minute = int.parse(parts[1]);
+
+        // Validate hour range
+        if (hour < 0 || hour > 23) {
+          return null;
+        }
+      }
+
+      // Validate minute range
+      if (minute < 0 || minute > 59) {
+        return null;
       }
     } catch (_) {
       return null;

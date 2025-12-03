@@ -18,6 +18,7 @@ class HijriCalendarService {
   static Future<HijriDate> getHijriDate({
     DateTime? date,
     bool forceRefresh = false,
+    http.Client? client,
   }) async {
     // Try cache first (if not force refresh)
     if (!forceRefresh) {
@@ -29,7 +30,7 @@ class HijriCalendarService {
 
     // Fetch from API
     try {
-      final hijriDate = await fetchHijriDate(date: date);
+      final hijriDate = await fetchHijriDate(date: date, client: client);
       await _cacheHijriDate(hijriDate);
       return hijriDate;
     } catch (e) {
@@ -46,13 +47,18 @@ class HijriCalendarService {
 
   /// Fetch Hijri date from Aladhan API
   /// Converts Gregorian date to Hijri using Umm Al-Qura calculation
-  static Future<HijriDate> fetchHijriDate({DateTime? date}) async {
+  static Future<HijriDate> fetchHijriDate({
+    DateTime? date,
+    http.Client? client,
+  }) async {
     final targetDate = date ?? DateTime.now();
     final dateStr = DateFormat('dd-MM-yyyy').format(targetDate);
+    final httpClient = client ?? http.Client();
+    final shouldCloseClient = client == null;
 
     try {
       final url = Uri.parse('$_baseUrl/gToH/$dateStr');
-      final response = await http.get(url).timeout(
+      final response = await httpClient.get(url).timeout(
         const Duration(seconds: 10),
       );
 
@@ -77,6 +83,10 @@ class HijriCalendarService {
         rethrow;
       }
       throw HijriServiceException('Network error: $e');
+    } finally {
+      if (shouldCloseClient) {
+        httpClient.close();
+      }
     }
   }
 

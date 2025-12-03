@@ -14,7 +14,7 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.27.1"
+          flutter-version: "3.28.0"
           channel: "stable"
 
       - name: Create .env file
@@ -51,7 +51,7 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.27.1"
+          flutter-version: "3.28.0"
           channel: "stable"
 
       - name: Create .env file
@@ -113,7 +113,7 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.27.1"
+          flutter-version: "3.28.0"
           channel: "stable"
 
       - name: Create .env file
