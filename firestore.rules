@@ -77,5 +77,20 @@ service cloud.firestore {
       allow read: if true;
       allow write: if request.auth != null;
     }
+
+    // Deletion logs collection - audit trail for deleted users
+    match /deletion_logs/{logId} {
+      // Only admins can read deletion logs (audit access)
+      allow read: if isAdmin();
+
+      // Only admins can permanently delete logs (for test user cleanup)
+      allow delete: if isAdmin();
+
+      // Any authenticated user can create logs (system creates during deletion)
+      allow create: if request.auth != null;
+
+      // Logs should never be updated (audit integrity)
+      allow update: if false;
+    }
   }
 }

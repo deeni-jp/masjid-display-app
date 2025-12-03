@@ -1,12 +1,15 @@
 // lib/screens/home_page.dart
 import 'dart:async';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/prayer_time.dart';
 import '../models/notification_model.dart';
 import '../models/user_model.dart';
+import '../models/hijri_date.dart';
 import '../services/prayer_service.dart';
+import '../services/hijri_calendar_service.dart';
 import '../services/location_service.dart';
 import '../services/firebase_service.dart';
 import '../services/storage_service.dart';
@@ -15,6 +18,7 @@ import 'home_tab.dart';
 import 'prayers_tab.dart';
 import 'notifications_tab.dart';
 import 'more_tab.dart';
+import 'qibla_tab.dart';
 import '../widgets/countdown_overlay.dart';
 import '../widgets/blackout_overlay.dart';
 import '../widgets/notification_card.dart';
@@ -44,6 +48,9 @@ class _HomePageState extends State<HomePage> {
 
   // Location data
   LocationData? _locationData;
+
+  // Hijri calendar data
+  HijriDate? _hijriDate;
 
   // Prayer data
   PrayerSchedule? _prayerSchedule;
@@ -121,6 +128,7 @@ class _HomePageState extends State<HomePage> {
     try {
       final cachedIqama = await StorageService.getIqamaTimes();
       final cachedNotifications = await StorageService.getNotifications();
+      final cachedHijri = await HijriCalendarService.getCachedHijriDate();
 
       setState(() {
         if (cachedIqama.isNotEmpty) {
@@ -131,6 +139,7 @@ class _HomePageState extends State<HomePage> {
         }
         _notifications = cachedNotifications;
         _notifLoaded = true;
+        _hijriDate = cachedHijri;
       });
     } catch (e) {
       debugPrint('Failed to load cached data: $e');
@@ -192,6 +201,17 @@ class _HomePageState extends State<HomePage> {
 
       // Save iqama times to cache
       await StorageService.saveIqamaTimes(finalIqamaMap);
+
+      // Fetch Hijri date
+      try {
+        final hijriDate = await HijriCalendarService.getHijriDate();
+        setState(() {
+          _hijriDate = hijriDate;
+        });
+      } catch (e) {
+        debugPrint('Failed to fetch Hijri date: $e');
+        // Non-critical, continue with cached/null
+      }
 
       // Apply theme based on sunset
       await _applyThemeBySunset();
@@ -482,7 +502,7 @@ class _HomePageState extends State<HomePage> {
   void _navigateToNotificationsTab(MosqueNotification notification) {
     // First, switch to notifications tab
     setState(() {
-      _selectedIndex = 2; // Notifications tab index
+      _selectedIndex = kIsWeb ? 2 : 3; // Notifications tab index (2 on web, 3 on mobile after Qibla)
     });
 
     // Then show the detail sheet for the specific notification
@@ -529,6 +549,7 @@ class _HomePageState extends State<HomePage> {
                         currentUser: widget.currentUser,
                         onUserChanged: widget.onUserChanged,
                         onNotificationTap: _navigateToNotificationsTab,
+                        hijriDate: _hijriDate,
                       ),
                       PrayersTab(
                         prayerSchedule: _prayerSchedule,
@@ -537,6 +558,12 @@ class _HomePageState extends State<HomePage> {
                         onRefresh: onRefresh,
                         onIqamaUpdated: onIqamaUpdated,
                       ),
+                      if (!kIsWeb)
+                        QiblaTab(
+                          locationData: _locationData,
+                          darkMode: widget.darkMode,
+                          onRefresh: onRefresh,
+                        ),
                       NotificationsTab(
                         notifications: _notifications,
                         notifLoaded: _notifLoaded,
@@ -586,7 +613,7 @@ class _HomePageState extends State<HomePage> {
       decoration: BoxDecoration(
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, -5),
           )
@@ -607,6 +634,12 @@ class _HomePageState extends State<HomePage> {
             selectedIcon: Icon(Icons.access_time),
             label: 'Prayers',
           ),
+          if (!kIsWeb)
+            const NavigationDestination(
+              icon: Icon(Icons.navigation_outlined),
+              selectedIcon: Icon(Icons.navigation),
+              label: 'Qibla',
+            ),
           NavigationDestination(
             icon: Badge(
               isLabelVisible: activeCount > 0,
@@ -690,9 +723,9 @@ class _LoadingOverlayState extends State<_LoadingOverlay>
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                AppColors.primaryGreenDark.withOpacity(0.96),
-                AppColors.primaryGreen.withOpacity(0.96),
-                AppColors.primaryGreenLight.withOpacity(0.96),
+                AppColors.primaryGreenDark.withValues(alpha: 0.96),
+                AppColors.primaryGreen.withValues(alpha: 0.96),
+                AppColors.primaryGreenLight.withValues(alpha: 0.96),
               ],
             ),
           ),
@@ -732,9 +765,9 @@ class _LoadingOverlayState extends State<_LoadingOverlay>
                                 child: CircularProgressIndicator(
                                   strokeWidth: 3,
                                   valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white.withOpacity(0.9),
+                                    Colors.white.withValues(alpha: 0.9),
                                   ),
-                                  backgroundColor: Colors.white.withOpacity(0.2),
+                                  backgroundColor: Colors.white.withValues(alpha: 0.2),
                                 ),
                               ),
                             );
@@ -745,10 +778,10 @@ class _LoadingOverlayState extends State<_LoadingOverlay>
                           padding: const EdgeInsets.all(24),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: Colors.white.withOpacity(0.15),
+                            color: Colors.white.withValues(alpha: 0.15),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.white.withOpacity(0.2),
+                                color: Colors.white.withValues(alpha: 0.2),
                                 blurRadius: 30,
                                 spreadRadius: 5,
                               ),
@@ -790,10 +823,10 @@ class _LoadingOverlayState extends State<_LoadingOverlay>
                                 vertical: 10,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.15),
+                                color: Colors.white.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(25),
                                 border: Border.all(
-                                  color: Colors.white.withOpacity(0.25),
+                                  color: Colors.white.withValues(alpha: 0.25),
                                   width: 1,
                                 ),
                               ),

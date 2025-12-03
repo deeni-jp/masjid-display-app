@@ -748,8 +748,8 @@ class _NotificationsTabState extends State<NotificationsTab> {
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? color.withOpacity(0.15)
-                      : Colors.grey.withOpacity(0.1),
+                      ? color.withValues(alpha: 0.15)
+                      : Colors.grey.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
                   border: Border.all(
                     color: isSelected ? color : Colors.transparent,
@@ -805,7 +805,7 @@ class _NotificationsTabState extends State<NotificationsTab> {
                 decoration: BoxDecoration(
                   color: isSelected
                       ? priority.backgroundColor
-                      : Colors.grey.withOpacity(0.1),
+                      : Colors.grey.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
                   border: Border.all(
                     color: isSelected ? priority.color : Colors.transparent,

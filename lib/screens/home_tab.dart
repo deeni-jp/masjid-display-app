@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../models/prayer_time.dart';
 import '../models/notification_model.dart';
 import '../models/user_model.dart';
+import '../models/hijri_date.dart';
 import '../services/location_service.dart';
 import '../utils/constants.dart';
 import '../widgets/notification_card.dart';
@@ -22,6 +23,7 @@ class HomeTab extends StatelessWidget {
   final AppUser currentUser;
   final void Function(AppUser?) onUserChanged;
   final void Function(MosqueNotification)? onNotificationTap;
+  final HijriDate? hijriDate;
 
   const HomeTab({
     super.key,
@@ -35,6 +37,7 @@ class HomeTab extends StatelessWidget {
     required this.currentUser,
     required this.onUserChanged,
     this.onNotificationTap,
+    this.hijriDate,
   });
 
   // Get high priority notifications sorted by expiry
@@ -89,8 +92,7 @@ class HomeTab extends StatelessWidget {
 
   Widget _buildHeader(BuildContext context) {
     final now = DateTime.now();
-    const hijriDate =
-        'Muharram 24, 1446 AH'; // TODO: Integrate Hijri calendar package
+    final hijriDateStr = hijriDate?.formattedShort ?? 'Loading...';
 
     return Container(
       decoration: BoxDecoration(
@@ -120,7 +122,7 @@ class HomeTab extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius:
                           BorderRadius.circular(AppStyles.radiusMedium),
                     ),
@@ -157,15 +159,13 @@ class HomeTab extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(AppStyles.paddingMedium),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
+                color: Colors.white.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(AppStyles.radiusLarge),
               ),
               child: Column(
                 children: [
-                  Icon(Icons.wb_sunny, color: Colors.white, size: 32),
-                  const SizedBox(height: 12),
                   Text(
-                    hijriDate,
+                    hijriDateStr,
                     style: GoogleFonts.poppins(
                       fontSize: 13,
                       color: Colors.white70,
@@ -244,7 +244,7 @@ class HomeTab extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppStyles.radiusXLarge),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 15,
               offset: const Offset(0, 5),
             ),
@@ -286,8 +286,8 @@ class HomeTab extends StatelessWidget {
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
                   color: darkMode
-                      ? Colors.black.withOpacity(0.2)
-                      : Colors.white.withOpacity(0.5),
+                      ? Colors.black.withValues(alpha: 0.2)
+                      : Colors.white.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
                 ),
                 child: Row(
@@ -375,7 +375,7 @@ class HomeTab extends StatelessWidget {
           label,
           style: GoogleFonts.poppins(
             fontSize: 11,
-            color: color.withOpacity(0.7),
+            color: color.withValues(alpha: 0.7),
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -391,7 +391,7 @@ class HomeTab extends StatelessWidget {
         style: GoogleFonts.poppins(
           fontSize: 36,
           fontWeight: FontWeight.w700,
-          color: color.withOpacity(0.7),
+          color: color.withValues(alpha: 0.7),
         ),
       ),
     );
@@ -580,11 +580,11 @@ class HomeTab extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: isNext
-            ? Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3)
+            ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3)
             : Colors.transparent,
         border: Border(
           bottom: BorderSide(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             width: 1,
           ),
         ),
@@ -617,7 +617,7 @@ class HomeTab extends StatelessWidget {
                     height: 32,
                     decoration: BoxDecoration(
                       color: AppColors.getPrayerColor(prayer.name)
-                          .withOpacity(0.1),
+                          .withValues(alpha: 0.1),
                       borderRadius:
                           BorderRadius.circular(AppStyles.radiusSmall),
                     ),

@@ -180,11 +180,11 @@ class CompactPrayerRow extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: isNext
-            ? Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3)
+            ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3)
             : Colors.transparent,
         border: Border(
           bottom: BorderSide(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             width: 1,
           ),
         ),
@@ -205,7 +205,7 @@ class CompactPrayerRow extends StatelessWidget {
                     width: 32,
                     height: 32,
                     decoration: BoxDecoration(
-                      color: prayerColor.withOpacity(0.1),
+                      color: prayerColor.withValues(alpha: 0.1),
                       borderRadius:
                           BorderRadius.circular(AppStyles.radiusSmall),
                     ),
@@ -274,7 +274,7 @@ class PrayerChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: isActive ? prayerColor : prayerColor.withOpacity(0.1),
+        color: isActive ? prayerColor : prayerColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
       ),
       child: Column(

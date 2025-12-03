@@ -353,6 +353,7 @@ class UserService {
 
   /// Delete user (Soft delete for Spark plan compatibility)
   /// Marks user as deleted in Firestore and disables their account
+  /// Creates audit log in deletion_logs collection
   /// NOTE: For full deletion (Auth + Firestore), upgrade to Blaze plan
   /// and use Cloud Functions
   static Future<void> deleteUser({
@@ -365,6 +366,23 @@ class UserService {
       if (canDelete != null) {
         throw UserServiceException(canDelete);
       }
+
+      // Get user data before deletion for audit log
+      final userDoc =
+          await _firestore.collection(_usersCollection).doc(uid).get();
+
+      if (!userDoc.exists) {
+        throw UserServiceException('User not found');
+      }
+
+      final userData = userDoc.data()!;
+
+      // Create audit log BEFORE marking as deleted
+      await logDeletion(
+        uid: uid,
+        email: email,
+        userData: userData,
+      );
 
       // Soft delete: Mark user as deleted in Firestore
       // This prevents them from accessing the app
@@ -415,6 +433,107 @@ class UserService {
     } catch (e) {
       if (e is UserServiceException) rethrow;
       throw UserServiceException('Failed to delete user: $e');
+    }
+  }
+
+  /// Log user deletion for audit trail
+  /// Stores complete user data snapshot in deletion_logs collection
+  static Future<void> logDeletion({
+    required String uid,
+    required String email,
+    required Map<String, dynamic> userData,
+  }) async {
+    try {
+      await _firestore.collection('deletion_logs').add({
+        'uid': uid,
+        'email': email,
+        'deletedAt': FieldValue.serverTimestamp(),
+        'deletedBy': _auth.currentUser?.uid,
+        'deletedByEmail': _auth.currentUser?.email,
+        'userData': userData,
+        'reason': 'admin_deletion',
+      });
+    } catch (e) {
+      // Log warning but don't fail deletion if audit logging fails
+      print('Warning: Failed to log deletion: $e');
+    }
+  }
+
+  /// Delete user with audit trail (recommended approach)
+  /// 1. Logs complete user data to deletion_logs collection
+  /// 2. Hard deletes user from Auth and Firestore
+  /// This allows deleted users to re-signup while maintaining audit records
+  static Future<void> deleteUserWithAudit({
+    required String uid,
+    required String email,
+  }) async {
+    try {
+      // Safety checks
+      final canDelete = await canDeleteUser(uid);
+      if (canDelete != null) {
+        throw UserServiceException(canDelete);
+      }
+
+      // Get user document before deletion
+      final userDoc =
+          await _firestore.collection(_usersCollection).doc(uid).get();
+      if (!userDoc.exists) {
+        throw UserServiceException('User not found');
+      }
+
+      final userData = userDoc.data()!;
+
+      // 1. Log deletion first (for audit trail)
+      await logDeletion(uid: uid, email: email, userData: userData);
+
+      // 2. Then hard delete (removes Auth + Firestore)
+      await hardDeleteUser(uid: uid, email: email);
+    } catch (e) {
+      if (e is UserServiceException) rethrow;
+      throw UserServiceException('Failed to delete user: $e');
+    }
+  }
+
+  /// Get all deletion logs (Admin only)
+  /// Returns list of deleted users for audit purposes
+  static Future<List<Map<String, dynamic>>> getDeletionLogs() async {
+    try {
+      // Verify current user is admin
+      final currentUser = await getCurrentUser();
+      if (currentUser == null || !currentUser.isAdmin) {
+        throw UserServiceException('Only admins can view deletion logs');
+      }
+
+      final query = await _firestore
+          .collection('deletion_logs')
+          .orderBy('deletedAt', descending: true)
+          .get();
+
+      return query.docs.map((doc) {
+        final data = doc.data();
+        data['logId'] = doc.id; // Add document ID for permanent deletion
+        return data;
+      }).toList();
+    } catch (e) {
+      if (e is UserServiceException) rethrow;
+      throw UserServiceException('Failed to get deletion logs: $e');
+    }
+  }
+
+  /// Permanently delete a deletion log (Admin only)
+  /// Used for cleaning up test user records from audit trail
+  static Future<void> permanentlyDeleteLog(String logId) async {
+    try {
+      // Verify current user is admin
+      final currentUser = await getCurrentUser();
+      if (currentUser == null || !currentUser.isAdmin) {
+        throw UserServiceException('Only admins can delete logs');
+      }
+
+      await _firestore.collection('deletion_logs').doc(logId).delete();
+    } catch (e) {
+      if (e is UserServiceException) rethrow;
+      throw UserServiceException('Failed to delete log: $e');
     }
   }
 }

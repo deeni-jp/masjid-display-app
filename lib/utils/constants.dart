@@ -43,6 +43,7 @@ class AppConstants {
       'notifications_list'; // Updated key for list
   static const String keyNotificationDoc =
       'notification_doc'; // Legacy - keeping for migration
+  static const String keyHijriDate = 'hijri_date_cache';
 
   // Firestore Collections
   static const String collectionMosque = 'mosque';
@@ -203,7 +204,7 @@ class AppStyles {
   // Card Shadows
   static List<BoxShadow> cardShadow = [
     BoxShadow(
-      color: Colors.black.withOpacity(0.05),
+      color: Colors.black.withValues(alpha: 0.05),
       blurRadius: 10,
       offset: const Offset(0, 3),
     ),
@@ -211,7 +212,7 @@ class AppStyles {
 
   static List<BoxShadow> cardShadowLight = [
     BoxShadow(
-      color: Colors.black.withOpacity(0.03),
+      color: Colors.black.withValues(alpha: 0.03),
       blurRadius: 8,
       offset: const Offset(0, 2),
     ),
@@ -220,10 +221,10 @@ class AppStyles {
   // Notification Badge Style
   static BoxDecoration priorityBadgeDecoration(Color color) {
     return BoxDecoration(
-      color: color.withOpacity(0.1),
+      color: color.withValues(alpha: 0.1),
       borderRadius: BorderRadius.circular(radiusSmall),
       border: Border.all(
-        color: color.withOpacity(0.5),
+        color: color.withValues(alpha: 0.5),
         width: 1,
       ),
     );
@@ -237,7 +238,7 @@ class AppStyles {
           : AppColors.tickerBackgroundLight,
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.1),
+          color: Colors.black.withValues(alpha: 0.1),
           blurRadius: 4,
           offset: const Offset(0, -2),
         ),

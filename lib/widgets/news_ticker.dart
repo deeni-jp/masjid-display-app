@@ -127,7 +127,7 @@ class _NewsTickerState extends State<NewsTicker>
           color: bgColor,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 4,
               offset: const Offset(0, -2),
             ),
@@ -151,7 +151,7 @@ class _NewsTickerState extends State<NewsTicker>
               padding: const EdgeInsets.only(right: 12),
               child: Icon(
                 Icons.chevron_right,
-                color: textColor.withOpacity(0.5),
+                color: textColor.withValues(alpha: 0.5),
                 size: 20,
               ),
             ),
@@ -229,7 +229,7 @@ class _NewsTickerState extends State<NewsTicker>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: priority.color.withOpacity(0.2),
+        color: priority.color.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
@@ -250,8 +250,8 @@ class _NewsTickerState extends State<NewsTicker>
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
         color: isUrgent
-            ? Colors.red.withOpacity(0.2)
-            : Colors.orange.withOpacity(0.2),
+            ? Colors.red.withValues(alpha: 0.2)
+            : Colors.orange.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
@@ -280,7 +280,7 @@ class _NewsTickerState extends State<NewsTicker>
               shape: BoxShape.circle,
               color: index == _currentIndex
                   ? baseColor
-                  : baseColor.withOpacity(0.3),
+                  : baseColor.withValues(alpha: 0.3),
             ),
           ),
         ),
@@ -544,7 +544,7 @@ class EmptyTickerPlaceholder extends StatelessWidget {
           style: GoogleFonts.poppins(
             fontSize: 12,
             color: (darkMode ? AppColors.tickerText : AppColors.tickerTextLight)
-                .withOpacity(0.5),
+                .withValues(alpha: 0.5),
           ),
         ),
       ),

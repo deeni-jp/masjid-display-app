@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// Common test helpers and utilities
 
 /// Pump and settle with custom duration
-Future<void> pumpAndSettle Extended(
+Future<void> pumpAndSettleExtended(
   WidgetTester tester, {
   Duration duration = const Duration(milliseconds: 500),
 }) async {
