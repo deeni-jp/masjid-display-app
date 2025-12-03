@@ -131,7 +131,7 @@ class MoreTab extends StatelessWidget {
             // Avatar
             CircleAvatar(
               radius: 28,
-              backgroundColor: _getRoleColor(currentUser.role).withOpacity(0.2),
+              backgroundColor: _getRoleColor(currentUser.role).withValues(alpha: 0.2),
               child: Text(
                 currentUser.email.isNotEmpty
                     ? currentUser.email[0].toUpperCase()
@@ -187,10 +187,10 @@ class MoreTab extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: _getRoleColor(role).withOpacity(0.1),
+        color: _getRoleColor(role).withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(AppStyles.radiusSmall),
         border: Border.all(
-          color: _getRoleColor(role).withOpacity(0.5),
+          color: _getRoleColor(role).withValues(alpha: 0.5),
           width: 1,
         ),
       ),
@@ -265,7 +265,7 @@ class MoreTab extends StatelessWidget {
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: (iconColor ?? Theme.of(context).colorScheme.primary)
-                      .withOpacity(0.1),
+                      .withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
                 ),
                 child: Icon(
@@ -329,10 +329,10 @@ class MoreTab extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(AppStyles.paddingMedium),
         decoration: BoxDecoration(
-          color: Colors.red.withOpacity(0.05),
+          color: Colors.red.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(AppStyles.radiusLarge),
           border: Border.all(
-            color: Colors.red.withOpacity(0.3),
+            color: Colors.red.withValues(alpha: 0.3),
             width: 1,
           ),
         ),
@@ -376,7 +376,7 @@ class MoreTab extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(AppStyles.radiusSmall),
                 ),
                 child: const Icon(

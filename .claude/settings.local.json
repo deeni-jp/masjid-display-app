@@ -5,7 +5,8 @@
       "Bash(cd:*)",
       "Bash(tree:*)",
       "Bash(cat:*)",
-      "Bash(flutter build:*)"
+      "Bash(flutter build:*)",
+      "Bash(flutter analyze:*)"
     ],
     "deny": [],
     "ask": []

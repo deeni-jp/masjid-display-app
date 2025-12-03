@@ -1,8 +1,10 @@
 // lib/screens/users_screen.dart
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../models/user_model.dart';
+import '../models/deletion_log.dart';
 import '../services/user_service.dart';
 import '../utils/constants.dart';
 
@@ -13,21 +15,38 @@ class UsersScreen extends StatefulWidget {
   State<UsersScreen> createState() => _UsersScreenState();
 }
 
-class _UsersScreenState extends State<UsersScreen> {
+class _UsersScreenState extends State<UsersScreen>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
+  late TabController _tabController;
+
+  // Active users
   List<AppUser> _users = [];
   List<AppUser> _filteredUsers = [];
+
+  // Deleted users
+  List<DeletionLog> _deletedUsers = [];
+  List<DeletionLog> _filteredDeletedUsers = [];
+
   bool _loading = true;
   String? _error;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      if (_tabController.indexIsChanging) {
+        _searchController.clear();
+        _loadUsers();
+      }
+    });
     _loadUsers();
   }
 
   @override
   void dispose() {
+    _tabController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -39,10 +58,32 @@ class _UsersScreenState extends State<UsersScreen> {
     });
 
     try {
-      final users = await UserService.getAllUsers();
+      if (_tabController.index == 0) {
+        // Load active users
+        final users = await UserService.getAllUsers();
+        setState(() {
+          _users = users;
+          _filteredUsers = users;
+          _loading = false;
+        });
+      } else {
+        // Load deleted users
+        await _loadDeletedUsers();
+      }
+    } catch (e) {
       setState(() {
-        _users = users;
-        _filteredUsers = users;
+        _error = e.toString();
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _loadDeletedUsers() async {
+    try {
+      final logs = await UserService.getDeletionLogs();
+      setState(() {
+        _deletedUsers = logs.map((log) => DeletionLog.fromMap(log)).toList();
+        _filteredDeletedUsers = _deletedUsers;
         _loading = false;
       });
     } catch (e) {
@@ -55,17 +96,31 @@ class _UsersScreenState extends State<UsersScreen> {
 
   void _filterUsers(String query) {
     if (query.isEmpty) {
-      setState(() => _filteredUsers = _users);
+      setState(() {
+        _filteredUsers = _users;
+        _filteredDeletedUsers = _deletedUsers;
+      });
       return;
     }
 
     final lowerQuery = query.toLowerCase();
-    setState(() {
-      _filteredUsers = _users.where((user) {
-        return user.email.toLowerCase().contains(lowerQuery) ||
-            (user.displayName?.toLowerCase().contains(lowerQuery) ?? false);
-      }).toList();
-    });
+    if (_tabController.index == 0) {
+      // Filter active users
+      setState(() {
+        _filteredUsers = _users.where((user) {
+          return user.email.toLowerCase().contains(lowerQuery) ||
+              (user.displayName?.toLowerCase().contains(lowerQuery) ?? false);
+        }).toList();
+      });
+    } else {
+      // Filter deleted users
+      setState(() {
+        _filteredDeletedUsers = _deletedUsers.where((log) {
+          return log.email.toLowerCase().contains(lowerQuery) ||
+              log.displayName.toLowerCase().contains(lowerQuery);
+        }).toList();
+      });
+    }
   }
 
   Future<void> _showUserManagementDialog(AppUser user) async {
@@ -252,6 +307,115 @@ class _UsersScreenState extends State<UsersScreen> {
     }
   }
 
+  Future<void> _handlePermanentlyDeleteLog(DeletionLog log) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppStyles.radiusLarge),
+        ),
+        title: Row(
+          children: [
+            const Icon(Icons.delete_forever, color: Colors.red, size: 28),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Delete Forever',
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.red,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'Permanently delete this deletion log? This will remove all audit records for ${log.email}. This action cannot be undone.',
+          style: GoogleFonts.poppins(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Delete Forever'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await UserService.permanentlyDeleteLog(log.logId);
+
+      // Remove from local list
+      setState(() {
+        _deletedUsers.removeWhere((l) => l.logId == log.logId);
+        _filteredDeletedUsers.removeWhere((l) => l.logId == log.logId);
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Deletion log for ${log.email} removed'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to delete log: $e'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _showFullUserData(DeletionLog log) async {
+    final jsonString =
+        const JsonEncoder.withIndent('  ').convert(log.userData);
+
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppStyles.radiusLarge),
+        ),
+        title: Text(
+          'Full User Data',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: SelectableText(
+              jsonString,
+              style: GoogleFonts.sourceCodePro(fontSize: 12),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -261,48 +425,71 @@ class _UsersScreenState extends State<UsersScreen> {
           style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
         ),
         centerTitle: true,
-      ),
-      body: Column(
-        children: [
-          // Search Bar
-          Padding(
-            padding: const EdgeInsets.all(AppStyles.paddingMedium),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search by email...',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          _filterUsers('');
-                        },
-                      )
-                    : null,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
-                ),
-                filled: true,
-                fillColor: Theme.of(context).cardColor,
-              ),
-              onChanged: _filterUsers,
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(
+              icon: Icon(Icons.people),
+              text: 'Active Users',
             ),
+            Tab(
+              icon: Icon(Icons.history),
+              text: 'Deleted Users',
+            ),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          // Active Users Tab
+          Column(
+            children: [
+              // Search Bar
+              Padding(
+                padding: const EdgeInsets.all(AppStyles.paddingMedium),
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Search by email...',
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _searchController.clear();
+                              _filterUsers('');
+                            },
+                          )
+                        : null,
+                    border: OutlineInputBorder(
+                      borderRadius:
+                          BorderRadius.circular(AppStyles.radiusMedium),
+                    ),
+                    filled: true,
+                    fillColor: Theme.of(context).cardColor,
+                  ),
+                  onChanged: _filterUsers,
+                ),
+              ),
+
+              // Stats Row
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppStyles.paddingMedium),
+                child: _buildStatsRow(),
+              ),
+              const SizedBox(height: 8),
+
+              // User List
+              Expanded(
+                child: _buildUserList(),
+              ),
+            ],
           ),
 
-          // Stats Row
-          Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: AppStyles.paddingMedium),
-            child: _buildStatsRow(),
-          ),
-          const SizedBox(height: 8),
-
-          // User List
-          Expanded(
-            child: _buildUserList(),
-          ),
+          // Deleted Users Tab
+          _buildDeletedUsersTab(),
         ],
       ),
     );
@@ -330,7 +517,7 @@ class _UsersScreenState extends State<UsersScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(AppStyles.radiusSmall),
       ),
       child: Row(
@@ -430,6 +617,323 @@ class _UsersScreenState extends State<UsersScreen> {
       ),
     );
   }
+
+  Widget _buildDeletedUsersTab() {
+    return Column(
+      children: [
+        // Search Bar
+        Padding(
+          padding: const EdgeInsets.all(AppStyles.paddingMedium),
+          child: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Search deleted users...',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _searchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        _searchController.clear();
+                        _filterUsers('');
+                      },
+                    )
+                  : null,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
+              ),
+              filled: true,
+              fillColor: Theme.of(context).cardColor,
+            ),
+            onChanged: _filterUsers,
+          ),
+        ),
+
+        // Deleted Users Count
+        if (!_loading)
+          Padding(
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppStyles.paddingMedium),
+            child: Row(
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(AppStyles.radiusSmall),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '${_deletedUsers.length}',
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.red,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Deleted',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: Colors.red,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        const SizedBox(height: 8),
+
+        // Deleted Users List
+        Expanded(
+          child: _buildDeletedUserList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDeletedUserList() {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_error != null) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.error_outline, size: 64, color: Colors.grey.shade400),
+            const SizedBox(height: 16),
+            Text(
+              'Failed to load deleted users',
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _error!,
+              style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _loadUsers,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_filteredDeletedUsers.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.history, size: 64, color: Colors.grey.shade400),
+            const SizedBox(height: 16),
+            Text(
+              _searchController.text.isNotEmpty
+                  ? 'No deleted users found'
+                  : 'No deleted users yet',
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey,
+              ),
+            ),
+            if (_searchController.text.isEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Deleted users will appear here',
+                style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey),
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadUsers,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(AppStyles.paddingMedium),
+        itemCount: _filteredDeletedUsers.length,
+        itemBuilder: (context, index) {
+          final log = _filteredDeletedUsers[index];
+          return _DeletedUserCard(
+            log: log,
+            onPermanentlyDelete: () => _handlePermanentlyDeleteLog(log),
+            onViewFullData: () => _showFullUserData(log),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _DeletedUserCard extends StatefulWidget {
+  final DeletionLog log;
+  final VoidCallback onPermanentlyDelete;
+  final VoidCallback onViewFullData;
+
+  const _DeletedUserCard({
+    required this.log,
+    required this.onPermanentlyDelete,
+    required this.onViewFullData,
+  });
+
+  @override
+  State<_DeletedUserCard> createState() => _DeletedUserCardState();
+}
+
+class _DeletedUserCardState extends State<_DeletedUserCard> {
+  bool _isExpanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          leading: CircleAvatar(
+            backgroundColor: Colors.red.withValues(alpha: 0.2),
+            child: const Icon(Icons.person_off, color: Colors.red, size: 20),
+          ),
+          title: Text(
+            widget.log.email,
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.w600,
+              fontSize: 15,
+              decoration: TextDecoration.lineThrough,
+              color: Colors.grey,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withValues(alpha: 0.1),
+                      borderRadius:
+                          BorderRadius.circular(AppStyles.radiusSmall),
+                      border: Border.all(
+                        color: Colors.red.withValues(alpha: 0.5),
+                        width: 1,
+                      ),
+                    ),
+                    child: Text(
+                      widget.log.role.toUpperCase(),
+                      style: GoogleFonts.poppins(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.red,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Deleted ${widget.log.formattedDate}',
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          trailing: IconButton(
+            icon: const Icon(Icons.delete_forever, color: Colors.red),
+            onPressed: widget.onPermanentlyDelete,
+            tooltip: 'Delete Forever',
+          ),
+          onExpansionChanged: (expanded) {
+            setState(() => _isExpanded = expanded);
+          },
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(AppStyles.paddingMedium),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildDetailRow('UID', widget.log.uid),
+                  _buildDetailRow('Email', widget.log.email),
+                  _buildDetailRow('Display Name', widget.log.displayName),
+                  _buildDetailRow('Role', widget.log.role),
+                  _buildDetailRow('Deleted By', widget.log.deletedByEmail),
+                  _buildDetailRow(
+                    'Deleted At',
+                    DateFormat('MMM d, yyyy \'at\' h:mm a')
+                        .format(widget.log.deletedAt),
+                  ),
+                  const SizedBox(height: 12),
+                  ElevatedButton.icon(
+                    onPressed: widget.onViewFullData,
+                    icon: const Icon(Icons.data_object),
+                    label: const Text('View Full User Data'),
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 40),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              '$label:',
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade700,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: Colors.grey.shade800,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _UserCard extends StatelessWidget {
@@ -454,7 +958,7 @@ class _UserCard extends StatelessWidget {
           children: [
             // Avatar
             CircleAvatar(
-              backgroundColor: _getRoleColor(user.role).withOpacity(0.2),
+              backgroundColor: _getRoleColor(user.role).withValues(alpha: 0.2),
               child: Text(
                 user.email.isNotEmpty ? user.email[0].toUpperCase() : '?',
                 style: GoogleFonts.poppins(
@@ -525,10 +1029,10 @@ class _UserCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: _getRoleColor(role).withOpacity(0.1),
+        color: _getRoleColor(role).withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(AppStyles.radiusSmall),
         border: Border.all(
-          color: _getRoleColor(role).withOpacity(0.5),
+          color: _getRoleColor(role).withValues(alpha: 0.5),
           width: 1,
         ),
       ),
@@ -690,10 +1194,10 @@ class _UserManagementDialog extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(AppStyles.radiusSmall),
         border: Border.all(
-          color: color.withOpacity(0.5),
+          color: color.withValues(alpha: 0.5),
           width: 1,
         ),
       ),
@@ -741,6 +1245,8 @@ class _DeleteConfirmationDialogState extends State<_DeleteConfirmationDialog> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppStyles.radiusLarge),
       ),
+      // Add inset padding to prevent edge overflow
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       title: Row(
         children: [
           const Icon(Icons.warning, color: Colors.red, size: 28),
@@ -756,10 +1262,14 @@ class _DeleteConfirmationDialogState extends State<_DeleteConfirmationDialog> {
           ),
         ],
       ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+      // Wrap content in scrollable container
+      content: SizedBox(
+        width: double.maxFinite,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
           // Warning Text
           Container(
             padding: const EdgeInsets.all(12),
@@ -769,7 +1279,7 @@ class _DeleteConfirmationDialogState extends State<_DeleteConfirmationDialog> {
               border: Border.all(color: Colors.red.shade200),
             ),
             child: Text(
-              'This action is permanent and cannot be undone. The user will be deleted from both Firebase Authentication and Firestore.',
+              'This will prevent the user from accessing the app. Their account will be marked as deleted and logged for audit purposes. Note: The user will not be able to sign up again with the same email.',
               style: GoogleFonts.poppins(
                 fontSize: 13,
                 color: Colors.red.shade900,
@@ -825,6 +1335,7 @@ class _DeleteConfirmationDialogState extends State<_DeleteConfirmationDialog> {
           const SizedBox(height: 8),
           TextField(
             controller: _emailController,
+            scrollPadding: const EdgeInsets.all(20), // Auto-scroll when focused
             decoration: InputDecoration(
               hintText: 'Enter email address',
               border: OutlineInputBorder(
@@ -851,7 +1362,9 @@ class _DeleteConfirmationDialogState extends State<_DeleteConfirmationDialog> {
               borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
             ),
           ),
-        ],
+            ],
+          ),
+        ),
       ),
       actions: [
         TextButton(

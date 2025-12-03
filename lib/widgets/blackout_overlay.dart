@@ -79,7 +79,7 @@ class _BlackoutOverlayState extends State<BlackoutOverlay>
                                         boxShadow: [
                                           BoxShadow(
                                             color: AppColors.primaryGreen
-                                                .withOpacity(0.3),
+                                                .withValues(alpha: 0.3),
                                             blurRadius: 60,
                                             spreadRadius: 10,
                                           ),
@@ -87,7 +87,7 @@ class _BlackoutOverlayState extends State<BlackoutOverlay>
                                         gradient: RadialGradient(
                                           colors: [
                                             AppColors.primaryGreen
-                                                .withOpacity(0.2),
+                                                .withValues(alpha: 0.2),
                                             Colors.transparent,
                                           ],
                                         ),
@@ -141,10 +141,10 @@ class _BlackoutOverlayState extends State<BlackoutOverlay>
                                   vertical: 14,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.1),
+                                  color: Colors.white.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(30),
                                   border: Border.all(
-                                    color: Colors.white.withOpacity(0.15),
+                                    color: Colors.white.withValues(alpha: 0.15),
                                     width: 1.5,
                                   ),
                                 ),
@@ -193,10 +193,10 @@ class _BlackoutOverlayState extends State<BlackoutOverlay>
                                 vertical: 14,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.08),
+                                color: Colors.white.withValues(alpha: 0.08),
                                 borderRadius: BorderRadius.circular(25),
                                 border: Border.all(
-                                  color: Colors.white.withOpacity(0.12),
+                                  color: Colors.white.withValues(alpha: 0.12),
                                   width: 1,
                                 ),
                               ),
@@ -263,7 +263,7 @@ class MosqueBlackoutOverlay extends StatelessWidget {
                 Icon(
                   Icons.mosque,
                   size: 80,
-                  color: Colors.white.withOpacity(0.15),
+                  color: Colors.white.withValues(alpha: 0.15),
                 ),
                 const SizedBox(height: 24),
 
@@ -272,7 +272,7 @@ class MosqueBlackoutOverlay extends StatelessWidget {
                   Text(
                     prayerName!,
                     style: GoogleFonts.amiri(
-                      color: Colors.white.withOpacity(0.6),
+                      color: Colors.white.withValues(alpha: 0.6),
                       fontSize: 28,
                       fontWeight: FontWeight.w600,
                     ),

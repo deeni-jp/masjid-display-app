@@ -43,7 +43,7 @@ class NextPrayerCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppStyles.radiusXLarge),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 15,
               offset: const Offset(0, 5),
             ),
@@ -110,8 +110,8 @@ class NextPrayerCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: darkMode
-            ? Colors.white.withOpacity(0.1)
-            : prayerColor.withOpacity(0.1),
+            ? Colors.white.withValues(alpha: 0.1)
+            : prayerColor.withValues(alpha: 0.1),
         shape: BoxShape.circle,
       ),
       child: Icon(
@@ -185,8 +185,8 @@ class NextPrayerCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: darkMode
-            ? Colors.black.withOpacity(0.2)
-            : Colors.white.withOpacity(0.5),
+            ? Colors.black.withValues(alpha: 0.2)
+            : Colors.white.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
       ),
       child: Row(
@@ -310,7 +310,7 @@ class CircularCountdownCard extends StatelessWidget {
                   child: CircularProgressIndicator(
                     value: progress,
                     strokeWidth: 8,
-                    backgroundColor: Colors.grey.withOpacity(0.2),
+                    backgroundColor: Colors.grey.withValues(alpha: 0.2),
                     valueColor: AlwaysStoppedAnimation<Color>(
                       Theme.of(context).colorScheme.primary,
                     ),

@@ -165,9 +165,9 @@ class _AuthScreenState extends State<AuthScreen> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.1),
+                        color: Colors.red.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.red.withOpacity(0.3)),
+                        border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
                       ),
                       child: Text(
                         errorMsg!,
@@ -337,10 +337,10 @@ class _AuthScreenState extends State<AuthScreen> {
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: AppColors.primaryGreen.withOpacity(0.1),
+            color: AppColors.primaryGreen.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
-          child: Icon(
+          child: const Icon(
             Icons.mosque,
             size: 64,
             color: AppColors.primaryGreen,
@@ -379,9 +379,9 @@ class _AuthScreenState extends State<AuthScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
+                color: Colors.red.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
-                border: Border.all(color: Colors.red.withOpacity(0.3)),
+                border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
@@ -547,7 +547,7 @@ class _AuthScreenState extends State<AuthScreen> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
         ),
-        disabledBackgroundColor: AppColors.primaryGreen.withOpacity(0.5),
+        disabledBackgroundColor: AppColors.primaryGreen.withValues(alpha: 0.5),
       ),
       child: _isLoading
           ? const SizedBox(

@@ -127,7 +127,7 @@ class PrayersTab extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppColors.getPrayerColor(prayer.name).withOpacity(0.1),
+                      color: AppColors.getPrayerColor(prayer.name).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(AppStyles.radiusSmall),
                     ),
                     child: Icon(

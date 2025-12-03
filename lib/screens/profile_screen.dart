@@ -406,7 +406,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         // Avatar
         CircleAvatar(
           radius: 50,
-          backgroundColor: _getRoleColor(_user.role).withOpacity(0.2),
+          backgroundColor: _getRoleColor(_user.role).withValues(alpha: 0.2),
           child: Text(
             _user.email.isNotEmpty ? _user.email[0].toUpperCase() : '?',
             style: GoogleFonts.poppins(
@@ -442,10 +442,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
-            color: _getRoleColor(_user.role).withOpacity(0.1),
+            color: _getRoleColor(_user.role).withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
             border: Border.all(
-              color: _getRoleColor(_user.role).withOpacity(0.5),
+              color: _getRoleColor(_user.role).withValues(alpha: 0.5),
             ),
           ),
           child: Row(

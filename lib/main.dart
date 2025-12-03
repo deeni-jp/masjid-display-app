@@ -293,10 +293,10 @@ class _AuthWrapperState extends State<AuthWrapper> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: AppColors.primaryGreen.withOpacity(0.1),
+                  color: AppColors.primaryGreen.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
+                child: const Icon(
                   Icons.mosque,
                   size: 64,
                   color: AppColors.primaryGreen,
