@@ -279,7 +279,7 @@ class CircularCountdownCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Calculate progress (max 6 hours)
-    final maxSeconds = 6 * 60 * 60;
+    const maxSeconds = 6 * 60 * 60;
     final currentSeconds = timeToNext.inSeconds.clamp(0, maxSeconds);
     final progress = 1 - (currentSeconds / maxSeconds);
 

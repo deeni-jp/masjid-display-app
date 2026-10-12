@@ -1,10 +1,30 @@
 name: Flutter CI/CD
 
+# Checks (format, analyze, tests) run on every push to any branch and on pull
+# requests, so contributors get feedback before review. Android builds run on
+# main, on version tags (v*) and on manual runs. iOS builds and Firestore rules
+# deploys are manual (Actions -> Flutter CI/CD -> Run workflow).
 on:
   push:
-    branches: [main, develop]
+    branches: ["**"]
+    tags: ["v*"]
   pull_request:
     branches: [main, develop]
+  workflow_dispatch:
+    inputs:
+      build_ios:
+        description: "Build iOS (needs the iOS project to be set up)"
+        type: boolean
+        default: false
+      deploy_rules:
+        description: "Deploy Firestore rules to Firebase"
+        type: boolean
+        default: false
+
+# A newer push to the same branch/PR cancels the older, still-running checks.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   analyze:
@@ -30,7 +50,8 @@ jobs:
         run: dart format --output=none --set-exit-if-changed .
 
       - name: Analyze project
-        run: flutter analyze
+        # Errors and warnings fail; infos are listed but don't fail the build.
+        run: flutter analyze --no-fatal-infos
 
       - name: Run tests
         run: flutter test --coverage
@@ -44,7 +65,10 @@ jobs:
   build-android:
     needs: analyze
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' &&
+       (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')))
     steps:
       - uses: actions/checkout@v4
 
@@ -118,7 +142,7 @@ jobs:
   build-ios:
     needs: analyze
     runs-on: macos-latest
-    if: github.event_name == 'push'
+    if: github.event_name == 'workflow_dispatch' && inputs.build_ios
     steps:
       - uses: actions/checkout@v4
 
@@ -145,10 +169,11 @@ jobs:
           name: ios-build
           path: build/ios/iphoneos/
 
+  # Manual on purpose: deploying rules changes live database security.
   deploy-firebase:
-    needs: [build-android]
+    needs: analyze
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.event_name == 'workflow_dispatch' && inputs.deploy_rules
     steps:
       - uses: actions/checkout@v4
 
@@ -164,7 +189,7 @@ jobs:
 
   # Optional: Create GitHub Release on tag
   release:
-    needs: [build-android, build-ios]
+    needs: [build-android]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     steps:

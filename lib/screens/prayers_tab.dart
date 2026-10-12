@@ -63,7 +63,7 @@ class PrayersTab extends StatelessWidget {
                   adminMode: adminMode,
                   onEditIqama: () => _showEditIqamaDialog(context, prayer),
                 );
-              }).toList(),
+              }),
             const SizedBox(height: 80),
           ],
         ),

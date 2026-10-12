@@ -247,6 +247,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     confirmPasswordController.dispose();
 
     if (result != true) return;
+    // The screen may have closed while the dialog was open.
+    if (!mounted) return;
 
     // Validation
     if (currentPassword.isEmpty ||

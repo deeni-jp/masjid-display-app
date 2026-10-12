@@ -24,16 +24,22 @@ service cloud.firestore {
 
     // Users collection
     match /users/{userId} {
-      // Anyone authenticated can read user documents (needed for role checks)
-      allow read: if request.auth != null;
+      // Users can read their own document; admins can read everyone's
+      // (Users screen). Role checks in these rules use get(), which isn't
+      // limited by this rule.
+      allow read: if request.auth != null &&
+        (request.auth.uid == userId || isAdmin());
 
-      // Users can create their own document on sign-up
-      allow create: if request.auth != null && request.auth.uid == userId;
+      // Users can create their own document on sign-up, only as 'public'
+      allow create: if request.auth != null && request.auth.uid == userId &&
+        request.resource.data.role == 'public';
 
-      // Users can update their own profile, but NOT their role
-      // Admins can update any user (including role changes)
+      // Users can update only their display name and last-login time
+      // (not role, deleted, active, ...). Admins can update any user.
       allow update: if request.auth != null && (
-        (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])) ||
+        (request.auth.uid == userId &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['displayName', 'lastLogin'])) ||
         isAdmin()
       );
 
@@ -81,7 +87,7 @@ service cloud.firestore {
     // Mosque collection - other documents (fallback)
     match /mosque/{document} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isModeratorOrAdmin();
     }
 
     // Deletion logs collection - audit trail for deleted users

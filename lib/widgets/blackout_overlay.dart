@@ -224,7 +224,7 @@ class SimpleBlackoutOverlay extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('🤫', style: TextStyle(fontSize: 64)),
+                const Text('🤫', style: TextStyle(fontSize: 64)),
                 const SizedBox(height: 24),
                 Text(
                   'Please silence your phone',

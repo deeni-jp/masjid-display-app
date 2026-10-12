@@ -129,13 +129,15 @@ class AppColors {
     final lowerName = prayerName.toLowerCase();
     if (lowerName.contains('fajr')) return fajrColor;
     if (lowerName.contains('sunrise')) return sunriseColor;
-    if (lowerName.contains('dhuhr') || lowerName.contains('zuhr'))
+    if (lowerName.contains('dhuhr') || lowerName.contains('zuhr')) {
       return dhuhrColor;
+    }
     if (lowerName.contains('asr')) return asrColor;
     if (lowerName.contains('maghrib')) return maghribColor;
     if (lowerName.contains('isha')) return ishaColor;
-    if (lowerName.contains('jummah') || lowerName.contains('jumuah'))
+    if (lowerName.contains('jummah') || lowerName.contains('jumuah')) {
       return jummahColor;
+    }
     return primaryGreen;
   }
 
@@ -144,13 +146,15 @@ class AppColors {
     final lowerName = prayerName.toLowerCase();
     if (lowerName.contains('fajr')) return Icons.wb_twilight;
     if (lowerName.contains('sunrise')) return Icons.wb_sunny_outlined;
-    if (lowerName.contains('dhuhr') || lowerName.contains('zuhr'))
+    if (lowerName.contains('dhuhr') || lowerName.contains('zuhr')) {
       return Icons.wb_sunny;
+    }
     if (lowerName.contains('asr')) return Icons.wb_sunny_outlined;
     if (lowerName.contains('maghrib')) return Icons.wb_twilight;
     if (lowerName.contains('isha')) return Icons.nightlight_round;
-    if (lowerName.contains('jummah') || lowerName.contains('jumuah'))
+    if (lowerName.contains('jummah') || lowerName.contains('jumuah')) {
       return Icons.people;
+    }
     return Icons.access_time;
   }
 

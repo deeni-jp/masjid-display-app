@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../models/notification_model.dart';
-import '../models/user_model.dart';
 import '../services/firebase_service.dart';
 import '../services/storage_service.dart';
 import '../services/user_service.dart';

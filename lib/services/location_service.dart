@@ -1,4 +1,5 @@
 // lib/services/location_service.dart
+import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
@@ -38,7 +39,9 @@ class LocationService {
 
       // Get position
       final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.low,
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.low,
+        ),
       );
 
       // Try to reverse geocode
@@ -65,7 +68,9 @@ class LocationService {
     } catch (e) {
       // If any error occurs (permission denied, service disabled, etc.),
       // return default Nagatsuta location
-      print('Location error: $e. Using default location: $defaultLocation');
+      debugPrint(
+        'Location error: $e. Using default location: $defaultLocation',
+      );
       return getDefaultLocation();
     }
   }
@@ -89,7 +94,7 @@ class LocationService {
       final location = await getCurrentLocation();
       return LocationResult(data: location, usedDefault: location.isDefault);
     } catch (e) {
-      print('Failed to get location: $e. Using default.');
+      debugPrint('Failed to get location: $e. Using default.');
       return LocationResult(data: getDefaultLocation(), usedDefault: true);
     }
   }

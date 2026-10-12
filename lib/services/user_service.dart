@@ -1,10 +1,10 @@
 // lib/services/user_service.dart
+import 'package:flutter/foundation.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import '../models/user_model.dart';
-import '../utils/constants.dart';
 
 class UserService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -447,7 +447,7 @@ class UserService {
       });
     } catch (e) {
       // Log warning but don't fail deletion if audit logging fails
-      print('Warning: Failed to log deletion: $e');
+      debugPrint('Warning: Failed to log deletion: $e');
     }
   }
 

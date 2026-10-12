@@ -1386,8 +1386,26 @@ Copy the token and add it as `FIREBASE_TOKEN` secret in GitHub.
 
 ### Workflow Jobs
 
+**Contributing:** push your work to a branch (any name) and open a pull request into `main`. The checks below run automatically on every push and PR; a maintainer reviews and merges once they pass. Before pushing, run the same checks locally:
+
+```bash
+dart format .
+flutter analyze
+flutter test
+```
+
+| Job | Runs on |
+|---|---|
+| Analyze (format, analyze, tests) | Every push to any branch, every PR to `main`/`develop` |
+| Build Android | Pushes to `main`, version tags `v*`, manual runs |
+| Build iOS | Manual runs only (tick "Build iOS") — the iOS project still needs setting up on a Mac |
+| Deploy Firebase (Firestore rules) | Manual runs only (tick "Deploy Firestore rules") |
+| Release | Version tags `v*` |
+
+Manual runs: GitHub → **Actions** → **Flutter CI/CD** → **Run workflow**. A newer push to the same branch cancels the older run.
+
 #### 1. Analyze Job
-**Triggers**: Every push and pull request
+**Triggers**: Every push to any branch and every pull request
 
 **Steps**:
 - Creates `.env` file with default values
@@ -1399,10 +1417,11 @@ Copy the token and add it as `FIREBASE_TOKEN` secret in GitHub.
 **Purpose**: Ensure code quality before building
 
 #### 2. Build Android Job
-**Triggers**: After analyze succeeds on `main` or `develop` branches
+**Triggers**: After analyze succeeds — on pushes to `main`, version tags, or manual runs
 
 **Steps**:
 - Creates `.env` file
+- Writes `google-services.json` from the `GOOGLE_SERVICES_JSON` secret
 - Decodes keystore from base64
 - Configures signing properties
 - Builds release APK: `flutter build apk --release`
@@ -1415,7 +1434,7 @@ Copy the token and add it as `FIREBASE_TOKEN` secret in GitHub.
 - `app-release.aab`
 
 #### 3. Build iOS Job
-**Triggers**: After analyze succeeds on `main` or `develop` branches
+**Triggers**: Manual runs only (tick "Build iOS" in Run workflow)
 
 **Steps**:
 - Creates `.env` file
@@ -1426,7 +1445,7 @@ Copy the token and add it as `FIREBASE_TOKEN` secret in GitHub.
 **Note**: Code signing for iOS typically requires a macOS runner and Apple Developer certificates.
 
 #### 4. Deploy Firebase Job
-**Triggers**: After successful Android build on `main` branch only
+**Triggers**: Manual runs only (tick "Deploy Firestore rules" in Run workflow) — deploying rules changes live database security, so it's never automatic
 
 **Steps**:
 - Installs Firebase CLI

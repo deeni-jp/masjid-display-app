@@ -1,4 +1,5 @@
 // lib/services/hijri_calendar_service.dart
+import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
@@ -113,7 +114,7 @@ class HijriCalendarService {
       );
     } catch (e) {
       // Non-critical error, log but don't throw
-      print('Failed to cache Hijri date: $e');
+      debugPrint('Failed to cache Hijri date: $e');
     }
   }
 
@@ -129,7 +130,7 @@ class HijriCalendarService {
     try {
       await StorageService.remove(AppConstants.keyHijriDate);
     } catch (e) {
-      print('Failed to clear Hijri cache: $e');
+      debugPrint('Failed to clear Hijri cache: $e');
     }
   }
 }

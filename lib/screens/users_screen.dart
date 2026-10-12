@@ -160,6 +160,7 @@ class _UsersScreenState extends State<UsersScreen>
       }
       return;
     }
+    if (!mounted) return;
 
     final newRole = await showDialog<UserRole>(
       context: context,
@@ -272,6 +273,8 @@ class _UsersScreenState extends State<UsersScreen>
       }
       return;
     }
+
+    if (!mounted) return;
 
     // Show delete confirmation dialog
     final confirmed = await showDialog<bool>(
@@ -793,8 +796,6 @@ class _DeletedUserCard extends StatefulWidget {
 }
 
 class _DeletedUserCardState extends State<_DeletedUserCard> {
-  bool _isExpanded = false;
-
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -867,9 +868,6 @@ class _DeletedUserCardState extends State<_DeletedUserCard> {
             onPressed: widget.onPermanentlyDelete,
             tooltip: 'Delete Forever',
           ),
-          onExpansionChanged: (expanded) {
-            setState(() => _isExpanded = expanded);
-          },
           children: [
             Padding(
               padding: const EdgeInsets.all(AppStyles.paddingMedium),

@@ -30,7 +30,7 @@ void main() {
         () async {
           // Arrange
           final testDate = DateTime(2025, 12, 3);
-          final responseBody = '''
+          const responseBody = '''
 {
   "code": 200,
   "status": "OK",
@@ -383,7 +383,7 @@ void main() {
 
       test('fetches from API if no cache exists', () async {
         // Arrange - No cache
-        final responseBody = '''
+        const responseBody = '''
 {
   "code": 200,
   "status": "OK",
@@ -428,7 +428,7 @@ void main() {
           jsonEncode(validCachedDate.toJson()),
         );
 
-        final responseBody = '''
+        const responseBody = '''
 {
   "code": 200,
   "status": "OK",
@@ -516,7 +516,8 @@ void main() {
         // Arrange
         await StorageService.remove(AppConstants.keyHijriDate);
 
-        final hijriDate = HijriDate(
+        // What the mocked API response below should produce
+        final expected = HijriDate(
           day: 2,
           month: 6,
           year: 1447,
@@ -529,7 +530,7 @@ void main() {
         );
 
         // Act
-        final responseBody = '''
+        const responseBody = '''
 {
   "code": 200,
   "status": "OK",
@@ -567,6 +568,11 @@ void main() {
         expect(cached!.day, result.day);
         expect(cached.month, result.month);
         expect(cached.year, result.year);
+        expect(cached.day, expected.day);
+        expect(cached.month, expected.month);
+        expect(cached.year, expected.year);
+        expect(cached.monthNameEnglish, expected.monthNameEnglish);
+        expect(cached.gregorianDate, expected.gregorianDate);
       });
 
       test('clearCache removes cached Hijri date', () async {

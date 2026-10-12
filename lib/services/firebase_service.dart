@@ -146,7 +146,6 @@ class FirebaseService {
         final snapshot =
             await _notificationsRef.where('active', isEqualTo: true).get();
 
-        final now = DateTime.now();
         return snapshot.docs
             .map((doc) => MosqueNotification.fromFirestore(doc))
             .where((n) => !n.isExpired)
@@ -300,7 +299,6 @@ class FirebaseService {
     return _notificationsRef.where('active', isEqualTo: true).snapshots().map((
       snapshot,
     ) {
-      final now = DateTime.now();
       return snapshot.docs
           .map((doc) => MosqueNotification.fromFirestore(doc))
           .where((n) => !n.isExpired)
@@ -331,7 +329,6 @@ class FirebaseService {
       // If index error, try alternative approach
       try {
         final snapshot = await _notificationsRef.get();
-        final now = DateTime.now();
 
         final expiredDocs =
             snapshot.docs.where((doc) {
@@ -363,7 +360,6 @@ class FirebaseService {
               .where('type', isEqualTo: type.toFirestore())
               .get();
 
-      final now = DateTime.now();
       return snapshot.docs
           .map((doc) => MosqueNotification.fromFirestore(doc))
           .where((n) => !n.isExpired)
@@ -384,7 +380,6 @@ class FirebaseService {
               .where('priority', isEqualTo: priority.toFirestore())
               .get();
 
-      final now = DateTime.now();
       return snapshot.docs
           .map((doc) => MosqueNotification.fromFirestore(doc))
           .where((n) => !n.isExpired)

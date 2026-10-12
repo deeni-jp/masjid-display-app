@@ -1,4 +1,5 @@
 // lib/utils/env_config.dart
+import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// Environment configuration manager
@@ -12,7 +13,7 @@ class EnvConfig {
     } catch (e) {
       // .env file not found or error loading
       // This is acceptable for production builds without .env
-      print('Warning: .env file not found or could not be loaded: $e');
+      debugPrint('Warning: .env file not found or could not be loaded: $e');
     }
   }
 

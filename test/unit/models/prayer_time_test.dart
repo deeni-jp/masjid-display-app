@@ -7,7 +7,6 @@ void main() {
     group('Time Parsing - 12-hour format', () {
       test('parses 12:30 PM correctly', () {
         // Arrange
-        final now = DateTime.now();
         final prayer = PrayerTime.fromMaps(
           name: 'Dhuhr',
           timings: {'Dhuhr': '12:30 PM'},

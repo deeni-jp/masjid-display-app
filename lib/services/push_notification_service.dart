@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/notification_model.dart';
-import 'firebase_service.dart';
 import 'user_service.dart';
 
 /// Background message handler - must be top-level function
@@ -292,10 +291,6 @@ class PushNotificationService {
     // Determine notification priority from data
     final priorityString = message.data['priority'] as String?;
     final priority = NotificationPriority.fromString(priorityString);
-
-    // Determine notification type from data
-    final typeString = message.data['type'] as String?;
-    final type = NotificationType.fromString(typeString);
 
     // Select channel based on priority
     String channelId;

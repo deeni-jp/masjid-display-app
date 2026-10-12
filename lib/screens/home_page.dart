@@ -548,7 +548,7 @@ class _HomePageState extends State<HomePage> {
         ),
 
         // Loading overlay (shown during location fetch and data loading)
-        if (_showLoadingOverlay) _LoadingOverlay(),
+        if (_showLoadingOverlay) const _LoadingOverlay(),
 
         // Iqamah countdown -> prayer time started -> prayer in progress
         if (_prayerPhase != null && !_showLoadingOverlay)
