@@ -35,6 +35,7 @@ A beautiful, modern Flutter application for displaying prayer times, managing mo
 - [Notification System](#notification-system)
 - [Configuration](#configuration)
 - [UI Features](#ui-features)
+- [Masjid Display Mode](#masjid-display-mode)
 
 ### Deployment & Operations
 - [Troubleshooting](#troubleshooting)
@@ -82,9 +83,11 @@ A beautiful, modern Flutter application for displaying prayer times, managing mo
 
 ### Special Features
 
-- 🔔 **60-Second Countdown Overlay** - Full-screen alert before Iqama with progress bar
-- 🔵 **Silent Mode Screen** - 7-minute blackout during prayer time with elegant design
-- 🎯 **High Priority Notifications** - Rotating cards for important announcements on home screen
+- 🖥️ **Masjid Display Mode** - Full-screen TV/tablet layout with large prayer table, clock, Hijri date, notices and donation QR code (see [Masjid Display Mode](#masjid-display-mode))
+- 🔔 **Iqamah Sequence** - 60-second iqamah countdown → 30-second "Time for prayer" screen → 10-minute "Prayer in progress" silent screen → back to home, on both display and phones
+- 🕌 **Jummah Times** - Jummah shown in the prayer tables (in place of Dhuhr on Fridays)
+- 🌐 **Bilingual UI** - English with Arabic labels throughout; Japanese on the "Prayer in progress" screen
+- 🎯 **Rotating Notices** - Notices cycle on the home screen, high priority first
 - 💬 **Notification Detail View** - Full-screen bottom sheet with complete information
 - 🔄 **Real-time Updates** - Live sync with Firestore for iqama times and notifications
 - 👤 **User Profiles** - Edit display name, change password, and view account info
@@ -123,6 +126,7 @@ lib/
 │
 ├── models/
 │   ├── prayer_time.dart           # Prayer time data models
+│   ├── prayer_windows.dart        # Iqamah sequence timing (countdown → started → in progress)
 │   ├── notification_model.dart    # Enhanced notification model with types & priorities
 │   └── user_model.dart            # User model with roles (Public, Moderator, Admin)
 │
@@ -136,7 +140,8 @@ lib/
 ├── screens/
 │   ├── auth_screen.dart           # Login/Signup screen with validation
 │   ├── home_page.dart             # Main container with bottom nav & overlays
-│   ├── home_tab.dart              # Home tab with countdown & high priority notifications
+│   ├── home_tab.dart              # Home tab: mobile layout, or display layout on wide screens
+│   ├── display_home.dart          # Masjid display (TV/tablet) home layout
 │   ├── prayers_tab.dart           # Prayer schedule with edit capabilities
 │   ├── notifications_tab.dart     # Full notifications list with filters & CRUD
 │   ├── more_tab.dart              # Settings, user info, and app info
@@ -146,13 +151,16 @@ lib/
 ├── widgets/
 │   ├── prayer_card.dart           # Prayer card widgets (full & compact)
 │   ├── next_prayer_card.dart      # Countdown card with sun times
-│   ├── countdown_overlay.dart     # Pre-iqama full-screen overlay
-│   ├── blackout_overlay.dart      # Silent mode full-screen overlay
+│   ├── countdown_overlay.dart     # Iqamah countdown (final 60 seconds)
+│   ├── prayer_started_overlay.dart # "Time for prayer" screen (30 seconds after iqamah)
+│   ├── blackout_overlay.dart      # "Prayer in progress" silent screen
+│   ├── prohibited_time_overlay.dart # Prohibited-time alert (currently disabled)
 │   ├── notification_card.dart     # Notification cards with detail sheet
 │   └── news_ticker.dart           # Bottom ticker for announcements
 │
 └── utils/
     ├── constants.dart             # App constants, colors, & enums
+    ├── design.dart                # Design tokens: palette (light/dark), fonts, Arabic labels, masjid info
     └── env_config.dart            # Environment configuration manager
 ```
 
@@ -996,8 +1004,8 @@ class AppConstants {
   static const int aladhanApiMethod = 2; // ISNA
 
   // Timing
-  static const Duration countdownWarningTime = Duration(seconds: 60);
-  static const Duration blackoutDuration = Duration(minutes: 7);
+  static const Duration countdownWarningTime = Duration(seconds: 60); // iqamah countdown
+  static const Duration blackoutDuration = Duration(minutes: 10);     // "Prayer in progress"
 
   // Notification settings
   static const Duration notificationRotationInterval = Duration(seconds: 5);
@@ -1024,13 +1032,42 @@ class AppConstants {
 
 ### Colors & Theme
 
-Edit `AppColors` class in `constants.dart`:
+The home screens, display mode and full-screen overlays use the design tokens in `lib/utils/design.dart`:
+
+- `DesignColors` - the palette from the mockups in `design/screens` (greens, gold accents, red for alerts)
+- `DesignPalette.light` / `DesignPalette.dark` - colour sets for the home screens; dark is used when the app is in dark mode
+- `DesignText` - fonts: Manrope (English), Noto Sans Arabic, Noto Sans JP (loaded via `google_fonts`)
+
+Other screens still use the `AppColors` class in `constants.dart`:
 
 ```dart
 static const Color primaryGreen = Color(0xFF2D5F3F);
 static const Color priorityHigh = Color(0xFFE53935);
 static const Color priorityRegular = Color(0xFF1E88E5);
 ```
+
+### Masjid Name & Donation QR Code
+
+Set in `MasjidInfo` (`lib/utils/design.dart`):
+
+```dart
+class MasjidInfo {
+  static const String name = AppConstants.appName;
+  static const String donationQrAsset = 'assets/images/qr code for donations.png';
+}
+```
+
+To change the QR code, replace `assets/images/qr code for donations.png` (keep the same name, or update both `donationQrAsset` and the `assets:` entry in `pubspec.yaml`).
+
+### Iqamah Sequence Timing
+
+Set in `lib/models/prayer_windows.dart`:
+
+| Screen | Duration | Constant |
+| --- | --- | --- |
+| Iqamah countdown | 60 seconds before iqamah | `kIqamahCountdownDuration` (= `AppConstants.countdownWarningTime`) |
+| Time for prayer | 30 seconds from iqamah | `kPrayerStartedDuration` |
+| Prayer in progress | 10 minutes | `kPrayerInProgressDuration` (= `AppConstants.blackoutDuration`) |
 
 ### Environment Variables
 
@@ -1065,20 +1102,59 @@ final method = EnvConfig.aladhanApiMethod;
 - **Auto-switching**: Between Maghrib and Sunrise
 - **Manual override**: Toggle in settings
 - **Proper contrast**: All screens optimized for both themes
+- **Home screens**: The mobile home and the masjid display both have light and dark versions
 - **Notification detail**: Fixed contrast issue in meta information section
 
 ### Responsive Design
 
-- **Mobile-first**: Optimized for phones
-- **Tablet support**: Larger screens supported
-- **Adaptive layouts**: Content adjusts to screen size
+- **Phones**: Mobile home with next-prayer card, prayer list and rotating notices
+- **Wide screens (≥ 900px)**: Masjid display layout (see below)
+- **Full-screen overlays**: Landscape layouts for the display, portrait layouts for phones
 - **Smooth animations**: Fade transitions for countdown and notifications
 
-### Overlays
+### Mobile Home
 
-- **Countdown Overlay**: Shows 60 seconds before iqama
-- **Blackout Overlay**: Silent mode during prayer (7 minutes)
-- **Gradient designs**: Beautiful visual effects
+- Masjid name with a bell button that opens Notices
+- Next prayer card: name (English & Arabic), countdown, iqamah time
+- Prayer list with Begins and Iqamah times; the next prayer is highlighted
+- Notice card that rotates every 5 seconds through active notices (high priority first), with dots (or a "3 / 20" counter above 10 notices)
+- Bottom navigation with English and Arabic labels: Times, Prayers, Qibla (not on web), Notices, Settings
+
+### Prayer Times Rules
+
+- **Sunrise** is not a prayer: it is not counted as the next prayer, has no iqamah, and is not listed in the Prayers tab (it is still used for the automatic dark mode)
+- **Jummah** replaces Dhuhr on Fridays; on other days it is shown as an extra row at the bottom of the prayer tables
+
+### Overlays (Iqamah Sequence)
+
+Shown on both the display and phones:
+
+1. **Iqamah countdown** - final 60 seconds before iqamah, large MM:SS timer
+2. **Time for prayer** - 30 seconds from iqamah: prayer name, iqamah time and etiquette reminders (straighten the rows, fill the gaps, silence your phone, repeat after the iqamah)
+3. **Prayer in progress** - 10-minute black silent screen in English and Japanese
+4. Back to the home screen
+
+The sequence is calculated from the iqamah time, so the correct screen is shown even if the app restarts part way through.
+
+A **prohibited-time alert** (sunrise, zenith, sunset) is implemented in `prohibited_time_overlay.dart` and `prayer_windows.dart` but is currently **disabled**.
+
+---
+
+## 🖥️ Masjid Display Mode
+
+When the app window is at least **900px wide** (TV, monitor or landscape tablet), the Home tab switches to a full-screen display layout based on `design/screens/1 · Home display`. The bottom navigation is hidden; the ⚙️ button opens Settings.
+
+| Area | Content |
+| --- | --- |
+| Header | Masjid icon, masjid name, settings button |
+| Clock | Live time, Gregorian date, Hijri date (English & Arabic) |
+| Left (main) | Large prayer table: Fajr, Dhuhr/Jummah, Asr, Maghrib, Isha (+ Jummah on non-Fridays) with Begins and Iqamah times; next prayer highlighted |
+| Right | Small next-prayer countdown (when notices are shown), rotating notices carousel, "Support the Masjid" donation QR code |
+| Bottom | Notice ticker (when there are notices) |
+
+When there are no active notices, the notices area shows the next prayer with a countdown instead.
+
+The display follows the app's dark mode setting, including the automatic switch after Maghrib.
 
 ---
 
@@ -1745,7 +1821,39 @@ For support and questions:
 
 ## 📝 Changelog
 
-### Version 1.1.0 (Current)
+### Unreleased (13 October 2026) - UI Redesign & Masjid Display
+
+#### New Features
+
+- 🖥️ **Masjid display mode** for screens ≥ 900px wide: large prayer table, clock with Gregorian & Hijri dates, rotating notices, next-prayer countdown, donation QR code, notice ticker
+- 🔔 **New iqamah sequence**: 60s countdown → 30s "Time for prayer" → 10-minute "Prayer in progress" → home (display and phones)
+- 🕌 **"Time for prayer" screen** with etiquette reminders, in landscape (display) and portrait (phone) layouts
+- 🕋 **Jummah** shown in the prayer tables, in place of Dhuhr on Fridays
+- 💳 **Donation QR code** on the display (`assets/images/qr code for donations.png`)
+- 🌙 **Dark mode** for the redesigned mobile home and the display
+- 🌐 **Arabic labels** across the home screens and overlays; **Japanese** on the "Prayer in progress" screen
+
+#### Changes
+
+- 🎨 Redesigned mobile home, iqamah countdown and "Prayer in progress" screens to match `design/screens`
+- 🧭 Bottom navigation restyled with English & Arabic labels (Times, Prayers, Qibla, Notices, Settings)
+- 🔄 Mobile home notice card now rotates through all active notices (high priority first)
+- ⏱️ "Prayer in progress" duration changed from 7 to 10 minutes
+- 🌅 Sunrise removed from the Prayers tab and no longer counted as the next prayer
+- 🕌 New sunset icon for Maghrib
+- 🚫 Prohibited-time alert implemented but disabled for now
+
+#### Bug Fixes
+
+- Fixed bottom navigation overflow error when the browser window is very small
+- Notice dots switch to a "3 / 20" counter above 10 notices so they don't overflow
+
+#### Tests
+
+- Added `test/unit/models/prayer_windows_test.dart` (iqamah sequence, Jummah/Friday rule, prohibited windows)
+- Added a test that Sunrise is skipped when finding the next prayer
+
+### Version 1.1.0
 
 #### Security Enhancements 🔐
 
