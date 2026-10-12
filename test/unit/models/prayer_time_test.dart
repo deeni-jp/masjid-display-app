@@ -556,6 +556,26 @@ void main() {
         expect(nextPrayer!.name, 'Dhuhr');
       });
 
+      test('getNextPrayer skips Sunrise', () {
+        // Arrange: Sunrise is sooner than Asr, but is not a prayer
+        final now = DateTime.now();
+        String hhmm(DateTime t) =>
+            '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+        final sunrise = hhmm(now.add(const Duration(hours: 1)));
+        final asr = hhmm(now.add(const Duration(hours: 2)));
+
+        final schedule = PrayerSchedule(
+          timings: {'Sunrise': sunrise, 'Asr': asr},
+          iqamaMap: {'Sunrise': sunrise, 'Asr': asr},
+        );
+
+        // Act
+        final nextPrayer = schedule.getNextPrayer();
+
+        // Assert
+        expect(nextPrayer?.name, 'Asr');
+      });
+
       test('getNextPrayer wraps to Fajr when all prayers passed', () {
         // Arrange
         final timings = {

@@ -8,12 +8,14 @@ import '../models/prayer_time.dart';
 import '../models/notification_model.dart';
 import '../models/user_model.dart';
 import '../models/hijri_date.dart';
+import '../models/prayer_windows.dart';
 import '../services/prayer_service.dart';
 import '../services/hijri_calendar_service.dart';
 import '../services/location_service.dart';
 import '../services/firebase_service.dart';
 import '../services/storage_service.dart';
 import '../utils/constants.dart';
+import '../utils/design.dart';
 import 'home_tab.dart';
 import 'prayers_tab.dart';
 import 'notifications_tab.dart';
@@ -21,6 +23,7 @@ import 'more_tab.dart';
 import 'qibla_tab.dart';
 import '../widgets/countdown_overlay.dart';
 import '../widgets/blackout_overlay.dart';
+import '../widgets/prayer_started_overlay.dart';
 import '../widgets/notification_card.dart';
 
 class HomePage extends StatefulWidget {
@@ -72,11 +75,9 @@ class _HomePageState extends State<HomePage> {
   // Notification cleanup timer
   Timer? _cleanupTimer;
 
-  // Full-screen overlays
-  bool _showFullScreenCountdown = false;
-  bool _blackoutActive = false;
-  DateTime? _blackoutEndsAt;
-  Timer? _blackoutTimer;
+  // Full-screen sequence around iqamah: countdown -> prayer time started
+  // -> prayer in progress (see prayer_windows.dart).
+  PrayerPhaseState? _prayerPhase;
 
   // Permission helpers based on user role
   // Moderator AND Admin can now manage iqama times
@@ -97,7 +98,6 @@ class _HomePageState extends State<HomePage> {
     _iqamaSub?.cancel();
     _notifSub?.cancel();
     _cleanupTimer?.cancel();
-    _blackoutTimer?.cancel();
     super.dispose();
   }
 
@@ -267,21 +267,18 @@ class _HomePageState extends State<HomePage> {
 
   void _startIqamaListener() {
     try {
-      _iqamaSub = FirebaseService.listenToIqamaTimes().listen(
-        (iqamaMap) async {
-          if (iqamaMap.isNotEmpty && _prayerSchedule != null) {
-            setState(() {
-              _prayerSchedule = PrayerSchedule(
-                timings: _prayerSchedule!.timings,
-                iqamaMap: iqamaMap,
-              );
-              _usingRemoteIqama = true;
-            });
-            await StorageService.saveIqamaTimes(iqamaMap);
-          }
-        },
-        onError: (e) => debugPrint('Iqama listener error: $e'),
-      );
+      _iqamaSub = FirebaseService.listenToIqamaTimes().listen((iqamaMap) async {
+        if (iqamaMap.isNotEmpty && _prayerSchedule != null) {
+          setState(() {
+            _prayerSchedule = PrayerSchedule(
+              timings: _prayerSchedule!.timings,
+              iqamaMap: iqamaMap,
+            );
+            _usingRemoteIqama = true;
+          });
+          await StorageService.saveIqamaTimes(iqamaMap);
+        }
+      }, onError: (e) => debugPrint('Iqama listener error: $e'));
     } catch (e) {
       debugPrint('Failed to start iqama listener: $e');
     }
@@ -289,19 +286,18 @@ class _HomePageState extends State<HomePage> {
 
   void _startNotificationListener() {
     try {
-      _notifSub = FirebaseService.listenToNotifications().listen(
-        (notifications) async {
-          setState(() {
-            _notifications = notifications;
-            _notifLoaded = true;
-          });
-          await StorageService.saveNotifications(notifications);
+      _notifSub = FirebaseService.listenToNotifications().listen((
+        notifications,
+      ) async {
+        setState(() {
+          _notifications = notifications;
+          _notifLoaded = true;
+        });
+        await StorageService.saveNotifications(notifications);
 
-          // Check for high priority alerts and trigger vibration
-          _checkForAlerts(notifications);
-        },
-        onError: (e) => debugPrint('Notification listener error: $e'),
-      );
+        // Check for high priority alerts and trigger vibration
+        _checkForAlerts(notifications);
+      }, onError: (e) => debugPrint('Notification listener error: $e'));
     } catch (e) {
       debugPrint('Failed to start notification listener: $e');
     }
@@ -309,9 +305,10 @@ class _HomePageState extends State<HomePage> {
 
   void _checkForAlerts(List<MosqueNotification> notifications) {
     // Check if there are any new high-priority alerts
-    final alerts = notifications
-        .where((n) => n.isAlert && n.isHighPriority && n.shouldShow)
-        .toList();
+    final alerts =
+        notifications
+            .where((n) => n.isAlert && n.isHighPriority && n.shouldShow)
+            .toList();
 
     if (alerts.isNotEmpty) {
       // Vibrate for alerts
@@ -346,7 +343,8 @@ class _HomePageState extends State<HomePage> {
             await FirebaseService.cleanupExpiredNotifications();
         if (remoteCleaned > 0) {
           debugPrint(
-              'Cleaned up $remoteCleaned expired notifications from Firestore');
+            'Cleaned up $remoteCleaned expired notifications from Firestore',
+          );
         }
       }
 
@@ -375,71 +373,18 @@ class _HomePageState extends State<HomePage> {
   void _updateNextPrayer() {
     if (_prayerSchedule == null) return;
 
+    final now = DateTime.now();
     final nextPrayer = _prayerSchedule!.getNextPrayer();
     final timeToNext = _prayerSchedule!.getTimeToNextPrayer();
-
-    if (nextPrayer != null) {
-      final remainingSeconds = timeToNext.inSeconds;
-
-      // Check if we should show countdown overlay (60s before iqama)
-      // Don't show if loading overlay is active
-      if (remainingSeconds <= 60 && remainingSeconds > 5 && !_blackoutActive && !_showLoadingOverlay) {
-        if (!_showFullScreenCountdown) {
-          setState(() => _showFullScreenCountdown = true);
-        }
-      } else if (remainingSeconds <= 5 && !_blackoutActive && !_showLoadingOverlay) {
-        // Start blackout mode
-        setState(() {
-          _showFullScreenCountdown = false;
-          _blackoutActive = true;
-          _blackoutEndsAt = DateTime.now().add(AppConstants.blackoutDuration);
-        });
-        _startBlackoutTimer();
-      } else if (remainingSeconds > 60 && _showFullScreenCountdown) {
-        setState(() => _showFullScreenCountdown = false);
-      }
-    }
-
-    // Check if blackout ended
-    if (_blackoutActive &&
-        _blackoutEndsAt != null &&
-        DateTime.now().isAfter(_blackoutEndsAt!)) {
-      setState(() {
-        _blackoutActive = false;
-        _blackoutEndsAt = null;
-      });
-    }
+    final prayerPhase = _prayerSchedule!.getPrayerPhase(now);
 
     if (mounted) {
       setState(() {
         _nextPrayer = nextPrayer;
         _timeToNext = timeToNext;
+        _prayerPhase = prayerPhase;
       });
     }
-  }
-
-  void _startBlackoutTimer() {
-    _blackoutTimer?.cancel();
-    final endsAt = _blackoutEndsAt;
-    if (endsAt == null) return;
-
-    final remaining = endsAt.difference(DateTime.now());
-    if (remaining.isNegative) {
-      setState(() {
-        _blackoutActive = false;
-        _blackoutEndsAt = null;
-      });
-      return;
-    }
-
-    _blackoutTimer = Timer(remaining, () {
-      if (mounted) {
-        setState(() {
-          _blackoutActive = false;
-          _blackoutEndsAt = null;
-        });
-      }
-    });
   }
 
   // ============ THEME MANAGEMENT ============
@@ -502,7 +447,10 @@ class _HomePageState extends State<HomePage> {
   void _navigateToNotificationsTab(MosqueNotification notification) {
     // First, switch to notifications tab
     setState(() {
-      _selectedIndex = kIsWeb ? 2 : 3; // Notifications tab index (2 on web, 3 on mobile after Qibla)
+      _selectedIndex =
+          kIsWeb
+              ? 2
+              : 3; // Notifications tab index (2 on web, 3 on mobile after Qibla)
     });
 
     // Then show the detail sheet for the specific notification
@@ -533,75 +481,94 @@ class _HomePageState extends State<HomePage> {
         Scaffold(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           body: SafeArea(
-            child: _loading && _prayerSchedule == null
-                ? const Center(child: CircularProgressIndicator())
-                : IndexedStack(
-                    index: _selectedIndex,
-                    children: [
-                      HomeTab(
-                        locationData: _locationData,
-                        prayerSchedule: _prayerSchedule,
-                        nextPrayer: _nextPrayer,
-                        timeToNext: _timeToNext,
-                        notifications: _notifications,
-                        darkMode: widget.darkMode,
-                        onRefresh: onRefresh,
-                        currentUser: widget.currentUser,
-                        onUserChanged: widget.onUserChanged,
-                        onNotificationTap: _navigateToNotificationsTab,
-                        hijriDate: _hijriDate,
-                      ),
-                      PrayersTab(
-                        prayerSchedule: _prayerSchedule,
-                        nextPrayer: _nextPrayer,
-                        adminMode: canManageIqama, // Admin & Moderator can edit
-                        onRefresh: onRefresh,
-                        onIqamaUpdated: onIqamaUpdated,
-                      ),
-                      if (!kIsWeb)
-                        QiblaTab(
+            child:
+                _loading && _prayerSchedule == null
+                    ? const Center(child: CircularProgressIndicator())
+                    : IndexedStack(
+                      index: _selectedIndex,
+                      children: [
+                        HomeTab(
                           locationData: _locationData,
+                          prayerSchedule: _prayerSchedule,
+                          nextPrayer: _nextPrayer,
+                          timeToNext: _timeToNext,
+                          notifications: _notifications,
                           darkMode: widget.darkMode,
                           onRefresh: onRefresh,
+                          currentUser: widget.currentUser,
+                          onUserChanged: widget.onUserChanged,
+                          onNotificationTap: _navigateToNotificationsTab,
+                          hijriDate: _hijriDate,
+                          onOpenSettings:
+                              () => setState(
+                                () => _selectedIndex = kIsWeb ? 3 : 4,
+                              ),
+                          onOpenNotices:
+                              () => setState(
+                                () => _selectedIndex = kIsWeb ? 2 : 3,
+                              ),
                         ),
-                      NotificationsTab(
-                        notifications: _notifications,
-                        notifLoaded: _notifLoaded,
-                        adminMode: canManageAnnouncements, // Admin & Moderator
-                        onNotificationsUpdated: onNotificationsUpdated,
-                      ),
-                      MoreTab(
-                        locationData: _locationData,
-                        usingRemoteIqama: _usingRemoteIqama,
-                        currentUser: widget.currentUser,
-                        darkMode: widget.darkMode,
-                        onToggleTheme: widget.onToggleTheme,
-                        onUserChanged: widget.onUserChanged,
-                      ),
-                    ],
-                  ),
+                        PrayersTab(
+                          prayerSchedule: _prayerSchedule,
+                          nextPrayer: _nextPrayer,
+                          adminMode:
+                              canManageIqama, // Admin & Moderator can edit
+                          onRefresh: onRefresh,
+                          onIqamaUpdated: onIqamaUpdated,
+                        ),
+                        if (!kIsWeb)
+                          QiblaTab(
+                            locationData: _locationData,
+                            darkMode: widget.darkMode,
+                            onRefresh: onRefresh,
+                          ),
+                        NotificationsTab(
+                          notifications: _notifications,
+                          notifLoaded: _notifLoaded,
+                          adminMode:
+                              canManageAnnouncements, // Admin & Moderator
+                          onNotificationsUpdated: onNotificationsUpdated,
+                        ),
+                        MoreTab(
+                          locationData: _locationData,
+                          usingRemoteIqama: _usingRemoteIqama,
+                          currentUser: widget.currentUser,
+                          darkMode: widget.darkMode,
+                          onToggleTheme: widget.onToggleTheme,
+                          onUserChanged: widget.onUserChanged,
+                        ),
+                      ],
+                    ),
           ),
-          bottomNavigationBar: _buildBottomNav(),
+          // The large display's home screen is full-bleed, without the nav.
+          bottomNavigationBar:
+              _selectedIndex == 0 && isDisplayLayout(context)
+                  ? null
+                  : _buildBottomNav(),
         ),
 
         // Loading overlay (shown during location fetch and data loading)
-        if (_showLoadingOverlay)
-          _LoadingOverlay(),
+        if (_showLoadingOverlay) _LoadingOverlay(),
 
-        // Full-screen countdown overlay
-        if (_showFullScreenCountdown && !_blackoutActive && _nextPrayer != null && !_showLoadingOverlay)
-          CountdownOverlay(
-            prayerName: _nextPrayer!.name,
-            timeRemaining: _timeToNext,
-          ),
-
-        // Blackout overlay
-        if (_blackoutActive && !_showLoadingOverlay)
-          BlackoutOverlay(
-            endsAt: _blackoutEndsAt,
-          ),
+        // Iqamah countdown -> prayer time started -> prayer in progress
+        if (_prayerPhase != null && !_showLoadingOverlay)
+          _buildPrayerPhaseOverlay(_prayerPhase!),
       ],
     );
+  }
+
+  Widget _buildPrayerPhaseOverlay(PrayerPhaseState state) {
+    switch (state.phase) {
+      case PrayerPhase.iqamahCountdown:
+        return CountdownOverlay(
+          prayerName: state.prayer.name,
+          timeRemaining: state.remaining(DateTime.now()),
+        );
+      case PrayerPhase.prayerStarted:
+        return PrayerStartedOverlay(prayer: state.prayer);
+      case PrayerPhase.prayerInProgress:
+        return BlackoutOverlay(endsAt: state.endsAt);
+    }
   }
 
   Widget _buildBottomNav() {
@@ -609,62 +576,147 @@ class _HomePageState extends State<HomePage> {
     final activeCount = _notifications.activeOnly.length;
     final hasHighPriority = _notifications.highPriorityOnly.isNotEmpty;
 
+    return _DesignNavBar(
+      selectedIndex: _selectedIndex,
+      darkMode: widget.darkMode,
+      onSelected: (index) => setState(() => _selectedIndex = index),
+      items: [
+        const _NavItem(Icons.schedule_rounded, 'Times', 'الأوقات'),
+        const _NavItem(Icons.mosque_outlined, 'Prayers', 'الصلوات'),
+        if (!kIsWeb) const _NavItem(Icons.explore_outlined, 'Qibla', 'القبلة'),
+        _NavItem(
+          Icons.chat_bubble_outline_rounded,
+          'Notices',
+          'الإعلانات',
+          badge: activeCount,
+          badgeColor:
+              hasHighPriority ? AppColors.priorityHigh : DesignColors.green,
+        ),
+        const _NavItem(Icons.settings_outlined, 'Settings', 'الإعدادات'),
+      ],
+    );
+  }
+}
+
+class _NavItem {
+  final IconData icon;
+  final String label;
+  final String labelArabic;
+  final int badge;
+  final Color badgeColor;
+
+  const _NavItem(
+    this.icon,
+    this.label,
+    this.labelArabic, {
+    this.badge = 0,
+    this.badgeColor = DesignColors.green,
+  });
+}
+
+/// Bottom navigation with bilingual labels (design/screens/6 · Mobile app).
+class _DesignNavBar extends StatelessWidget {
+  final List<_NavItem> items;
+  final int selectedIndex;
+  final bool darkMode;
+  final ValueChanged<int> onSelected;
+
+  const _DesignNavBar({
+    required this.items,
+    required this.selectedIndex,
+    required this.darkMode,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final background = darkMode ? const Color(0xFF11261D) : Colors.white;
+    final border = darkMode ? const Color(0xFF1F3A2E) : DesignColors.border;
+    final selected = darkMode ? const Color(0xFF8FD4B0) : DesignColors.green;
+    final unselected =
+        darkMode ? const Color(0xFF9DB5A9) : DesignColors.inkMuted;
+
     return Container(
       decoration: BoxDecoration(
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -5),
-          )
-        ],
+        color: background,
+        border: Border(top: BorderSide(color: border)),
       ),
-      child: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: (index) =>
-            setState(() => _selectedIndex = index),
-        destinations: [
-          const NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Home',
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 76,
+          child: Row(
+            children: [
+              for (var i = 0; i < items.length; i++)
+                Expanded(
+                  child: _buildItem(
+                    items[i],
+                    i == selectedIndex ? selected : unselected,
+                    i == selectedIndex,
+                    () => onSelected(i),
+                  ),
+                ),
+            ],
           ),
-          const NavigationDestination(
-            icon: Icon(Icons.access_time_outlined),
-            selectedIcon: Icon(Icons.access_time),
-            label: 'Prayers',
-          ),
-          if (!kIsWeb)
-            const NavigationDestination(
-              icon: Icon(Icons.navigation_outlined),
-              selectedIcon: Icon(Icons.navigation),
-              label: 'Qibla',
+        ),
+      ),
+    );
+  }
+
+  Widget _buildItem(
+    _NavItem item,
+    Color color,
+    bool isSelected,
+    VoidCallback onTap,
+  ) {
+    return InkWell(
+      onTap: onTap,
+      child: Semantics(
+        selected: isSelected,
+        button: true,
+        label: item.label,
+        // Scales down rather than overflowing when the bar is squeezed
+        // (e.g. a near-zero browser window, or very large text settings).
+        child: Center(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Badge(
+                  isLabelVisible: item.badge > 0,
+                  label: Text(item.badge.toString()),
+                  backgroundColor: item.badgeColor,
+                  child: Icon(item.icon, color: color, size: 25),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  item.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: DesignText.latin(
+                    size: 12.5,
+                    weight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                    color: color,
+                    height: 1.1,
+                    features: const [],
+                  ),
+                ),
+                Text(
+                  item.labelArabic,
+                  maxLines: 1,
+                  textDirection: TextDirection.rtl,
+                  style: DesignText.arabic(
+                    size: 10.5,
+                    weight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                    color: color,
+                    height: 1.3,
+                  ),
+                ),
+              ],
             ),
-          NavigationDestination(
-            icon: Badge(
-              isLabelVisible: activeCount > 0,
-              label: Text(activeCount.toString()),
-              backgroundColor: hasHighPriority
-                  ? AppColors.priorityHigh
-                  : Theme.of(context).colorScheme.primary,
-              child: const Icon(Icons.notifications_outlined),
-            ),
-            selectedIcon: Badge(
-              isLabelVisible: activeCount > 0,
-              label: Text(activeCount.toString()),
-              backgroundColor: hasHighPriority
-                  ? AppColors.priorityHigh
-                  : Theme.of(context).colorScheme.primary,
-              child: const Icon(Icons.notifications),
-            ),
-            label: 'Notices',
           ),
-          const NavigationDestination(
-            icon: Icon(Icons.menu),
-            selectedIcon: Icon(Icons.menu),
-            label: 'More',
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -767,7 +819,9 @@ class _LoadingOverlayState extends State<_LoadingOverlay>
                                   valueColor: AlwaysStoppedAnimation<Color>(
                                     Colors.white.withValues(alpha: 0.9),
                                   ),
-                                  backgroundColor: Colors.white.withValues(alpha: 0.2),
+                                  backgroundColor: Colors.white.withValues(
+                                    alpha: 0.2,
+                                  ),
                                 ),
                               ),
                             );

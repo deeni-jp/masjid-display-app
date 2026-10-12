@@ -2,7 +2,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../utils/constants.dart';
+import '../utils/design.dart';
 
+/// Full-screen iqamah countdown shown in the final minute before iqamah
+/// (design/screens/3 · Iqamah countdown).
 class CountdownOverlay extends StatelessWidget {
   final String prayerName;
   final Duration timeRemaining;
@@ -13,204 +16,197 @@ class CountdownOverlay extends StatelessWidget {
     required this.timeRemaining,
   });
 
+  static const Color _mintText = Color(0xFFD5EBDD);
+  static const Color _mintMuted = Color(0xFF9CC7AE);
+
   @override
   Widget build(BuildContext context) {
+    final remaining = timeRemaining.isNegative ? Duration.zero : timeRemaining;
+    final minutes = remaining.inMinutes.toString().padLeft(2, '0');
+    final seconds = remaining.inSeconds
+        .remainder(60)
+        .toString()
+        .padLeft(2, '0');
+
     return Positioned.fill(
       child: AbsorbPointer(
         absorbing: true,
-        child: Container(
-          color: Colors.black.withValues(alpha: 0.85),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Card(
-                margin: const EdgeInsets.all(AppStyles.paddingLarge),
-                color: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppStyles.radiusXLarge),
-                ),
-                elevation: 20,
-                child: Padding(
-                  padding: const EdgeInsets.all(32.0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Mosque Icon
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryGreen.withValues(alpha: 0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          AppColors.getPrayerIcon(prayerName),
-                          size: 40,
-                          color: AppColors.primaryGreen,
-                        ),
+        child: Material(
+          color: DesignColors.greenDeep,
+          child: LayoutBuilder(
+            builder: (context, c) {
+              // Scale against the 2000×1125 design, but let portrait phones
+              // use more of their width.
+              final s = (c.maxWidth / 1150).clamp(0.0, c.maxHeight / 1125);
+              final now = DateTime.now();
+
+              return Stack(
+                children: [
+                  Positioned.fill(
+                    child: CustomPaint(
+                      painter: RingsPainter(
+                        center: const Offset(0.5, 0.5),
+                        radii: const [0.445, 0.585],
+                        color: Colors.white.withValues(alpha: 0.07),
+                        strokeWidth: 2,
                       ),
-                      const SizedBox(height: 20),
+                    ),
+                  ),
 
-                      // Prayer Name
-                      Text(
-                        prayerName,
-                        style: GoogleFonts.poppins(
-                          fontSize: 32,
-                          color: AppColors.primaryGreen,
-                          fontWeight: FontWeight.w700,
-                        ),
+                  // Current time
+                  Positioned(
+                    left: 50 * s,
+                    top: 50 * s,
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 34 * s,
+                        vertical: 18 * s,
                       ),
-                      const SizedBox(height: 8),
-
-                      // Subtitle
-                      Text(
-                        'Iqama in',
-                        style: GoogleFonts.poppins(
-                          fontSize: 18,
-                          color: Colors.black87,
-                        ),
+                      decoration: BoxDecoration(
+                        color: DesignColors.greenRaised,
+                        borderRadius: BorderRadius.circular(20 * s),
                       ),
-                      const SizedBox(height: 20),
+                      child: TimeWithPeriod(
+                        time: now,
+                        size: 46 * s,
+                        color: DesignColors.goldBright,
+                        periodScale: 0.5,
+                      ),
+                    ),
+                  ),
 
-                      // Countdown Display
-                      _buildCountdownDisplay(),
-                      const SizedBox(height: 24),
+                  // Masjid name
+                  Positioned(
+                    right: 50 * s,
+                    top: 56 * s,
+                    child: Text(
+                      MasjidInfo.name,
+                      style: DesignText.latin(
+                        size: 32 * s,
+                        weight: FontWeight.w700,
+                        color: _mintText,
+                        height: 1.1,
+                      ),
+                    ),
+                  ),
 
-                      // Progress Bar
-                      _buildProgressBar(),
-                      const SizedBox(height: 24),
-
-                      // Message
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 12,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryGreen.withValues(alpha: 0.1),
-                          borderRadius:
-                              BorderRadius.circular(AppStyles.radiusMedium),
-                        ),
-                        child: Row(
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(24, 130 * s, 24, 0),
+                    child: Center(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(
-                              Icons.info_outline,
-                              color: AppColors.primaryGreen,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Flexible(
-                              child: Text(
-                                'Please prepare — line up quietly',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 14,
-                                  color: AppColors.primaryGreen,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                textAlign: TextAlign.center,
+                            BilingualLabel(
+                              english: prayerName,
+                              arabic: Bilingual.prayerArabic(prayerName),
+                              alignment: CrossAxisAlignment.center,
+                              englishStyle: DesignText.latin(
+                                size: 54 * s,
+                                weight: FontWeight.w700,
+                                color: _mintText,
+                                height: 1.1,
+                                features: const [],
                               ),
+                              arabicStyle: DesignText.arabic(
+                                size: 46 * s,
+                                weight: FontWeight.w600,
+                                color: _mintMuted,
+                                height: 1.4,
+                              ),
+                            ),
+                            SizedBox(height: 26 * s),
+                            BilingualLabel(
+                              english: 'Iqamah in',
+                              arabic: 'الإقامة بعد',
+                              alignment: CrossAxisAlignment.center,
+                              englishStyle: DesignText.latin(
+                                size: 70 * s,
+                                weight: FontWeight.w800,
+                                color: DesignColors.goldBright,
+                                height: 1.1,
+                                features: const [],
+                              ),
+                              arabicStyle: DesignText.arabic(
+                                size: 54 * s,
+                                weight: FontWeight.w700,
+                                color: DesignColors.goldBright,
+                                height: 1.4,
+                              ),
+                            ),
+                            SizedBox(height: 20 * s),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _unit(s, minutes, 'minutes', 'دقائق'),
+                                _colon(s),
+                                _unit(s, seconds, 'seconds', 'ثانية'),
+                              ],
                             ),
                           ],
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-            ),
+                ],
+              );
+            },
           ),
         ),
       ),
     );
   }
 
-  Widget _buildCountdownDisplay() {
-    final seconds = timeRemaining.inSeconds;
-    final displaySeconds = seconds.clamp(0, 60);
-
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 200),
-      transitionBuilder: (child, animation) {
-        return ScaleTransition(
-          scale: animation,
-          child: FadeTransition(opacity: animation, child: child),
-        );
-      },
-      child: Text(
-        _formatTime(timeRemaining),
-        key: ValueKey(displaySeconds),
-        style: GoogleFonts.poppins(
-          fontSize: 72,
-          fontWeight: FontWeight.w700,
-          color: Colors.black,
-          height: 1,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildProgressBar() {
-    // Progress from 60 seconds to 0
-    final totalSeconds = 60;
-    final remainingSeconds = timeRemaining.inSeconds.clamp(0, totalSeconds);
-    final progress = 1 - (remainingSeconds / totalSeconds);
-
+  Widget _unit(double s, String value, String label, String labelAr) {
     return Column(
       children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: LinearProgressIndicator(
-            value: progress,
-            minHeight: 8,
-            backgroundColor: Colors.grey.shade200,
-            valueColor: AlwaysStoppedAnimation<Color>(
-              _getProgressColor(progress),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 250),
+          transitionBuilder:
+              (child, animation) =>
+                  FadeTransition(opacity: animation, child: child),
+          child: Text(
+            value,
+            key: ValueKey(value),
+            style: DesignText.latin(
+              size: 360 * s,
+              weight: FontWeight.w800,
+              color: Colors.white,
+              height: 1,
             ),
           ),
         ),
-        const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              '60s',
-              style: GoogleFonts.poppins(
-                fontSize: 11,
-                color: Colors.grey,
-              ),
-            ),
-            Text(
-              'Iqama',
-              style: GoogleFonts.poppins(
-                fontSize: 11,
-                color: Colors.grey,
-              ),
-            ),
-          ],
+        SizedBox(height: 30 * s),
+        BilingualLabel(
+          english: label,
+          arabic: labelAr,
+          alignment: CrossAxisAlignment.center,
+          englishStyle: DesignText.latin(
+            size: 34 * s,
+            weight: FontWeight.w700,
+            color: _mintText,
+            height: 1.1,
+            features: const [],
+          ),
+          arabicStyle: DesignText.arabic(
+            size: 27 * s,
+            color: _mintMuted,
+            height: 1.4,
+          ),
         ),
       ],
     );
   }
 
-  Color _getProgressColor(double progress) {
-    // Green -> Yellow -> Red as time decreases
-    if (progress < 0.5) {
-      return AppColors.primaryGreen;
-    } else if (progress < 0.8) {
-      return Colors.orange;
-    } else {
-      return Colors.red;
-    }
-  }
-
-  String _formatTime(Duration d) {
-    final seconds = d.inSeconds;
-    if (seconds <= 0) return '0';
-    if (seconds < 60) return '${seconds}s';
-
-    final minutes = d.inMinutes;
-    final remainingSeconds = seconds % 60;
-    return '${minutes}m ${remainingSeconds.toString().padLeft(2, '0')}s';
+  Widget _colon(double s) {
+    Widget dot() =>
+        Container(width: 46 * s, height: 46 * s, color: DesignColors.gold);
+    return Padding(
+      padding: EdgeInsets.fromLTRB(46 * s, 105 * s, 46 * s, 0),
+      child: Column(children: [dot(), SizedBox(height: 44 * s), dot()]),
+    );
   }
 }
 
@@ -233,10 +229,7 @@ class MinimalCountdownOverlay extends StatelessWidget {
         child: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [
-                AppColors.primaryGreenDark,
-                AppColors.primaryGreen,
-              ],
+              colors: [AppColors.primaryGreenDark, AppColors.primaryGreen],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ),

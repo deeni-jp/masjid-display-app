@@ -1,17 +1,20 @@
 // lib/screens/home_tab.dart
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart' show DateFormat;
 import '../models/prayer_time.dart';
 import '../models/notification_model.dart';
 import '../models/user_model.dart';
 import '../models/hijri_date.dart';
 import '../services/location_service.dart';
 import '../utils/constants.dart';
-import '../widgets/notification_card.dart';
-import '../widgets/news_ticker.dart';
-import 'profile_screen.dart';
+import '../utils/design.dart';
+import 'display_home.dart';
 
+/// Home tab. Shows the masjid display on large screens
+/// (design/screens/1 · Home display) and the mobile home otherwise
+/// (design/screens/6 · Mobile app).
 class HomeTab extends StatelessWidget {
   final LocationData? locationData;
   final PrayerSchedule? prayerSchedule;
@@ -24,6 +27,8 @@ class HomeTab extends StatelessWidget {
   final void Function(AppUser?) onUserChanged;
   final void Function(MosqueNotification)? onNotificationTap;
   final HijriDate? hijriDate;
+  final VoidCallback? onOpenSettings;
+  final VoidCallback? onOpenNotices;
 
   const HomeTab({
     super.key,
@@ -38,534 +43,290 @@ class HomeTab extends StatelessWidget {
     required this.onUserChanged,
     this.onNotificationTap,
     this.hijriDate,
+    this.onOpenSettings,
+    this.onOpenNotices,
   });
 
-  // Get high priority notifications sorted by expiry
-  List<MosqueNotification> get _highPriorityNotifications {
-    return notifications.highPriorityOnly.sortedByExpiry;
-  }
-
-  // Get notifications for ticker (non-high priority)
-  List<MosqueNotification> get _tickerNotifications {
-    return notifications.excludingHighPriority;
+  /// Active notices for the rotating card: high priority first, then the
+  /// rest, newest first within each group.
+  List<MosqueNotification> get _cardNotices {
+    final active = notifications.activeOnly;
+    return [
+      ...active.highPriorityOnly.sortedByNewest,
+      ...active.excludingHighPriority.sortedByNewest,
+    ];
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    if (isDisplayLayout(context)) {
+      return DisplayHome(
+        prayerSchedule: prayerSchedule,
+        nextPrayer: nextPrayer,
+        timeToNext: timeToNext,
+        notifications: notifications,
+        hijriDate: hijriDate,
+        onOpenSettings: onOpenSettings,
+        onNotificationTap: onNotificationTap,
+        darkMode: darkMode,
+      );
+    }
+
+    final p = DesignPalette.of(darkMode);
+    final notices = _cardNotices;
+
+    return ColoredBox(
+      color: p.background,
+      child: RefreshIndicator(
+        onRefresh: onRefresh,
+        color: DesignColors.green,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          children: [
+            _buildHeader(p),
+            const SizedBox(height: 22),
+            _buildNextPrayerCard(),
+            const SizedBox(height: 16),
+            _buildPrayerList(p),
+            if (notices.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              _RotatingNoticeCard(
+                notices: notices,
+                palette: p,
+                builder: (notice) => _buildNoticeCard(p, notice),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(DesignPalette p) {
+    return Row(
       children: [
-        // Main scrollable content
         Expanded(
-          child: RefreshIndicator(
-            onRefresh: onRefresh,
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _buildHeader(context),
-                  _buildNextPrayerCard(context),
-
-                  // High priority notifications
-                  if (_highPriorityNotifications.isNotEmpty)
-                    _buildHighPrioritySection(context),
-
-                  _buildQuickPrayerTimes(context),
-                  const SizedBox(height: 20),
-                ],
+          child: Text(
+            MasjidInfo.name,
+            style: DesignText.latin(
+              size: 24,
+              weight: FontWeight.w800,
+              color: p.title,
+              height: 1.15,
+              features: const [],
+            ),
+          ),
+        ),
+        Material(
+          color: p.surface,
+          shape: CircleBorder(side: BorderSide(color: p.border)),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: onOpenNotices,
+            child: SizedBox(
+              width: 50,
+              height: 50,
+              child: Icon(
+                Icons.notifications_none_rounded,
+                color: p.title,
+                size: 24,
               ),
             ),
           ),
         ),
-
-        // News ticker at bottom (for non-high priority notifications)
-        if (_tickerNotifications.isNotEmpty)
-          NewsTicker(
-            notifications: _tickerNotifications,
-            onTap: onNotificationTap,
-            darkMode: darkMode,
-            rotationInterval: AppConstants.tickerRotationInterval,
-          ),
       ],
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
-    final now = DateTime.now();
-    final hijriDateStr = hijriDate?.formattedShort ?? 'Loading...';
+  Widget _buildNextPrayerCard() {
+    final name = nextPrayer?.name ?? '';
+    final iqamah = nextPrayer?.getIqamaTime();
+    const labelColor = Color(0xFFBFDCCD);
 
     return Container(
+      padding: const EdgeInsets.fromLTRB(22, 22, 22, 20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: darkMode
-              ? AppColors.headerGradientDark
-              : AppColors.headerGradientLight,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: DesignColors.green,
+        borderRadius: BorderRadius.circular(28),
       ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppStyles.paddingLarge,
-          AppStyles.paddingMedium,
-          AppStyles.paddingLarge,
-          AppStyles.paddingXLarge,
-        ),
-        child: Column(
-          children: [
-            // Profile Icon Row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                GestureDetector(
-                  onTap: () => _openProfileScreen(context),
-                  child: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      borderRadius:
-                          BorderRadius.circular(AppStyles.radiusMedium),
-                    ),
-                    child:
-                        const Icon(Icons.person_outline, color: Colors.white),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-
-            // Welcome Message - CENTERED
-            Text(
-              'Welcome',
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: Colors.white70,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              AppConstants.appName,
-              style: GoogleFonts.poppins(
-                fontSize: 22,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 20),
-
-            // Calendar Card - CENTERED
-            Container(
-              padding: const EdgeInsets.all(AppStyles.paddingMedium),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(AppStyles.radiusLarge),
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    hijriDateStr,
-                    style: GoogleFonts.poppins(
-                      fontSize: 13,
-                      color: Colors.white70,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    DateFormat('EEEE, d MMMM yyyy').format(now),
-                    style: GoogleFonts.poppins(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Location - CENTERED
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.location_on_outlined,
-                    color: Colors.white70, size: 16),
-                const SizedBox(width: 6),
-                Text(
-                  locationData?.formattedLocation ?? 'Unknown',
-                  style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    color: Colors.white70,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _openProfileScreen(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ProfileScreen(
-          currentUser: currentUser,
-          onUserChanged: onUserChanged,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNextPrayerCard(BuildContext context) {
-    final sunriseRaw = prayerSchedule?.getPrayerByName('Sunrise')?.waqt ?? '';
-    final sunsetRaw = prayerSchedule?.getPrayerByName('Maghrib')?.waqt ?? '';
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppStyles.paddingLarge,
-        AppStyles.paddingLarge,
-        AppStyles.paddingLarge,
-        0,
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: darkMode
-                ? AppColors.nextPrayerGradientDark
-                : AppColors.nextPrayerGradientLight,
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(AppStyles.radiusXLarge),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 15,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(AppStyles.paddingXLarge),
-          child: Column(
-            children: [
-              // Prayer Name - CENTERED
-              Text(
-                nextPrayer?.name ?? 'Next Prayer',
-                style: GoogleFonts.poppins(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                  color: darkMode ? Colors.white : AppColors.primaryGreen,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Salah will start in',
-                style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  color: darkMode ? Colors.white70 : Colors.black54,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 20),
-
-              // Countdown Timer - CENTERED with smooth animation
-              _buildSmoothCountdown(context),
-
-              const SizedBox(height: 24),
-
-              // Sunrise & Sunset Row
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: darkMode
-                      ? Colors.black.withValues(alpha: 0.2)
-                      : Colors.white.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildSunTimeItem(
-                      icon: Icons.wb_sunny_outlined,
-                      label: 'Sunrise',
-                      time: PrayerTime.trimTime(sunriseRaw),
-                    ),
-                    Container(
-                      width: 1,
-                      height: 30,
-                      color: darkMode ? Colors.white24 : Colors.black12,
-                    ),
-                    _buildSunTimeItem(
-                      icon: Icons.wb_twilight,
-                      label: 'Sunset',
-                      time: PrayerTime.trimTime(sunsetRaw),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSmoothCountdown(BuildContext context) {
-    final hours = timeToNext.inHours;
-    final minutes = timeToNext.inMinutes.remainder(60);
-    final seconds = timeToNext.inSeconds.remainder(60);
-
-    final textColor = darkMode ? Colors.white : AppColors.primaryGreen;
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        if (hours > 0) ...[
-          _buildTimeUnit(hours.toString().padLeft(2, '0'), 'hrs', textColor),
-          _buildTimeSeparator(textColor),
-        ],
-        _buildTimeUnit(minutes.toString().padLeft(2, '0'), 'min', textColor),
-        _buildTimeSeparator(textColor),
-        _buildTimeUnit(seconds.toString().padLeft(2, '0'), 'sec', textColor),
-      ],
-    );
-  }
-
-  Widget _buildTimeUnit(String value, String label, Color color) {
-    return Column(
-      children: [
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
-          transitionBuilder: (child, animation) {
-            return FadeTransition(
-              opacity: animation,
-              child: SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(0, -0.3),
-                  end: Offset.zero,
-                ).animate(CurvedAnimation(
-                  parent: animation,
-                  curve: Curves.easeOutCubic,
-                )),
-                child: child,
-              ),
-            );
-          },
-          child: Text(
-            value,
-            key: ValueKey(value),
-            style: GoogleFonts.poppins(
-              fontSize: 42,
-              fontWeight: FontWeight.w700,
-              color: color,
-              height: 1,
-            ),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: GoogleFonts.poppins(
-            fontSize: 11,
-            color: color.withValues(alpha: 0.7),
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTimeSeparator(Color color) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: Text(
-        ':',
-        style: GoogleFonts.poppins(
-          fontSize: 36,
-          fontWeight: FontWeight.w700,
-          color: color.withValues(alpha: 0.7),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSunTimeItem({
-    required IconData icon,
-    required String label,
-    required String time,
-  }) {
-    return Row(
-      children: [
-        Icon(
-          icon,
-          size: 20,
-          color: darkMode ? Colors.white70 : Colors.black54,
-        ),
-        const SizedBox(width: 8),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: GoogleFonts.poppins(
-                fontSize: 11,
-                color: darkMode ? Colors.white60 : Colors.black45,
-              ),
-            ),
-            Text(
-              time.isNotEmpty ? time : '--:--',
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: darkMode ? Colors.white : Colors.black87,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildHighPrioritySection(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Section header
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppStyles.paddingLarge,
-            AppStyles.paddingLarge,
-            AppStyles.paddingLarge,
-            0,
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.priority_high,
-                color: AppColors.priorityHigh,
-                size: 20,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                'Important',
-                style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.priorityHigh,
-                ),
-              ),
-              const Spacer(),
-              if (_highPriorityNotifications.length > 1)
-                Text(
-                  '${_highPriorityNotifications.length} alerts',
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: Colors.grey,
-                  ),
-                ),
-            ],
-          ),
-        ),
-
-        // Rotating high priority card
-        RotatingHighPriorityCard(
-          notifications: _highPriorityNotifications,
-          onTap: onNotificationTap,
-          darkMode: darkMode,
-          rotationInterval: AppConstants.notificationRotationInterval,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildQuickPrayerTimes(BuildContext context) {
-    if (prayerSchedule == null) return const SizedBox.shrink();
-
-    final prayers = prayerSchedule!.getMainPrayers();
-
-    return Padding(
-      padding: const EdgeInsets.all(AppStyles.paddingLarge),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Prayer Times',
-            style: GoogleFonts.poppins(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
+          Row(
+            children: [
+              Text(
+                'NEXT PRAYER',
+                style: DesignText.latin(
+                  size: 13,
+                  weight: FontWeight.w700,
+                  color: labelColor,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                'الصلاة القادمة',
+                textDirection: TextDirection.rtl,
+                style: DesignText.arabic(size: 14, color: labelColor),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                name.isEmpty ? '—' : name,
+                style: DesignText.latin(
+                  size: 34,
+                  weight: FontWeight.w800,
+                  color: Colors.white,
+                  features: const [],
+                ),
+              ),
+              const SizedBox(width: 14),
+              Text(
+                Bilingual.prayerArabic(name),
+                textDirection: TextDirection.rtl,
+                style: DesignText.arabic(
+                  size: 26,
+                  weight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 2),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              DesignTime.hms(timeToNext),
+              style: DesignText.latin(
+                size: 50,
+                weight: FontWeight.w800,
+                color: Colors.white,
+              ),
             ),
           ),
           const SizedBox(height: 12),
-          Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
-              borderRadius: BorderRadius.circular(AppStyles.radiusLarge),
-              boxShadow: AppStyles.cardShadowLight,
-            ),
-            child: Column(
+          Container(height: 1, color: Colors.white24),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Text(
+                iqamah != null
+                    ? 'Iqamah ${DateFormat('h:mm a').format(iqamah)}'
+                    : 'Iqamah',
+                style: DesignText.latin(
+                  size: 15,
+                  weight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+              const Spacer(),
+              if (iqamah != null)
+                Text(
+                  'الإقامة ${Bilingual.timeArabic(iqamah)}',
+                  textDirection: TextDirection.rtl,
+                  style: DesignText.arabic(size: 14, color: Colors.white),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPrayerList(DesignPalette p) {
+    final prayers = displayPrayers(prayerSchedule);
+    if (prayers.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: p.surface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: p.border),
+      ),
+      child: Column(
+        children: [
+          for (var i = 0; i < prayers.length; i++) ...[
+            if (i > 0 &&
+                prayers[i].name != nextPrayer?.name &&
+                prayers[i - 1].name != nextPrayer?.name)
+              Divider(height: 1, indent: 16, endIndent: 16, color: p.divider),
+            _buildPrayerRow(p, prayers[i]),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPrayerRow(DesignPalette p, PrayerTime prayer) {
+    final highlighted = prayer.name == nextPrayer?.name;
+    final nameColor = highlighted ? p.highlightText : p.ink;
+
+    String fmt(DateTime? t) =>
+        t == null
+            ? PrayerTime.trimTime(prayer.waqt)
+            : DateFormat('h:mm a').format(t);
+
+    return Container(
+      color: highlighted ? p.highlight : null,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
               children: [
-                _buildPrayerTimeHeader(context),
-                const Divider(height: 1),
-                ...prayers.map((prayer) {
-                  return _buildCompactPrayerRow(context, prayer);
-                }).toList(),
+                Text(
+                  prayer.name,
+                  style: DesignText.latin(
+                    size: 17,
+                    weight: FontWeight.w700,
+                    color: nameColor,
+                    features: const [],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Flexible(
+                  child: Text(
+                    Bilingual.prayerArabic(prayer.name),
+                    overflow: TextOverflow.ellipsis,
+                    textDirection: TextDirection.rtl,
+                    style: DesignText.arabic(size: 14, color: nameColor),
+                  ),
+                ),
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPrayerTimeHeader(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppStyles.paddingMedium,
-        vertical: 12,
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 2,
+          SizedBox(
+            width: 92,
             child: Text(
-              'Waqt',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey,
+              fmt(prayer.getWaqtTime()),
+              textAlign: TextAlign.right,
+              style: DesignText.latin(
+                size: 16,
+                weight: FontWeight.w500,
+                color: highlighted ? p.highlightText : p.inkMuted,
               ),
             ),
           ),
-          Expanded(
-            flex: 3,
+          SizedBox(
+            width: 92,
             child: Text(
-              'Prayer',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey,
-              ),
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text(
-              'Iqama',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey,
+              fmt(prayer.getIqamaTime()),
+              textAlign: TextAlign.right,
+              style: DesignText.latin(
+                size: 16,
+                weight: FontWeight.w800,
+                color: nameColor,
               ),
             ),
           ),
@@ -574,88 +335,181 @@ class HomeTab extends StatelessWidget {
     );
   }
 
-  Widget _buildCompactPrayerRow(BuildContext context, PrayerTime prayer) {
-    final isNext = nextPrayer?.name == prayer.name;
+  Widget _buildNoticeCard(DesignPalette p, MosqueNotification notice) {
+    final hasArabic = RegExp(r'[؀-ۿ]').hasMatch(notice.message);
+    final label = notice.isHighPriority ? 'IMPORTANT' : 'NOTICE';
+    final labelAr = notice.isHighPriority ? 'مهم' : 'إعلان';
+    final labelColor =
+        notice.isHighPriority
+            ? DesignColors.red
+            : (darkMode ? DesignColors.goldBright : DesignColors.goldText);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: isNext
-            ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3)
-            : Colors.transparent,
-        border: Border(
-          bottom: BorderSide(
-            color: Colors.grey.withValues(alpha: 0.1),
-            width: 1,
-          ),
-        ),
+    return Material(
+      color: p.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: BorderSide(color: p.border),
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppStyles.paddingMedium,
-          vertical: 14,
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              flex: 2,
-              child: Text(
-                PrayerTime.trimTime(prayer.waqt),
-                textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            Expanded(
-              flex: 3,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(24),
+        onTap:
+            onNotificationTap == null ? null : () => onNotificationTap!(notice),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: AppColors.getPrayerColor(prayer.name)
-                          .withValues(alpha: 0.1),
-                      borderRadius:
-                          BorderRadius.circular(AppStyles.radiusSmall),
-                    ),
-                    child: Icon(
-                      AppColors.getPrayerIcon(prayer.name),
-                      size: 16,
-                      color: AppColors.getPrayerColor(prayer.name),
+                  Text(
+                    label,
+                    style: DesignText.latin(
+                      size: 13,
+                      weight: FontWeight.w700,
+                      color: labelColor,
+                      letterSpacing: 1.2,
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  SizedBox(
-                    width: 80,
-                    child: Text(
-                      prayer.name,
-                      textAlign: TextAlign.left,
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        fontWeight: isNext ? FontWeight.w600 : FontWeight.w500,
-                      ),
-                    ),
+                  const Spacer(),
+                  Text(
+                    labelAr,
+                    textDirection: TextDirection.rtl,
+                    style: DesignText.arabic(size: 14, color: labelColor),
                   ),
                 ],
               ),
-            ),
-            Expanded(
-              flex: 2,
-              child: Text(
-                PrayerTime.trimTime(prayer.iqama),
-                textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w600,
+              const SizedBox(height: 8),
+              Text(
+                notice.title,
+                style: DesignText.latin(
+                  size: 18,
+                  weight: FontWeight.w700,
+                  color: p.ink,
+                  height: 1.3,
+                  features: const [],
                 ),
               ),
-            ),
-          ],
+              if (notice.message.trim().isNotEmpty &&
+                  notice.message.trim() != notice.title.trim()) ...[
+                const SizedBox(height: 4),
+                Text(
+                  notice.getPreview(maxLength: 140),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  textDirection: hasArabic ? TextDirection.rtl : null,
+                  style:
+                      hasArabic
+                          ? DesignText.arabic(size: 15, color: p.inkMuted)
+                          : DesignText.latin(
+                            size: 14,
+                            weight: FontWeight.w500,
+                            color: p.inkMuted,
+                            height: 1.4,
+                            features: const [],
+                          ),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+/// Cycles through [notices] every few seconds, with position dots.
+class _RotatingNoticeCard extends StatefulWidget {
+  final List<MosqueNotification> notices;
+  final DesignPalette palette;
+  final Widget Function(MosqueNotification) builder;
+
+  const _RotatingNoticeCard({
+    required this.notices,
+    required this.palette,
+    required this.builder,
+  });
+
+  @override
+  State<_RotatingNoticeCard> createState() => _RotatingNoticeCardState();
+}
+
+class _RotatingNoticeCardState extends State<_RotatingNoticeCard> {
+  Timer? _timer;
+  int _index = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(AppConstants.notificationRotationInterval, (_) {
+      if (widget.notices.length > 1) {
+        setState(() => _index = (_index + 1) % widget.notices.length);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final notices = widget.notices;
+    if (_index >= notices.length) _index = 0;
+    final notice = notices[_index];
+
+    return Column(
+      children: [
+        AnimatedSize(
+          duration: const Duration(milliseconds: 250),
+          alignment: Alignment.topCenter,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 400),
+            layoutBuilder:
+                (current, previous) => Stack(
+                  alignment: Alignment.topCenter,
+                  children: [...previous, if (current != null) current],
+                ),
+            child: KeyedSubtree(
+              key: ValueKey(notice.id),
+              child: widget.builder(notice),
+            ),
+          ),
+        ),
+        if (notices.length > 10) ...[
+          const SizedBox(height: 8),
+          Text(
+            '${_index + 1} / ${notices.length}',
+            style: DesignText.latin(
+              size: 12,
+              weight: FontWeight.w600,
+              color: widget.palette.inkMuted,
+            ),
+          ),
+        ] else if (notices.length > 1) ...[
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              for (var i = 0; i < notices.length; i++)
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  width: i == _index ? 18 : 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color:
+                        i == _index
+                            ? DesignColors.green
+                            : widget.palette.dotInactive,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ],
     );
   }
 }

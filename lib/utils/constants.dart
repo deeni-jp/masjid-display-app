@@ -27,7 +27,7 @@ class AppConstants {
   // Timing Constants
   static const Duration countdownWarningTime = Duration(seconds: 60);
   static const Duration iqamaTransitionTime = Duration(seconds: 5);
-  static const Duration blackoutDuration = Duration(minutes: 7);
+  static const Duration blackoutDuration = Duration(minutes: 10);
 
   // API Configuration
   // NOTE: Method and School are now configured in .env

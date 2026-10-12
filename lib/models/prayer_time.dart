@@ -213,10 +213,12 @@ class PrayerSchedule {
 
     // Find next prayer today
     for (final prayer in prayers) {
-      // On Fridays, skip Dhuhr in next prayer calculation
-      if (isFriday && prayer.name == 'Dhuhr') {
-        continue;
-      }
+      // Sunrise is not a prayer; it has no iqamah.
+      if (prayer.name == 'Sunrise') continue;
+
+      // Jummah replaces Dhuhr on Fridays only
+      if (isFriday && prayer.name == 'Dhuhr') continue;
+      if (!isFriday && prayer.name == 'Jummah') continue;
 
       final nextTime = prayer.getNextTime();
       if (nextTime != null &&

@@ -25,7 +25,10 @@ class PrayersTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final prayers = prayerSchedule?.getPrayersInOrder() ?? [];
+    // Sunrise has no iqamah to edit, so it isn't listed here.
+    final prayers = (prayerSchedule?.getPrayersInOrder() ?? [])
+        .where((p) => p.name != 'Sunrise')
+        .toList();
 
     return RefreshIndicator(
       onRefresh: onRefresh,
