@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 
 import 'firebase_options.dart';
 import 'models/user_model.dart';
@@ -14,6 +15,7 @@ import 'screens/auth_screen.dart';
 import 'screens/home_page.dart';
 import 'utils/constants.dart';
 import 'utils/env_config.dart';
+import 'widgets/masjid_logo.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,10 +26,48 @@ Future<void> main() async {
   // Initialize Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
+  // Attest that requests come from this app (Firebase App Check)
+  await _activateAppCheck();
+
   // Initialize local storage
   await StorageService.init();
 
   runApp(const PrayerApp());
+}
+
+/// Turns on Firebase App Check, which attaches a token to Firebase requests
+/// proving they come from this app (not a script). It's in monitoring mode:
+/// Firebase only *records* missing/invalid tokens until enforcement is turned
+/// on in the Firebase Console (see README → App Check). Failures here must
+/// never stop the app.
+Future<void> _activateAppCheck() async {
+  try {
+    if (kIsWeb) {
+      final siteKey = EnvConfig.appCheckWebSiteKey;
+      if (siteKey.isEmpty) {
+        debugPrint('App Check: no APP_CHECK_WEB_SITE_KEY in .env; skipped');
+        return;
+      }
+      await FirebaseAppCheck.instance.activate(
+        providerWeb: ReCaptchaV3Provider(siteKey),
+      );
+    } else {
+      await FirebaseAppCheck.instance.activate(
+        // Debug builds use the debug provider: its token is printed in the
+        // log and must be registered in Firebase Console → App Check.
+        providerAndroid:
+            kDebugMode
+                ? const AndroidDebugProvider()
+                : const AndroidPlayIntegrityProvider(),
+        providerApple:
+            kDebugMode
+                ? const AppleDebugProvider()
+                : const AppleAppAttestWithDeviceCheckFallbackProvider(),
+      );
+    }
+  } catch (e) {
+    debugPrint('App Check activation failed (app continues): $e');
+  }
 }
 
 class PrayerApp extends StatefulWidget {
@@ -233,14 +273,17 @@ class _AuthWrapperState extends State<AuthWrapper> {
   }
 
   Future<void> _initializePushNotifications() async {
+    // Web push isn't set up (it needs a service worker and VAPID key), so
+    // don't ask browsers for notification permission. Web users see notices
+    // in the app itself.
+    if (kIsWeb) return;
+
     try {
       final pushService = PushNotificationService();
       await pushService.initialize();
 
-      // Subscribe to mosque-wide notifications topic (not supported on web)
-      if (!kIsWeb) {
-        await pushService.subscribeToTopic('mosque_notifications');
-      }
+      // Subscribe to the mosque-wide notifications topic
+      await pushService.subscribeToTopic('mosque_notifications');
 
       debugPrint('Push notifications initialized successfully');
     } catch (e) {
@@ -278,25 +321,14 @@ class _AuthWrapperState extends State<AuthWrapper> {
   Widget build(BuildContext context) {
     // Show loading screen while checking auth
     if (_isLoading) {
-      return Scaffold(
+      return const Scaffold(
         body: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryGreen.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.mosque,
-                  size: 64,
-                  color: AppColors.primaryGreen,
-                ),
-              ),
-              const SizedBox(height: 24),
-              const CircularProgressIndicator(),
+              MasjidLogo(size: 110),
+              SizedBox(height: 24),
+              CircularProgressIndicator(),
             ],
           ),
         ),

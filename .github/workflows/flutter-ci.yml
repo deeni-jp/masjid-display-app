@@ -39,8 +39,11 @@ jobs:
       - name: Create .env file
         run: |
           cat > .env << EOF
-          # CI Environment Configuration
+          # CI Environment Configuration (public values only: .env ships in the app)
           ALADHAN_API_METHOD=3
+          ALADHAN_SCHOOL=1
+          PUSH_WORKER_URL=${{ vars.PUSH_WORKER_URL }}
+          APP_CHECK_WEB_SITE_KEY=${{ vars.APP_CHECK_WEB_SITE_KEY }}
           EOF
 
       - name: Install dependencies
@@ -79,8 +82,11 @@ jobs:
       - name: Create .env file
         run: |
           cat > .env << EOF
-          # CI Environment Configuration
+          # CI Environment Configuration (public values only: .env ships in the app)
           ALADHAN_API_METHOD=3
+          ALADHAN_SCHOOL=1
+          PUSH_WORKER_URL=${{ vars.PUSH_WORKER_URL }}
+          APP_CHECK_WEB_SITE_KEY=${{ vars.APP_CHECK_WEB_SITE_KEY }}
           EOF
 
       - name: Install dependencies
@@ -153,8 +159,11 @@ jobs:
       - name: Create .env file
         run: |
           cat > .env << EOF
-          # CI Environment Configuration
+          # CI Environment Configuration (public values only: .env ships in the app)
           ALADHAN_API_METHOD=3
+          ALADHAN_SCHOOL=1
+          PUSH_WORKER_URL=${{ vars.PUSH_WORKER_URL }}
+          APP_CHECK_WEB_SITE_KEY=${{ vars.APP_CHECK_WEB_SITE_KEY }}
           EOF
 
       - name: Install dependencies

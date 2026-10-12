@@ -1,0 +1,15 @@
+# Cloudflare Worker that sends push notifications for masjid notices.
+# Deploy: npm install && npx wrangler deploy   (see README.md here)
+name = "dticc-push"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+[vars]
+FIREBASE_PROJECT_ID = "dticc-app"
+# Browser origins allowed to call the worker (the web app). Mobile apps
+# don't need CORS. http://localhost:* is always allowed for development.
+ALLOWED_ORIGINS = "https://dticc-app.web.app,https://dticc-app.firebaseapp.com"
+
+# Secret (never committed): set with
+#   npx wrangler secret put SERVICE_ACCOUNT_JSON
+# and paste the whole service-account JSON key file.

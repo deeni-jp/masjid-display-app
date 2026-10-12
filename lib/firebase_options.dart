@@ -52,7 +52,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyAnwBgDKnFJZIth_McJKUyramFM3bgeGac',
-    appId: '1:245306822222:android:baad96922e3e610280bd1f',
+    appId: '1:245306822222:android:82fe69bbd4b15af980bd1f', // com.dticc.app
     messagingSenderId: '245306822222',
     projectId: 'dticc-app',
     storageBucket: 'dticc-app.firebasestorage.app',

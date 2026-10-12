@@ -3,9 +3,7 @@ import 'dart:async';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/notification_model.dart';
-import 'user_service.dart';
 
 /// Background message handler - must be top-level function
 @pragma('vm:entry-point')
@@ -171,46 +169,18 @@ class PushNotificationService {
         ?.createNotificationChannel(lowChannel);
   }
 
-  /// Get FCM token and save it
+  /// Get the FCM token. Pushes go to the 'mosque_notifications' topic, so
+  /// the token isn't stored anywhere.
   Future<void> _initializeFCMToken() async {
     try {
       _fcmToken = await _messaging.getToken();
 
       if (_fcmToken != null) {
-        if (kDebugMode) {
-          print('FCM Token: $_fcmToken');
-        }
-
-        // Save token to Firestore
-        await _saveFCMToken(_fcmToken!);
+        debugPrint('FCM Token: $_fcmToken');
       }
     } catch (e) {
       if (kDebugMode) {
         print('Error getting FCM token: $e');
-      }
-    }
-  }
-
-  /// Save FCM token to Firestore user document
-  Future<void> _saveFCMToken(String token) async {
-    try {
-      final user = await UserService.getCurrentUser();
-      if (user != null) {
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.email)
-            .set({
-              'fcmToken': token,
-              'fcmTokenUpdatedAt': FieldValue.serverTimestamp(),
-            }, SetOptions(merge: true));
-
-        if (kDebugMode) {
-          print('FCM token saved to Firestore');
-        }
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error saving FCM token: $e');
       }
     }
   }
@@ -222,8 +192,6 @@ class PushNotificationService {
     if (kDebugMode) {
       print('FCM token refreshed: $token');
     }
-
-    await _saveFCMToken(token);
   }
 
   /// Setup message handlers for different app states

@@ -21,13 +21,13 @@ dependencies:
   firebase_auth: ^6.0.1
   firebase_messaging: ^16.0.0
   flutter_local_notifications: ^18.0.1
-  googleapis_auth: ^1.6.0
   cloud_functions: ^6.0.0
   win32: ^5.15.0
   google_fonts: ^6.3.2
   flutter_dotenv: ^5.2.1
   image_picker: ^1.2.3
   image: ^4.12.0
+  firebase_app_check: ^0.4.8
 
 dev_dependencies:
   flutter_test:
@@ -50,9 +50,11 @@ dev_dependencies:
 
   # Coverage
   coverage: ^1.9.2
+  flutter_launcher_icons: ^0.14.4
 
 flutter:
   uses-material-design: true
   assets:
     - .env
     - "assets/images/qr code for donations.png"
+    - assets/images/masjid_logo.png

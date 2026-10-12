@@ -430,7 +430,7 @@ dependencies:
 
 > **Quick Links:** [Quick Start (5 min)](#quick-start-push-notifications) | [Android](#android-configuration-push) | [iOS](#ios-configuration-push) | [FCM Setup](#fcm-http-v1-api-setup) | [Testing](#testing-push-notifications) | [Troubleshooting](#troubleshooting-push-notifications)
 
-This app uses **Firebase Cloud Messaging (FCM) HTTP v1 API** to send push notifications to users when admins create or activate announcements.
+This app uses **Firebase Cloud Messaging (FCM) HTTP v1 API** to send push notifications when moderators/admins save a notice. The message is sent by the **push worker** (`push-worker/`, a free Cloudflare Worker) that holds the Firebase service-account key — the key is never in the app. Push notifications work on Android and iOS; the web app shows notices in-app only.
 
 ### Overview
 
@@ -492,26 +492,13 @@ flutter pub get
 5. Check "Remote notifications" and "Background fetch"
 6. Upload APNs key to Firebase Console (Project Settings → Cloud Messaging)
 
-#### 4. FCM HTTP v1 API Setup (10 minutes)
+#### 4. Deploy the push worker (10 minutes)
 
-See [FCM HTTP v1 API Setup](#fcm-http-v1-api-setup) below for complete instructions.
+Follow [`push-worker/README.md`](push-worker/README.md): `wrangler login`, store a service-account key with `wrangler secret put SERVICE_ACCOUNT_JSON`, `wrangler deploy`, then set `PUSH_WORKER_URL` in `.env` (and the `PUSH_WORKER_URL` repository variable for CI).
 
-Quick version:
-1. Generate service account credentials from Firebase Console
-2. Add credentials to `.env` file (see section below)
-3. Enable Firebase Cloud Messaging API in Google Cloud Console
+Make sure the **Firebase Cloud Messaging API** is enabled in Google Cloud Console (APIs & Services → Library).
 
-#### 5. Deploy Cloud Functions (2 minutes)
-
-```bash
-cd functions
-npm install
-firebase login
-firebase use --add  # Select your project
-firebase deploy --only functions
-```
-
-#### 6. Test It!
+#### 5. Test It!
 
 1. Run the app: `flutter run`
 2. Log in as a user
@@ -647,90 +634,19 @@ The app will automatically request notification permissions when the user logs i
 #### 4. FCM HTTP v1 API Setup
 <a id="fcm-http-v1-api-setup"></a>
 
-The app uses the modern **FCM HTTP v1 API** with OAuth2 authentication for enhanced security.
+Messages are sent with the **FCM HTTP v1 API** by the push worker in `push-worker/` (a Cloudflare Worker), not by the app:
 
-##### Step 1: Get Service Account Credentials
+1. A moderator/admin saves a notice in the app.
+2. The app calls `POST <PUSH_WORKER_URL>/notify` with the user's Firebase ID token and the notice id (`lib/services/fcm_notification_sender.dart`).
+3. The worker verifies the token, checks the user's role in Firestore, reads the notice, and sends it to the `mosque_notifications` topic.
 
-1. Go to [Firebase Console](https://console.firebase.google.com/)
-2. Select your project
-3. Click ⚙️ gear icon → **Project settings**
-4. Go to the **Service accounts** tab
-5. Click **Generate new private key**
-6. Click **Generate key** (a JSON file will download)
-7. **IMPORTANT**: Keep this file secure! Don't commit it to Git
+The Firebase **service-account key lives only in the worker** (as an encrypted Cloudflare secret). Never put it in `.env`: `.env` is bundled into the app and is publicly readable on the web.
 
-The downloaded file will look like this:
-```json
-{
-  "type": "service_account",
-  "project_id": "your-project-id",
-  "private_key_id": "abc123...",
-  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIE...\n-----END PRIVATE KEY-----\n",
-  "client_email": "firebase-adminsdk-xxxxx@your-project.iam.gserviceaccount.com",
-  ...
-}
-```
+Setup, deployment and key rotation: see [`push-worker/README.md`](push-worker/README.md).
 
-##### Step 2: Add Credentials to .env File
+**Enable the Firebase Cloud Messaging API:** Google Cloud Console → APIs & Services → Library → "Firebase Cloud Messaging API" → **Enable** (otherwise FCM returns 403).
 
-The app uses environment variables for FCM credentials (managed by `lib/services/fcm_notification_sender.dart`). Add the service account details to your `.env` file:
-
-```env
-# FCM Service Account Credentials
-FCM_PROJECT_ID=your-project-id
-FCM_PRIVATE_KEY_ID=your-private-key-id
-FCM_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYOUR_PRIVATE_KEY_HERE\n-----END PRIVATE KEY-----\n"
-FCM_CLIENT_EMAIL=firebase-adminsdk-xxxxx@your-project.iam.gserviceaccount.com
-FCM_CLIENT_ID=your-client-id
-FCM_AUTH_URI=https://accounts.google.com/o/oauth2/auth
-FCM_TOKEN_URI=https://oauth2.googleapis.com/token
-FCM_AUTH_PROVIDER_CERT_URL=https://www.googleapis.com/oauth2/v1/certs
-FCM_CLIENT_CERT_URL=https://www.googleapis.com/robot/v1/metadata/x509/...
-FCM_UNIVERSE_DOMAIN=googleapis.com
-```
-
-**IMPORTANT Notes:**
-- Make sure `.env` is in `.gitignore` (it already is)
-- The `fcm_notification_sender.dart` service reads from these environment variables
-- Keep newlines in the private key properly escaped with `\n`
-- Copy values exactly from the downloaded JSON file
-
-##### Step 3: Enable Firebase Cloud Messaging API
-
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Select your project
-3. Go to **APIs & Services** → **Library**
-4. Search for "Firebase Cloud Messaging API"
-5. Click on it and click **Enable**
-
-**This step is required** - the app will return a 403 error if this API is not enabled.
-
----
-
-#### 5. Cloud Functions Setup
-
-Cloud Functions automatically send push notifications when admins create or activate notifications.
-
-##### Initialize and Deploy
-
-```bash
-cd functions
-npm install
-firebase login
-firebase use --add  # Select your project
-firebase deploy --only functions
-```
-
-This deploys three functions:
-- `sendNotificationOnCreate` - Sends push notification when a notification is created
-- `sendNotificationOnUpdate` - Sends push notification when a notification is activated
-- `sendTargetedNotification` - Allows admins to send targeted notifications to specific users
-
-##### Verify Deployment
-
-Check the Firebase Console → Functions to verify the functions are deployed successfully.
-
-**Note:** Cloud Functions require a Blaze (pay-as-you-go) plan, but costs are minimal (~$0.40 per million invocations).
+> The old Cloud Functions in `functions/` need the paid Blaze plan and are not used; the project runs on the free Spark plan.
 
 ---
 
@@ -794,7 +710,7 @@ Check the Firebase Console → Functions to verify the functions are deployed su
 | Error Code | Issue | Solution |
 |------------|-------|----------|
 | **403 Permission Denied** | FCM API not enabled | Enable Firebase Cloud Messaging API in Google Cloud Console → APIs & Services → Library |
-| **401 Unauthorized** | Invalid service account credentials | Verify FCM credentials in `.env` file match the downloaded JSON exactly. Check for extra spaces or newline issues in `FCM_PRIVATE_KEY` |
+| **401 Unauthorized** | Invalid service account credentials | Re-run `npx wrangler secret put SERVICE_ACCOUNT_JSON` in `push-worker/` with the full service-account JSON; check `npx wrangler tail` |
 | **404 Not Found** | Wrong project ID or endpoint | Check `FCM_PROJECT_ID` in `.env` matches your Firebase project. Verify you're using v1 API endpoint |
 | **Missing credentials** | Service account not configured | Ensure all `FCM_*` variables are set in `.env` file. Run `flutter clean` and rebuild |
 
@@ -861,96 +777,24 @@ Check the Firebase Console → Functions to verify the functions are deployed su
 - Verify the key hasn't expired
 - Check the key has the correct permissions in Apple Developer Portal
 
-#### Cloud Functions Issues
+#### Push worker issues
 
-**Functions not deploying?**
-- Run `firebase login` and ensure you're logged in with correct account
-- Check you've selected the correct project: `firebase use --add`
-- Verify you're on a Blaze (pay-as-you-go) plan (required for Cloud Functions)
-- Check for syntax errors in `functions/index.js`
-- Try deploying individual functions: `firebase deploy --only functions:sendNotificationOnCreate`
-
-**Functions deployed but notifications not sending?**
-- Check Firebase Console → Functions → Logs for errors
-- Verify the function is triggered when creating notifications (check logs timestamp)
-- Ensure FCM credentials are configured in `.env`
-- Check Firestore rules allow Cloud Functions to read user tokens
-- Verify notification document has required fields: `title`, `message`, `active: true`
-
-**Cloud Functions timeout errors?**
-- Increase timeout in `functions/index.js`: `{ timeoutSeconds: 60 }`
-- Check if too many users are being notified at once
-- Consider batching notifications for large user bases
+- `npx wrangler tail` (in `push-worker/`) streams the worker's logs while you save a notice.
+- **No push, app logs "PUSH_WORKER_URL is not set"**: set `PUSH_WORKER_URL` in `.env` and rebuild.
+- **403 from the worker**: the signed-in user isn't a moderator/admin in Firestore.
+- **409**: the notice is inactive or expired.
+- **502**: FCM rejected the message — check the worker logs and that the FCM API is enabled.
 
 ---
 
 ### Security Best Practices
 
-#### Environment Variables (Current Approach) ✅
+- **`.env` is public.** It's bundled into every build (downloadable at `/assets/.env` on the web). Only non-secret settings go there (`ALADHAN_*`, `PUSH_WORKER_URL`).
+- **The service-account key lives only in the push worker** as a Cloudflare secret. Rotate it by creating a new key, updating the secret, and deleting the old key (see `push-worker/README.md`).
+- **Firestore rules** (`firestore.rules`) enforce roles: users can't set their own role, only moderators/admins write prayer times and notices, and only admins can read other users.
+- Restrict access to the Firebase Console, Google Cloud Console and Cloudflare account to authorised people.
 
-The app uses environment variables for FCM credentials, managed by `lib/services/fcm_notification_sender.dart`.
-
-**Advantages:**
-- ✅ Credentials not in source code
-- ✅ `.env` is gitignored automatically
-- ✅ Easy to manage different credentials per environment
-- ✅ No risk of accidentally committing secrets
-- ✅ Simple OAuth2 token management with automatic refresh
-
-**Security Checklist:**
-- [ ] `.env` file is in `.gitignore`
-- [ ] FCM credentials are in `.env` file (not in source code)
-- [ ] `.env.example` documents required variables without actual values
-- [ ] Production `.env` is never committed to Git
-- [ ] Team members have their own `.env` files
-- [ ] Service account JSON file is stored securely (not in project directory)
-- [ ] Access to Firebase Console is restricted to authorized personnel
-
-#### Alternative: Firestore Storage
-
-For maximum security in production environments, you can store credentials server-side:
-
-**Approach:**
-1. Store service account JSON in Firestore with admin-only access rules
-2. Fetch credentials on app startup (requires admin authentication)
-3. Cache credentials securely in memory
-4. Refresh OAuth2 tokens as needed
-
-**Trade-offs:**
-- ✅ More secure (credentials server-side only)
-- ✅ Centralized credential management
-- ❌ More complex setup and maintenance
-- ❌ Requires admin login before sending notifications
-- ❌ Additional Firestore reads
-
-**When to use:**
-- Production apps with high security requirements
-- Apps with multiple admins needing credential rotation
-- Environments where client-side credentials are prohibited
-
-#### Cost Comparison
-
-**Using FCM Direct (Current Approach):**
-- ✅ Free tier: Unlimited notifications
-- ✅ No Cloud Functions required for sending (can send from app)
-- ✅ OAuth2 authentication from app
-- ✅ Minimal infrastructure costs
-
-**Using Cloud Functions Only:**
-- Cloud Functions required (Blaze plan)
-- Small cost per function invocation (~$0.40 per million invocations)
-- Better for complex notification logic and server-side validation
-- Separates notification logic from client app
-
-**Hybrid Approach (Recommended - Current Implementation):**
-- Direct FCM for immediate, user-triggered notifications (free)
-- Cloud Functions for automatic triggers on Firestore changes (minimal cost)
-- Best balance of cost, security, and functionality
-
-**Estimated Monthly Costs:**
-- Up to 1,000 users: ~$0 (within free tier)
-- 1,000-10,000 users: ~$1-5/month
-- 10,000+ users: ~$5-20/month
+**Costs:** Firebase Spark (free) + Cloudflare Workers free plan (100,000 requests/day) + FCM (free). No paid services are required.
 
 ---
 
@@ -1058,6 +902,17 @@ class MasjidInfo {
 ```
 
 To change the QR code, replace `assets/images/qr code for donations.png` (keep the same name, or update both `donationQrAsset` and the `assets:` entry in `pubspec.yaml`).
+
+### Logo & App Icons
+
+`assets/images/mosque.png` is the source artwork. `tool/generate_icons.dart` derives the in-app logo (`assets/images/masjid_logo.png`, used by `MasjidLogo`) and the 1024×1024 icon sources in `assets/icon/`; `flutter_launcher_icons.yaml` turns those into Android, iOS, web, Windows and macOS icons:
+
+```bash
+dart run tool/generate_icons.dart
+dart run flutter_launcher_icons
+```
+
+The current artwork is small (≈130×160 px), so the large icons are upscaled and slightly soft — replace `mosque.png` with higher-resolution artwork and re-run.
 
 ### Iqamah Sequence Timing
 
@@ -1229,6 +1084,66 @@ The display follows the app's dark mode setting, including the automatic switch 
 
 For detailed CI/CD setup and deployment instructions, see [CI/CD Pipeline Setup](#cicd-pipeline-setup).
 
+### Web app (local / private)
+
+For now the web version is **not published on the internet**; it runs on the masjid's own network. (The Firebase backend is online either way — security comes from the Firestore rules and App Check, not from where the web page is hosted.)
+
+**Run it on a masjid computer:**
+
+```bash
+flutter build web --release
+npx serve build/web -l 8080        # or: python -m http.server 8080 --directory build/web
+```
+
+Then open `http://<that-computer's-IP>:8080` on the display/TV browser (same Wi-Fi). Keep the computer on and the server running.
+
+Limits of plain `http://` on the local network:
+- Browsers block GPS on non-HTTPS pages, so location falls back to IP-based / the default location (prayer times still load).
+- No offline caching (the Flutter service worker needs HTTPS).
+
+**Alternative for the display:** install the Android app on an Android TV box / stick. In landscape it shows the large display layout, works without a separate server, and gets push notifications.
+
+`.env` is bundled into the web build (`build/web/assets/.env`) — it must only contain public settings.
+
+**Going public later:** Firebase Hosting is already configured in `firebase.json` (SPA rewrite, caching). Before publishing, enforce App Check (below), then `firebase deploy --only hosting` → https://dticc-app.web.app. Add the URL to `ALLOWED_ORIGINS` in `push-worker/wrangler.toml` and to the reCAPTCHA key's domains.
+
+### App Check (protecting the backend)
+
+App Check makes Firebase reject requests that don't come from the genuine app (scripts, bots, copied API keys). The app activates it at startup (`_activateAppCheck` in `lib/main.dart`):
+
+| Platform | Provider |
+|---|---|
+| Android | Play Integrity (release builds), debug provider (debug builds) |
+| iOS | App Attest with DeviceCheck fallback (release), debug provider (debug) |
+| Web | reCAPTCHA v3 — only if `APP_CHECK_WEB_SITE_KEY` is set in `.env` |
+
+**It's in monitoring mode** — Firebase records unverified requests but still allows them. Setup (Firebase Console → **App Check**):
+
+1. **Android app** (`com.dticc.app`) → register with **Play Integrity**; add the app's signing-certificate **SHA-256** (Project settings → Your apps → Add fingerprint; get it with `cd android && ./gradlew signingReport`).
+2. **Web app** → register with **reCAPTCHA v3** (create a key at https://www.google.com/recaptcha/admin for `localhost` and the masjid computer's address); put the **site key** in `.env` as `APP_CHECK_WEB_SITE_KEY` (and the GitHub repository variable of the same name).
+3. **Debug builds:** run the app in debug, copy the "App Check debug token" from the log, and add it under App Check → Apps → ⋮ → Manage debug tokens.
+4. Watch **App Check → APIs → Cloud Firestore** metrics for a while.
+5. **Enforce** (Cloud Firestore → Enforce) only once all real users are verified — i.e. after the Android app is installed from **Google Play** (Play Integrity rejects sideloaded APKs) and the web site key is set. Enforcing earlier would lock out sideloaded installs.
+
+### Production checklist
+
+Done in code:
+- [x] No secrets in the app (push sending moved to `push-worker/`)
+- [x] Firestore rules: no self-assigned roles, only moderators/admins edit prayer times and notices, user emails private
+- [x] Android app ID `com.dticc.app`, name "Darut Tauhid Masjid", app icons
+- [x] Release signing from `android/key.properties` (CI creates it from secrets)
+- [x] Firebase App Check wired in (monitoring mode)
+- [x] Firebase Hosting config ready for a later public launch (web currently local only)
+
+To do (accounts/console):
+- [ ] Deploy the push worker and set `PUSH_WORKER_URL` (`.env` + GitHub repository variable) — `push-worker/README.md`
+- [ ] Rotate the service-account key: delete old keys after the worker has its new one
+- [ ] App Check: register the Android and web apps, add debug tokens, enforce after the Play Store release (see [App Check](#app-check-protecting-the-backend))
+- [ ] Higher-resolution logo artwork → replace `assets/images/mosque.png`, run `dart run tool/generate_icons.dart && dart run flutter_launcher_icons`
+- [ ] Google Play: developer account, upload keystore, store listing, **privacy policy** (the app uses location and accounts)
+- [ ] iOS/App Store: Apple developer account; choose a production bundle ID (Xcode currently `com.example.prayerApp`, Firebase iOS app `com.example.prayerTimesApp`) and register it in Firebase; APNs key for push
+- [ ] Bump `version:` in `pubspec.yaml` for each store release
+
 ### Manual Builds
 
 #### Android
@@ -1335,7 +1250,16 @@ Set these secrets in your GitHub repository: **Settings** → **Secrets and vari
 
 | Secret Name | Description | How to Get |
 |-------------|-------------|------------|
-| `FIREBASE_TOKEN` | Firebase CLI token for deployments | Run `firebase login:ci` |
+| `FIREBASE_TOKEN` | Firebase CLI token used by the `deploy-firebase` job (Firestore rules) | Run `firebase login:ci` |
+
+#### Repository variable (not secret)
+
+**Settings → Secrets and variables → Actions → Variables**
+
+| Variable | Value |
+|---|---|
+| `PUSH_WORKER_URL` | The push worker URL printed by `npx wrangler deploy` (written into the CI `.env`) |
+| `APP_CHECK_WEB_SITE_KEY` | reCAPTCHA v3 site key for App Check on the web (optional) |
 
 ---
 
@@ -1840,6 +1764,23 @@ For support and questions:
 ---
 
 ## 📝 Changelog
+
+### Unreleased - Production readiness
+
+#### Security 🔐
+
+- Push notifications are sent by a Cloudflare Worker (`push-worker/`); the Firebase service-account key is no longer bundled in the app (`.env` now holds public settings only)
+- Firestore rules: users can't assign themselves a role or undelete themselves; only moderators/admins can write `mosque/*`; only admins can read other users' profiles
+
+#### Changes
+
+- App name "Darut Tauhid Masjid", masjid logo in the app, new launcher/web icons
+- Compact, centred login page on wide screens (web)
+- Android app ID `com.dticc.app`; release signing from `key.properties`
+- Firebase App Check (monitoring mode) on Android, iOS and web
+- Web app runs locally for now; Firebase Hosting config prepared for a later public launch
+- Browsers are no longer asked for notification permission (web push isn't set up)
+- Removed unused token-based push code and the `googleapis_auth` dependency
 
 ### Unreleased (13 October 2026) - UI Redesign & Masjid Display
 

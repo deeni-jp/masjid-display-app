@@ -12,6 +12,7 @@ import '../models/notification_model.dart';
 import '../models/prayer_time.dart';
 import '../utils/design.dart';
 import '../widgets/notice_image.dart';
+import '../widgets/masjid_logo.dart';
 
 class DisplayHome extends StatelessWidget {
   final PrayerSchedule? prayerSchedule;
@@ -205,19 +206,7 @@ class _MasjidHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
-            width: 94 * s,
-            height: 94 * s,
-            decoration: const BoxDecoration(
-              color: DesignColors.green,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.mosque_outlined,
-              color: Colors.white,
-              size: 46 * s,
-            ),
-          ),
+          MasjidLogo(size: 104 * s),
           SizedBox(width: 28 * s),
           Expanded(
             child: FittedBox(

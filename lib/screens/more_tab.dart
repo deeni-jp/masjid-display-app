@@ -8,6 +8,7 @@ import '../services/storage_service.dart';
 import '../utils/constants.dart';
 import 'users_screen.dart';
 import 'profile_screen.dart';
+import '../widgets/masjid_logo.dart';
 
 class MoreTab extends StatelessWidget {
   final LocationData? locationData;
@@ -380,7 +381,7 @@ class MoreTab extends StatelessWidget {
                   color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(AppStyles.radiusSmall),
                 ),
-                child: const Icon(Icons.mosque, color: Colors.white, size: 24),
+                child: const MasjidLogo(size: 28),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -533,11 +534,7 @@ class MoreTab extends StatelessWidget {
                     color: Theme.of(context).colorScheme.primaryContainer,
                     borderRadius: BorderRadius.circular(AppStyles.radiusSmall),
                   ),
-                  child: Icon(
-                    Icons.mosque,
-                    color: Theme.of(context).colorScheme.primary,
-                    size: 20,
-                  ),
+                  child: const MasjidLogo(size: 24),
                 ),
                 const SizedBox(width: 12),
                 Text(

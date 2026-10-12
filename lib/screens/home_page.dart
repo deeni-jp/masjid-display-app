@@ -25,6 +25,7 @@ import '../widgets/countdown_overlay.dart';
 import '../widgets/blackout_overlay.dart';
 import '../widgets/prayer_started_overlay.dart';
 import '../widgets/notification_card.dart';
+import '../widgets/masjid_logo.dart';
 
 class HomePage extends StatefulWidget {
   final Future<void> Function(bool, {bool manual}) onToggleTheme;
@@ -841,11 +842,7 @@ class _LoadingOverlayState extends State<_LoadingOverlay>
                               ),
                             ],
                           ),
-                          child: const Icon(
-                            Icons.mosque,
-                            size: 60,
-                            color: Colors.white,
-                          ),
+                          child: const MasjidLogo(size: 68),
                         ),
                       ],
                     ),

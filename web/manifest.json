@@ -1,12 +1,12 @@
 {
-    "name": "prayer_app",
-    "short_name": "prayer_app",
+    "name": "Darut Tauhid Masjid",
+    "short_name": "Darut Tauhid",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "background_color": "#FFFFFF",
+    "theme_color": "#0F5C46",
+    "description": "Prayer times, iqamah and notices for Darut Tauhid Masjid.",
+    "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
         {

@@ -5,6 +5,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/user_model.dart';
 import '../services/user_service.dart';
 import '../utils/constants.dart';
+import '../utils/design.dart';
+import '../widgets/masjid_logo.dart';
 
 class AuthScreen extends StatefulWidget {
   final void Function(AppUser user) onAuthSuccess;
@@ -318,25 +320,52 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
+  /// Max width of the form, so it stays compact on wide screens (web).
+  static const double _maxFormWidth = 420;
+
   @override
   Widget build(BuildContext context) {
+    final isWide = MediaQuery.sizeOf(context).width >= 600;
+    final palette = DesignPalette.of(
+      Theme.of(context).brightness == Brightness.dark,
+    );
+
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildHeader(),
+        const SizedBox(height: 32),
+        _buildForm(),
+        const SizedBox(height: 24),
+        _buildSubmitButton(),
+        const SizedBox(height: 16),
+        _buildToggleMode(),
+      ],
+    );
+
     return Scaffold(
+      // On wide screens the form sits in a card on the app background.
+      backgroundColor: isWide ? palette.background : null,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 40),
-              _buildHeader(),
-              const SizedBox(height: 40),
-              _buildForm(),
-              const SizedBox(height: 24),
-              _buildSubmitButton(),
-              const SizedBox(height: 16),
-              _buildToggleMode(),
-              const SizedBox(height: 40),
-            ],
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: _maxFormWidth),
+              child:
+                  isWide
+                      ? Container(
+                        padding: const EdgeInsets.fromLTRB(32, 36, 32, 24),
+                        decoration: BoxDecoration(
+                          color: palette.surface,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: palette.border),
+                        ),
+                        child: content,
+                      )
+                      : content,
+            ),
           ),
         ),
       ),
@@ -346,20 +375,8 @@ class _AuthScreenState extends State<AuthScreen> {
   Widget _buildHeader() {
     return Column(
       children: [
-        // Mosque Icon
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: AppColors.primaryGreen.withValues(alpha: 0.1),
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(
-            Icons.mosque,
-            size: 64,
-            color: AppColors.primaryGreen,
-          ),
-        ),
-        const SizedBox(height: 24),
+        const MasjidLogo(size: 96),
+        const SizedBox(height: 20),
         Text(
           AppConstants.appName,
           style: GoogleFonts.poppins(

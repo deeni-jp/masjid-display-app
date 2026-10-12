@@ -24,6 +24,21 @@ class EnvConfig {
     return int.tryParse(methodStr ?? '3') ?? 3;
   }
 
+  /// Base URL of the push worker (push-worker/), e.g.
+  /// https://dticc-push.<account>.workers.dev. Empty if not configured.
+  ///
+  /// Note: .env is bundled into the app and is publicly readable on the web,
+  /// so it must only ever contain non-secret values like this one.
+  static String get pushWorkerUrl {
+    final url = dotenv.env['PUSH_WORKER_URL']?.trim() ?? '';
+    return url.endsWith('/') ? url.substring(0, url.length - 1) : url;
+  }
+
+  /// reCAPTCHA v3 site key for Firebase App Check on the web (a public key,
+  /// not a secret). Empty: App Check isn't activated on the web.
+  static String get appCheckWebSiteKey =>
+      dotenv.env['APP_CHECK_WEB_SITE_KEY']?.trim() ?? '';
+
   /// Get Aladhan API school (Asr calculation method)
   /// 0 = Shafi/Standard, 1 = Hanafi
   /// Default is 1 (Hanafi)
