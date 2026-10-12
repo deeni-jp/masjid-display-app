@@ -26,9 +26,10 @@ class PrayersTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Sunrise has no iqamah to edit, so it isn't listed here.
-    final prayers = (prayerSchedule?.getPrayersInOrder() ?? [])
-        .where((p) => p.name != 'Sunrise')
-        .toList();
+    final prayers =
+        (prayerSchedule?.getPrayersInOrder() ?? [])
+            .where((p) => p.name != 'Sunrise')
+            .toList();
 
     return RefreshIndicator(
       onRefresh: onRefresh,
@@ -49,10 +50,7 @@ class PrayersTab extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               'Today\'s prayer times',
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: Colors.grey,
-              ),
+              style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey),
             ),
             const SizedBox(height: 20),
             if (prayers.isEmpty)
@@ -96,10 +94,7 @@ class PrayersTab extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               'Pull down to refresh',
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: Colors.grey,
-              ),
+              style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey),
               textAlign: TextAlign.center,
             ),
           ],
@@ -109,7 +104,9 @@ class PrayersTab extends StatelessWidget {
   }
 
   Future<void> _showEditIqamaDialog(
-      BuildContext context, PrayerTime prayer) async {
+    BuildContext context,
+    PrayerTime prayer,
+  ) async {
     if (!adminMode) return;
 
     // Parse current iqama time to get initial values
@@ -130,8 +127,12 @@ class PrayersTab extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppColors.getPrayerColor(prayer.name).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(AppStyles.radiusSmall),
+                      color: AppColors.getPrayerColor(
+                        prayer.name,
+                      ).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(
+                        AppStyles.radiusSmall,
+                      ),
                     ),
                     child: Icon(
                       AppColors.getPrayerIcon(prayer.name),
@@ -171,7 +172,9 @@ class PrayersTab extends StatelessWidget {
                             data: Theme.of(context).copyWith(
                               timePickerTheme: TimePickerThemeData(
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(AppStyles.radiusLarge),
+                                  borderRadius: BorderRadius.circular(
+                                    AppStyles.radiusLarge,
+                                  ),
                                 ),
                               ),
                             ),
@@ -189,7 +192,9 @@ class PrayersTab extends StatelessWidget {
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         border: Border.all(color: Colors.grey.shade300),
-                        borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
+                        borderRadius: BorderRadius.circular(
+                          AppStyles.radiusMedium,
+                        ),
                       ),
                       child: Row(
                         children: [
@@ -247,12 +252,16 @@ class PrayersTab extends StatelessWidget {
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    final formattedTime = _formatTimeOfDay(selectedTime ?? initialTime);
+                    final formattedTime = _formatTimeOfDay(
+                      selectedTime ?? initialTime,
+                    );
                     Navigator.pop(context, formattedTime);
                   },
                   style: ElevatedButton.styleFrom(
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
+                      borderRadius: BorderRadius.circular(
+                        AppStyles.radiusMedium,
+                      ),
                     ),
                   ),
                   child: const Text('Save'),
@@ -324,7 +333,8 @@ class PrayersTab extends StatelessWidget {
       timeStr = timeStr.trim();
 
       // Handle 12-hour format (e.g., "12:15 PM" or "1:30 pm")
-      if (timeStr.toUpperCase().contains('AM') || timeStr.toUpperCase().contains('PM')) {
+      if (timeStr.toUpperCase().contains('AM') ||
+          timeStr.toUpperCase().contains('PM')) {
         final isPM = timeStr.toUpperCase().contains('PM');
         final timePart = timeStr.replaceAll(RegExp(r'[AaPp][Mm]'), '').trim();
         final parts = timePart.split(':');

@@ -50,11 +50,12 @@ class UserService {
   /// Get user by email
   static Future<AppUser?> getUserByEmail(String email) async {
     try {
-      final query = await _firestore
-          .collection(_usersCollection)
-          .where('email', isEqualTo: email.toLowerCase().trim())
-          .limit(1)
-          .get();
+      final query =
+          await _firestore
+              .collection(_usersCollection)
+              .where('email', isEqualTo: email.toLowerCase().trim())
+              .limit(1)
+              .get();
 
       if (query.docs.isEmpty) {
         return null;
@@ -87,9 +88,7 @@ class UserService {
         }
 
         // Update last login
-        await docRef.update({
-          'lastLogin': FieldValue.serverTimestamp(),
-        });
+        await docRef.update({'lastLogin': FieldValue.serverTimestamp()});
         return AppUser.fromFirestore(await docRef.get());
       } else {
         // Create new user with public role
@@ -139,10 +138,8 @@ class UserService {
   /// Excludes deleted users
   static Future<List<AppUser>> getAllUsers() async {
     try {
-      final query = await _firestore
-          .collection(_usersCollection)
-          .orderBy('email')
-          .get();
+      final query =
+          await _firestore.collection(_usersCollection).orderBy('email').get();
 
       // Filter out deleted users (handles both deleted: true and missing field)
       return query.docs
@@ -167,12 +164,13 @@ class UserService {
       final query = emailQuery.toLowerCase().trim();
 
       // Firestore doesn't support LIKE queries, so we use range query
-      final snapshot = await _firestore
-          .collection(_usersCollection)
-          .where('email', isGreaterThanOrEqualTo: query)
-          .where('email', isLessThanOrEqualTo: '$query\uf8ff')
-          .limit(50)
-          .get();
+      final snapshot =
+          await _firestore
+              .collection(_usersCollection)
+              .where('email', isGreaterThanOrEqualTo: query)
+              .where('email', isLessThanOrEqualTo: '$query\uf8ff')
+              .limit(50)
+              .get();
 
       return snapshot.docs.map((doc) => AppUser.fromFirestore(doc)).toList();
     } catch (e) {
@@ -183,11 +181,12 @@ class UserService {
   /// Get users by role
   static Future<List<AppUser>> getUsersByRole(UserRole role) async {
     try {
-      final query = await _firestore
-          .collection(_usersCollection)
-          .where('role', isEqualTo: role.toFirestore())
-          .orderBy('email')
-          .get();
+      final query =
+          await _firestore
+              .collection(_usersCollection)
+              .where('role', isEqualTo: role.toFirestore())
+              .orderBy('email')
+              .get();
 
       return query.docs.map((doc) => AppUser.fromFirestore(doc)).toList();
     } catch (e) {
@@ -201,8 +200,10 @@ class UserService {
         .collection(_usersCollection)
         .orderBy('email')
         .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map((doc) => AppUser.fromFirestore(doc)).toList());
+        .map(
+          (snapshot) =>
+              snapshot.docs.map((doc) => AppUser.fromFirestore(doc)).toList(),
+        );
   }
 
   // ============ AUTH OPERATIONS ============
@@ -293,9 +294,7 @@ class UserService {
   // ============ ADMIN USER MANAGEMENT ============
 
   /// Send password reset email to user (Admin only)
-  static Future<void> sendPasswordResetEmail({
-    required String email,
-  }) async {
+  static Future<void> sendPasswordResetEmail({required String email}) async {
     try {
       // Verify current user is admin
       final currentUser = await getCurrentUser();
@@ -378,11 +377,7 @@ class UserService {
       final userData = userDoc.data()!;
 
       // Create audit log BEFORE marking as deleted
-      await logDeletion(
-        uid: uid,
-        email: email,
-        userData: userData,
-      );
+      await logDeletion(uid: uid, email: email, userData: userData);
 
       // Soft delete: Mark user as deleted in Firestore
       // This prevents them from accessing the app
@@ -416,10 +411,7 @@ class UserService {
 
       // Call Cloud Function to delete user
       final callable = _functions.httpsCallable('deleteUser');
-      final result = await callable.call({
-        'uid': uid,
-        'email': email,
-      });
+      final result = await callable.call({'uid': uid, 'email': email});
 
       if (result.data['success'] != true) {
         throw UserServiceException(
@@ -504,10 +496,11 @@ class UserService {
         throw UserServiceException('Only admins can view deletion logs');
       }
 
-      final query = await _firestore
-          .collection('deletion_logs')
-          .orderBy('deletedAt', descending: true)
-          .get();
+      final query =
+          await _firestore
+              .collection('deletion_logs')
+              .orderBy('deletedAt', descending: true)
+              .get();
 
       return query.docs.map((doc) {
         final data = doc.data();

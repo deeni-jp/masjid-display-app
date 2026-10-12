@@ -96,21 +96,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
           .update({'displayName': result});
 
       // Update local state
-      final updatedUser =
-          _user.copyWith(displayName: result.isEmpty ? null : result);
+      final updatedUser = _user.copyWith(
+        displayName: result.isEmpty ? null : result,
+      );
       setState(() => _user = updatedUser);
       widget.onUserChanged(updatedUser);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Display name updated')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Display name updated')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to update: $e')));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -149,15 +150,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         labelText: 'Current Password',
                         prefixIcon: const Icon(Icons.lock_outline),
                         suffixIcon: IconButton(
-                          icon: Icon(obscureCurrent
-                              ? Icons.visibility
-                              : Icons.visibility_off),
-                          onPressed: () => setDialogState(
-                              () => obscureCurrent = !obscureCurrent),
+                          icon: Icon(
+                            obscureCurrent
+                                ? Icons.visibility
+                                : Icons.visibility_off,
+                          ),
+                          onPressed:
+                              () => setDialogState(
+                                () => obscureCurrent = !obscureCurrent,
+                              ),
                         ),
                         border: OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppStyles.radiusMedium),
+                          borderRadius: BorderRadius.circular(
+                            AppStyles.radiusMedium,
+                          ),
                         ),
                       ),
                     ),
@@ -169,15 +175,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         labelText: 'New Password',
                         prefixIcon: const Icon(Icons.lock),
                         suffixIcon: IconButton(
-                          icon: Icon(obscureNew
-                              ? Icons.visibility
-                              : Icons.visibility_off),
-                          onPressed: () =>
-                              setDialogState(() => obscureNew = !obscureNew),
+                          icon: Icon(
+                            obscureNew
+                                ? Icons.visibility
+                                : Icons.visibility_off,
+                          ),
+                          onPressed:
+                              () => setDialogState(
+                                () => obscureNew = !obscureNew,
+                              ),
                         ),
                         border: OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppStyles.radiusMedium),
+                          borderRadius: BorderRadius.circular(
+                            AppStyles.radiusMedium,
+                          ),
                         ),
                       ),
                     ),
@@ -189,15 +200,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         labelText: 'Confirm New Password',
                         prefixIcon: const Icon(Icons.lock),
                         suffixIcon: IconButton(
-                          icon: Icon(obscureConfirm
-                              ? Icons.visibility
-                              : Icons.visibility_off),
-                          onPressed: () => setDialogState(
-                              () => obscureConfirm = !obscureConfirm),
+                          icon: Icon(
+                            obscureConfirm
+                                ? Icons.visibility
+                                : Icons.visibility_off,
+                          ),
+                          onPressed:
+                              () => setDialogState(
+                                () => obscureConfirm = !obscureConfirm,
+                              ),
                         ),
                         border: OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppStyles.radiusMedium),
+                          borderRadius: BorderRadius.circular(
+                            AppStyles.radiusMedium,
+                          ),
                         ),
                       ),
                     ),
@@ -236,9 +252,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (currentPassword.isEmpty ||
         newPassword.isEmpty ||
         confirmPassword.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all fields')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please fill all fields')));
       return;
     }
 
@@ -250,9 +266,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     if (newPassword != confirmPassword) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Passwords do not match')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Passwords do not match')));
       return;
     }
 
@@ -287,15 +303,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
         message = 'New password is too weak';
       }
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -305,33 +321,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _signOut() async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppStyles.radiusLarge),
-        ),
-        title: Text(
-          'Sign Out',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-        ),
-        content: Text(
-          'Are you sure you want to sign out?',
-          style: GoogleFonts.poppins(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+      builder:
+          (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppStyles.radiusLarge),
             ),
-            child: const Text('Sign Out'),
+            title: Text(
+              'Sign Out',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            ),
+            content: Text(
+              'Are you sure you want to sign out?',
+              style: GoogleFonts.poppins(),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Sign Out'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
 
     if (confirm != true) return;
@@ -342,9 +359,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Sign out failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Sign out failed: $e')));
       }
     }
   }
@@ -381,22 +398,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         centerTitle: true,
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(AppStyles.paddingLarge),
-              child: Column(
-                children: [
-                  const SizedBox(height: 20),
-                  _buildProfileHeader(),
-                  const SizedBox(height: 32),
-                  _buildProfileOptions(),
-                  const SizedBox(height: 32),
-                  _buildSignOutButton(),
-                  const SizedBox(height: 40),
-                ],
+      body:
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : SingleChildScrollView(
+                padding: const EdgeInsets.all(AppStyles.paddingLarge),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 20),
+                    _buildProfileHeader(),
+                    const SizedBox(height: 32),
+                    _buildProfileOptions(),
+                    const SizedBox(height: 32),
+                    _buildSignOutButton(),
+                    const SizedBox(height: 40),
+                  ],
+                ),
               ),
-            ),
     );
   }
 
@@ -421,20 +439,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
         // Name
         Text(
           _user.displayName ?? 'No name set',
-          style: GoogleFonts.poppins(
-            fontSize: 22,
-            fontWeight: FontWeight.w600,
-          ),
+          style: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 4),
 
         // Email
         Text(
           _user.email,
-          style: GoogleFonts.poppins(
-            fontSize: 14,
-            color: Colors.grey,
-          ),
+          style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey),
         ),
         const SizedBox(height: 12),
 
@@ -525,10 +537,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 color: Theme.of(context).colorScheme.primaryContainer,
                 borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
               ),
-              child: Icon(
-                icon,
-                color: Theme.of(context).colorScheme.primary,
-              ),
+              child: Icon(icon, color: Theme.of(context).colorScheme.primary),
             ),
             const SizedBox(width: 16),
             Expanded(

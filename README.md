@@ -1329,6 +1329,7 @@ Set these secrets in your GitHub repository: **Settings** → **Secrets and vari
 | `KEYSTORE_PASSWORD` | Keystore password | Created when generating keystore |
 | `KEY_PASSWORD` | Key password | Created when generating keystore |
 | `KEY_ALIAS` | Key alias | Created when generating keystore |
+| `GOOGLE_SERVICES_JSON` | Full contents of `android/app/google-services.json` (Firebase Android config, not in git) | Firebase Console → Project settings → Your apps → Android app → download `google-services.json`, then paste the whole file as the secret value |
 
 #### Firebase Deployment Secret
 

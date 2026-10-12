@@ -67,7 +67,8 @@ class PrayerService {
     final apiSchool = school ?? EnvConfig.aladhanSchool;
 
     final url = Uri.parse(
-        'https://api.aladhan.com/v1/timings?latitude=$latitude&longitude=$longitude&method=$apiMethod&school=$apiSchool');
+      'https://api.aladhan.com/v1/timings?latitude=$latitude&longitude=$longitude&method=$apiMethod&school=$apiSchool',
+    );
 
     try {
       final response = await http.get(url).timeout(AppConstants.apiTimeout);
@@ -98,16 +99,11 @@ class PrayerService {
       // Initialize iqama map with same times
       final iqamaMap = Map<String, String>.from(timingsMap);
 
-      return PrayerSchedule(
-        timings: timingsMap,
-        iqamaMap: iqamaMap,
-      );
+      return PrayerSchedule(timings: timingsMap, iqamaMap: iqamaMap);
     } on PrayerServiceException {
       rethrow;
     } catch (e) {
-      throw PrayerServiceException(
-        'Failed to fetch prayer times: $e',
-      );
+      throw PrayerServiceException('Failed to fetch prayer times: $e');
     }
   }
 
@@ -143,7 +139,8 @@ class PrayerService {
     final apiSchool = school ?? EnvConfig.aladhanSchool;
 
     final url = Uri.parse(
-        'https://api.aladhan.com/v1/timingsByCity?city=$city&country=$country&method=$apiMethod&school=$apiSchool');
+      'https://api.aladhan.com/v1/timingsByCity?city=$city&country=$country&method=$apiMethod&school=$apiSchool',
+    );
 
     try {
       final response = await http.get(url).timeout(AppConstants.apiTimeout);
@@ -174,16 +171,11 @@ class PrayerService {
       // Initialize iqama map with same times
       final iqamaMap = Map<String, String>.from(timingsMap);
 
-      return PrayerSchedule(
-        timings: timingsMap,
-        iqamaMap: iqamaMap,
-      );
+      return PrayerSchedule(timings: timingsMap, iqamaMap: iqamaMap);
     } on PrayerServiceException {
       rethrow;
     } catch (e) {
-      throw PrayerServiceException(
-        'Failed to fetch prayer times: $e',
-      );
+      throw PrayerServiceException('Failed to fetch prayer times: $e');
     }
   }
 

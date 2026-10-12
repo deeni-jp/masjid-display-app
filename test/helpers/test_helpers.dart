@@ -50,11 +50,7 @@ Future<void> tapAndPump(
 }
 
 /// Enter text in text field
-Future<void> enterText(
-  WidgetTester tester,
-  Finder finder,
-  String text,
-) async {
+Future<void> enterText(WidgetTester tester, Finder finder, String text) async {
   await tester.enterText(finder, text);
   await tester.pump();
 }
@@ -89,20 +85,13 @@ Future<void> waitFor(
 }
 
 /// Simulate platform brightness
-void setPlatformBrightness(
-  WidgetTester tester,
-  Brightness brightness,
-) {
+void setPlatformBrightness(WidgetTester tester, Brightness brightness) {
   tester.platformDispatcher.platformBrightnessTestValue = brightness;
 }
 
 /// Create test material app wrapper
 Widget createTestApp(Widget child) {
-  return MaterialApp(
-    home: Scaffold(
-      body: child,
-    ),
-  );
+  return MaterialApp(home: Scaffold(body: child));
 }
 
 /// Create test material app with theme
@@ -114,9 +103,7 @@ Widget createTestAppWithTheme(
     theme: ThemeData.light(),
     darkTheme: ThemeData.dark(),
     themeMode: themeMode,
-    home: Scaffold(
-      body: child,
-    ),
+    home: Scaffold(body: child),
   );
 }
 

@@ -21,17 +21,20 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 /// Service to handle push notifications using Firebase Cloud Messaging
 class PushNotificationService {
-  static final PushNotificationService _instance = PushNotificationService._internal();
+  static final PushNotificationService _instance =
+      PushNotificationService._internal();
   factory PushNotificationService() => _instance;
   PushNotificationService._internal();
 
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
-  final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _localNotifications =
+      FlutterLocalNotificationsPlugin();
 
   String? _fcmToken;
   String? get fcmToken => _fcmToken;
 
-  final StreamController<RemoteMessage> _messageStreamController = StreamController<RemoteMessage>.broadcast();
+  final StreamController<RemoteMessage> _messageStreamController =
+      StreamController<RemoteMessage>.broadcast();
   Stream<RemoteMessage> get messageStream => _messageStreamController.stream;
 
   bool _initialized = false;
@@ -46,7 +49,6 @@ class PushNotificationService {
 
       if (settings.authorizationStatus == AuthorizationStatus.authorized ||
           settings.authorizationStatus == AuthorizationStatus.provisional) {
-
         if (kDebugMode) {
           print('Push notification permission granted');
         }
@@ -97,7 +99,9 @@ class PushNotificationService {
 
   /// Initialize local notifications for showing notifications when app is in foreground
   Future<void> _initializeLocalNotifications() async {
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
@@ -150,15 +154,21 @@ class PushNotificationService {
     );
 
     await _localNotifications
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.createNotificationChannel(highImportanceChannel);
 
     await _localNotifications
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.createNotificationChannel(regularChannel);
 
     await _localNotifications
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.createNotificationChannel(lowChannel);
   }
 
@@ -191,9 +201,9 @@ class PushNotificationService {
             .collection('users')
             .doc(user.email)
             .set({
-          'fcmToken': token,
-          'fcmTokenUpdatedAt': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
+              'fcmToken': token,
+              'fcmTokenUpdatedAt': FieldValue.serverTimestamp(),
+            }, SetOptions(merge: true));
 
         if (kDebugMode) {
           print('FCM token saved to Firestore');
@@ -264,7 +274,9 @@ class PushNotificationService {
 
     if (message != null) {
       if (kDebugMode) {
-        print('App opened from terminated state by message: ${message.messageId}');
+        print(
+          'App opened from terminated state by message: ${message.messageId}',
+        );
       }
 
       // Add to stream for app to handle
@@ -330,16 +342,20 @@ class PushNotificationService {
     );
 
     // Use notification ID from data if available, otherwise use timestamp
-    final notificationId = message.data['notificationId'] != null
-        ? int.tryParse(message.data['notificationId']) ?? DateTime.now().millisecondsSinceEpoch ~/ 1000
-        : DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final notificationId =
+        message.data['notificationId'] != null
+            ? int.tryParse(message.data['notificationId']) ??
+                DateTime.now().millisecondsSinceEpoch ~/ 1000
+            : DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
     await _localNotifications.show(
       notificationId,
       notification.title ?? 'Mosque Notification',
       notification.body ?? '',
       notificationDetails,
-      payload: message.data['notificationId'], // Pass notification ID for handling tap
+      payload:
+          message
+              .data['notificationId'], // Pass notification ID for handling tap
     );
   }
 

@@ -68,10 +68,7 @@ class _NewsTickerState extends State<NewsTicker>
     );
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeInOut,
-      ),
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
 
     _animationController.forward();
@@ -109,9 +106,10 @@ class _NewsTickerState extends State<NewsTicker>
     }
 
     final notification = widget.notifications[_currentIndex];
-    final bgColor = widget.darkMode
-        ? AppColors.tickerBackground
-        : AppColors.tickerBackgroundLight;
+    final bgColor =
+        widget.darkMode
+            ? AppColors.tickerBackground
+            : AppColors.tickerBackgroundLight;
     final textColor =
         widget.darkMode ? AppColors.tickerText : AppColors.tickerTextLight;
 
@@ -168,11 +166,7 @@ class _NewsTickerState extends State<NewsTicker>
   Widget _buildTypeIndicator(MosqueNotification notification) {
     final typeColor = _getTypeColor(notification.type);
 
-    return Container(
-      width: 4,
-      height: double.infinity,
-      color: typeColor,
-    );
+    return Container(width: 4, height: double.infinity, color: typeColor);
   }
 
   Widget _buildContent(MosqueNotification notification, Color textColor) {
@@ -249,9 +243,10 @@ class _NewsTickerState extends State<NewsTicker>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: isUrgent
-            ? Colors.red.withValues(alpha: 0.2)
-            : Colors.orange.withValues(alpha: 0.2),
+        color:
+            isUrgent
+                ? Colors.red.withValues(alpha: 0.2)
+                : Colors.orange.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
@@ -278,9 +273,10 @@ class _NewsTickerState extends State<NewsTicker>
             margin: const EdgeInsets.symmetric(horizontal: 2),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: index == _currentIndex
-                  ? baseColor
-                  : baseColor.withValues(alpha: 0.3),
+              color:
+                  index == _currentIndex
+                      ? baseColor
+                      : baseColor.withValues(alpha: 0.3),
             ),
           ),
         ),
@@ -457,16 +453,19 @@ class _MarqueeNewsTickerState extends State<MarqueeNewsTicker>
       return const SizedBox.shrink();
     }
 
-    final bgColor = widget.darkMode
-        ? AppColors.tickerBackground
-        : AppColors.tickerBackgroundLight;
+    final bgColor =
+        widget.darkMode
+            ? AppColors.tickerBackground
+            : AppColors.tickerBackgroundLight;
     final textColor =
         widget.darkMode ? AppColors.tickerText : AppColors.tickerTextLight;
 
     // Build combined text
     final combinedText = widget.notifications
-        .map((n) =>
-            '${n.type.displayName.toUpperCase()}: ${n.title.isNotEmpty ? n.title : n.getPreview(maxLength: 50)}')
+        .map(
+          (n) =>
+              '${n.type.displayName.toUpperCase()}: ${n.title.isNotEmpty ? n.title : n.getPreview(maxLength: 50)}',
+        )
         .join('  •  ');
 
     return GestureDetector(
@@ -524,19 +523,17 @@ class _MarqueeNewsTickerState extends State<MarqueeNewsTicker>
 class EmptyTickerPlaceholder extends StatelessWidget {
   final bool darkMode;
 
-  const EmptyTickerPlaceholder({
-    super.key,
-    this.darkMode = false,
-  });
+  const EmptyTickerPlaceholder({super.key, this.darkMode = false});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       height: AppStyles.tickerHeight,
       decoration: BoxDecoration(
-        color: darkMode
-            ? AppColors.tickerBackground
-            : AppColors.tickerBackgroundLight,
+        color:
+            darkMode
+                ? AppColors.tickerBackground
+                : AppColors.tickerBackgroundLight,
       ),
       child: Center(
         child: Text(

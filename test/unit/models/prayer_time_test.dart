@@ -320,7 +320,8 @@ void main() {
         // Arrange
         final now = DateTime.now();
         final futureTime = now.add(const Duration(hours: 1));
-        final timeStr = '${futureTime.hour.toString().padLeft(2, '0')}:${futureTime.minute.toString().padLeft(2, '0')}';
+        final timeStr =
+            '${futureTime.hour.toString().padLeft(2, '0')}:${futureTime.minute.toString().padLeft(2, '0')}';
 
         final prayer = PrayerTime.fromMaps(
           name: 'Dhuhr',
@@ -336,7 +337,8 @@ void main() {
         // Arrange
         final now = DateTime.now();
         final pastTime = now.subtract(const Duration(hours: 1));
-        final timeStr = '${pastTime.hour.toString().padLeft(2, '0')}:${pastTime.minute.toString().padLeft(2, '0')}';
+        final timeStr =
+            '${pastTime.hour.toString().padLeft(2, '0')}:${pastTime.minute.toString().padLeft(2, '0')}';
 
         final prayer = PrayerTime.fromMaps(
           name: 'Fajr',
@@ -351,7 +353,8 @@ void main() {
       test('isNext returns true when same minute as prayer', () {
         // Arrange
         final now = DateTime.now();
-        final timeStr = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+        final timeStr =
+            '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
 
         final prayer = PrayerTime.fromMaps(
           name: 'Dhuhr',
@@ -526,108 +529,61 @@ void main() {
     });
 
     group('Next Prayer Logic', () {
+      // Fixed times on today's date, so results don't depend on when the
+      // tests run. (Times in a schedule are parsed as "today".) The prayers
+      // used avoid Dhuhr, which is skipped for Jummah on Fridays.
+      DateTime at(int hour, int minute) {
+        final today = DateTime.now();
+        return DateTime(today.year, today.month, today.day, hour, minute);
+      }
+
+      final schedule = PrayerSchedule(
+        timings: {'Fajr': '05:30', 'Asr': '15:00', 'Isha': '20:00'},
+        iqamaMap: {'Fajr': '05:45', 'Asr': '15:15', 'Isha': '20:15'},
+      );
+
       test('getNextPrayer returns next prayer after current time', () {
-        // Arrange
-        final now = DateTime.now();
-        final futureTime = now.add(const Duration(hours: 2));
-        final futureTimeStr = '${futureTime.hour.toString().padLeft(2, '0')}:${futureTime.minute.toString().padLeft(2, '0')}';
+        final nextPrayer = schedule.getNextPrayer(now: at(12, 0));
 
-        final timings = {
-          'Fajr': '05:30',
-          'Dhuhr': futureTimeStr,
-          'Asr': '15:00',
-        };
-        final iqamaMap = {
-          'Fajr': '05:45',
-          'Dhuhr': futureTimeStr,
-          'Asr': '15:15',
-        };
+        expect(nextPrayer?.name, 'Asr');
+      });
 
-        final schedule = PrayerSchedule(
-          timings: timings,
-          iqamaMap: iqamaMap,
-        );
-
-        // Act
-        final nextPrayer = schedule.getNextPrayer();
-
-        // Assert
-        expect(nextPrayer, isNotNull);
-        expect(nextPrayer!.name, 'Dhuhr');
+      test('getNextPrayer counts a prayer until its iqamah', () {
+        // Asr has begun (15:00) but its iqamah (15:15) hasn't.
+        expect(schedule.getNextPrayer(now: at(15, 10))?.name, 'Asr');
+        expect(schedule.getNextPrayer(now: at(15, 16))?.name, 'Isha');
       });
 
       test('getNextPrayer skips Sunrise', () {
-        // Arrange: Sunrise is sooner than Asr, but is not a prayer
-        final now = DateTime.now();
-        String hhmm(DateTime t) =>
-            '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
-        final sunrise = hhmm(now.add(const Duration(hours: 1)));
-        final asr = hhmm(now.add(const Duration(hours: 2)));
-
-        final schedule = PrayerSchedule(
-          timings: {'Sunrise': sunrise, 'Asr': asr},
-          iqamaMap: {'Sunrise': sunrise, 'Asr': asr},
+        // Sunrise is sooner than Asr, but is not a prayer
+        final withSunrise = PrayerSchedule(
+          timings: {'Sunrise': '06:10', 'Asr': '15:00'},
+          iqamaMap: {'Sunrise': '06:10', 'Asr': '15:15'},
         );
 
-        // Act
-        final nextPrayer = schedule.getNextPrayer();
+        final nextPrayer = withSunrise.getNextPrayer(now: at(5, 0));
 
-        // Assert
         expect(nextPrayer?.name, 'Asr');
       });
 
       test('getNextPrayer wraps to Fajr when all prayers passed', () {
-        // Arrange
-        final timings = {
-          'Fajr': '05:30',
-          'Dhuhr': '12:30',
-          'Asr': '15:00',
-        };
-        final iqamaMap = {
-          'Fajr': '05:45',
-          'Dhuhr': '12:45',
-          'Asr': '15:15',
-        };
+        final nextPrayer = schedule.getNextPrayer(now: at(23, 0));
 
-        final schedule = PrayerSchedule(
-          timings: timings,
-          iqamaMap: iqamaMap,
-        );
-
-        // Act
-        final nextPrayer = schedule.getNextPrayer();
-
-        // Assert
-        expect(nextPrayer, isNotNull);
-        // Should wrap to next day's Fajr
+        expect(nextPrayer?.name, 'Fajr');
       });
 
       test('getTimeToNextPrayer calculates correct duration', () {
-        // Arrange
-        final now = DateTime.now();
-        final futureTime = now.add(const Duration(hours: 2, minutes: 30));
-        final futureTimeStr = '${futureTime.hour.toString().padLeft(2, '0')}:${futureTime.minute.toString().padLeft(2, '0')}';
+        final timeToNext = schedule.getTimeToNextPrayer(now: at(12, 45));
 
-        final timings = {
-          'Fajr': '05:30',
-          'Dhuhr': futureTimeStr,
-        };
-        final iqamaMap = {
-          'Fajr': '05:45',
-          'Dhuhr': futureTimeStr,
-        };
+        // Until Asr iqamah at 15:15
+        expect(timeToNext, const Duration(hours: 2, minutes: 30));
+      });
 
-        final schedule = PrayerSchedule(
-          timings: timings,
-          iqamaMap: iqamaMap,
-        );
+      test("getTimeToNextPrayer counts to tomorrow's Fajr after Isha", () {
+        final timeToNext = schedule.getTimeToNextPrayer(now: at(23, 0));
 
-        // Act
-        final timeToNext = schedule.getTimeToNextPrayer();
-
-        // Assert
-        expect(timeToNext.inHours, greaterThanOrEqualTo(2));
-        expect(timeToNext.inMinutes, greaterThanOrEqualTo(149)); // Account for test execution time
+        // 23:00 today -> 05:45 tomorrow
+        expect(timeToNext, const Duration(hours: 6, minutes: 45));
       });
     });
 
@@ -643,10 +599,16 @@ void main() {
         final prayers = schedule.getPrayersInOrder();
 
         // Assert
-        expect(prayers.any((p) => p.name == 'Dhuhr'), isTrue,
-            reason: 'Dhuhr should be in the list');
-        expect(prayers.any((p) => p.name == 'Jummah'), isTrue,
-            reason: 'Jummah should be added at the end');
+        expect(
+          prayers.any((p) => p.name == 'Dhuhr'),
+          isTrue,
+          reason: 'Dhuhr should be in the list',
+        );
+        expect(
+          prayers.any((p) => p.name == 'Jummah'),
+          isTrue,
+          reason: 'Jummah should be added at the end',
+        );
         expect(prayers.any((p) => p.name == 'Fajr'), isTrue);
         expect(prayers.any((p) => p.name == 'Asr'), isTrue);
       });
@@ -664,8 +626,11 @@ void main() {
         final dhuhr = prayers.firstWhere((p) => p.name == 'Dhuhr');
 
         // Assert
-        expect(jummah.waqt, dhuhr.waqt,
-            reason: 'Jummah should use Dhuhr waqt time');
+        expect(
+          jummah.waqt,
+          dhuhr.waqt,
+          reason: 'Jummah should use Dhuhr waqt time',
+        );
       });
     });
 
@@ -704,8 +669,11 @@ void main() {
 
         // Assert
         expect(asrPrayer, isNotNull);
-        expect(asrPrayer!.iqama, '03:15 PM',
-            reason: 'Other prayers should not be affected');
+        expect(
+          asrPrayer!.iqama,
+          '03:15 PM',
+          reason: 'Other prayers should not be affected',
+        );
       });
     });
   });

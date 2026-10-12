@@ -10,20 +10,11 @@ void main() {
         final apiData = {
           'hijri': {
             'day': '24',
-            'month': {
-              'number': 1,
-              'en': 'Muharram',
-              'ar': 'Muharram'
-            },
+            'month': {'number': 1, 'en': 'Muharram', 'ar': 'Muharram'},
             'year': '1446',
-            'weekday': {
-              'en': 'Thursday',
-              'ar': 'Thursday'
-            }
+            'weekday': {'en': 'Thursday', 'ar': 'Thursday'},
           },
-          'gregorian': {
-            'date': '01-08-2024'
-          }
+          'gregorian': {'date': '01-08-2024'},
         };
 
         // Act
@@ -51,17 +42,12 @@ void main() {
             'month': {
               'number': 6,
               'en': 'Jumada al-Akhirah',
-              'ar': 'Jumada al-Akhirah'
+              'ar': 'Jumada al-Akhirah',
             },
             'year': '1447',
-            'weekday': {
-              'en': 'Wednesday',
-              'ar': 'Wednesday'
-            }
+            'weekday': {'en': 'Wednesday', 'ar': 'Wednesday'},
           },
-          'gregorian': {
-            'date': '03-12-2025'
-          }
+          'gregorian': {'date': '03-12-2025'},
         };
 
         // Act
@@ -81,17 +67,12 @@ void main() {
             'month': {
               'number': 3,
               'en': 'Rabi al-Awwal',
-              'ar': 'Rabi al-Awwal'
+              'ar': 'Rabi al-Awwal',
             },
             'year': '1447',
-            'weekday': {
-              'en': 'Monday',
-              'ar': 'Monday'
-            }
+            'weekday': {'en': 'Monday', 'ar': 'Monday'},
           },
-          'gregorian': {
-            'date': '25-09-2025'
-          }
+          'gregorian': {'date': '25-09-2025'},
         };
 
         // Act
@@ -184,8 +165,11 @@ void main() {
         );
 
         // Act & Assert
-        expect(hijriDate.isCacheValid, isTrue,
-            reason: 'Cache within 24h and same date should be valid');
+        expect(
+          hijriDate.isCacheValid,
+          isTrue,
+          reason: 'Cache within 24h and same date should be valid',
+        );
       });
 
       test('isCacheValid returns true when cached 23 hours ago, same date', () {
@@ -204,8 +188,11 @@ void main() {
         );
 
         // Act & Assert
-        expect(hijriDate.isCacheValid, isTrue,
-            reason: 'Cache within 24h and same date should be valid');
+        expect(
+          hijriDate.isCacheValid,
+          isTrue,
+          reason: 'Cache within 24h and same date should be valid',
+        );
       });
 
       test('isCacheValid returns false when cached 25 hours ago', () {
@@ -224,68 +211,87 @@ void main() {
         );
 
         // Act & Assert
-        expect(hijriDate.isCacheValid, isFalse,
-            reason: 'Cache older than 24h should be invalid');
+        expect(
+          hijriDate.isCacheValid,
+          isFalse,
+          reason: 'Cache older than 24h should be invalid',
+        );
       });
 
-      test('isCacheValid returns false when cached 1 hour ago but yesterday\'s date',
-          () {
-        // Arrange
-        final now = DateTime.now();
-        final yesterday = now.subtract(const Duration(days: 1));
-        final hijriDate = HijriDate(
-          day: 2,
-          month: 6,
-          year: 1447,
-          monthName: 'Jumada al-Akhirah',
-          monthNameEnglish: 'Jumada al-Akhirah',
-          weekdayName: 'Wednesday',
-          weekdayNameEnglish: 'Wednesday',
-          gregorianDate: yesterday,
-          cachedAt: now.subtract(const Duration(hours: 1)),
-        );
+      test(
+        'isCacheValid returns false when cached 1 hour ago but yesterday\'s date',
+        () {
+          // Arrange
+          final now = DateTime.now();
+          final yesterday = now.subtract(const Duration(days: 1));
+          final hijriDate = HijriDate(
+            day: 2,
+            month: 6,
+            year: 1447,
+            monthName: 'Jumada al-Akhirah',
+            monthNameEnglish: 'Jumada al-Akhirah',
+            weekdayName: 'Wednesday',
+            weekdayNameEnglish: 'Wednesday',
+            gregorianDate: yesterday,
+            cachedAt: now.subtract(const Duration(hours: 1)),
+          );
 
-        // Act & Assert
-        expect(hijriDate.isCacheValid, isFalse,
-            reason: 'Cache with different date should be invalid');
-      });
+          // Act & Assert
+          expect(
+            hijriDate.isCacheValid,
+            isFalse,
+            reason: 'Cache with different date should be invalid',
+          );
+        },
+      );
 
-      test('EDGE CASE: isCacheValid returns false when cached at 23:59 yesterday, checked at 00:01 today',
-          () {
-        // Arrange
-        final today = DateTime.now();
-        final yesterday = today.subtract(const Duration(days: 1));
-        final yesterdayAt2359 = DateTime(
-          yesterday.year,
-          yesterday.month,
-          yesterday.day,
-          23,
-          59,
-        );
+      test(
+        'EDGE CASE: isCacheValid returns false when cached at 23:59 yesterday, checked at 00:01 today',
+        () {
+          // Arrange
+          final today = DateTime.now();
+          final yesterday = today.subtract(const Duration(days: 1));
+          final yesterdayAt2359 = DateTime(
+            yesterday.year,
+            yesterday.month,
+            yesterday.day,
+            23,
+            59,
+          );
 
-        final hijriDate = HijriDate(
-          day: 2,
-          month: 6,
-          year: 1447,
-          monthName: 'Jumada al-Akhirah',
-          monthNameEnglish: 'Jumada al-Akhirah',
-          weekdayName: 'Wednesday',
-          weekdayNameEnglish: 'Wednesday',
-          gregorianDate: yesterday,
-          cachedAt: yesterdayAt2359,
-        );
+          final hijriDate = HijriDate(
+            day: 2,
+            month: 6,
+            year: 1447,
+            monthName: 'Jumada al-Akhirah',
+            monthNameEnglish: 'Jumada al-Akhirah',
+            weekdayName: 'Wednesday',
+            weekdayNameEnglish: 'Wednesday',
+            gregorianDate: yesterday,
+            cachedAt: yesterdayAt2359,
+          );
 
-        // Act & Assert
-        expect(hijriDate.isCacheValid, isFalse,
+          // Act & Assert
+          expect(
+            hijriDate.isCacheValid,
+            isFalse,
             reason:
-                'Cache from yesterday should be invalid even if less than 24 hours');
-      });
+                'Cache from yesterday should be invalid even if less than 24 hours',
+          );
+        },
+      );
 
       test('isCacheValid checks date ignoring time component', () {
         // Arrange - Same calendar date but different times
         final today = DateTime.now();
         final todayMorning = DateTime(today.year, today.month, today.day, 8, 0);
-        final todayEvening = DateTime(today.year, today.month, today.day, 20, 0);
+        final todayEvening = DateTime(
+          today.year,
+          today.month,
+          today.day,
+          20,
+          0,
+        );
 
         final hijriDate = HijriDate(
           day: 2,
@@ -300,8 +306,11 @@ void main() {
         );
 
         // Act & Assert
-        expect(hijriDate.isCacheValid, isTrue,
-            reason: 'Same calendar date should be valid regardless of time');
+        expect(
+          hijriDate.isCacheValid,
+          isTrue,
+          reason: 'Same calendar date should be valid regardless of time',
+        );
       });
     });
 
@@ -389,8 +398,11 @@ void main() {
         );
 
         // Act & Assert
-        expect(date1, equals(date2),
-            reason: 'Same hijri/gregorian dates should be equal');
+        expect(
+          date1,
+          equals(date2),
+          reason: 'Same hijri/gregorian dates should be equal',
+        );
       });
 
       test('two HijriDates with different hijri dates are not equal', () {
@@ -420,8 +432,11 @@ void main() {
         );
 
         // Act & Assert
-        expect(date1, isNot(equals(date2)),
-            reason: 'Different hijri dates should not be equal');
+        expect(
+          date1,
+          isNot(equals(date2)),
+          reason: 'Different hijri dates should not be equal',
+        );
       });
 
       test('hashCode is consistent for equal objects', () {
@@ -451,8 +466,11 @@ void main() {
         );
 
         // Act & Assert
-        expect(date1.hashCode, equals(date2.hashCode),
-            reason: 'Equal objects should have equal hashCodes');
+        expect(
+          date1.hashCode,
+          equals(date2.hashCode),
+          reason: 'Equal objects should have equal hashCodes',
+        );
       });
 
       test('hashCode is different for different objects', () {
@@ -482,8 +500,11 @@ void main() {
         );
 
         // Act & Assert
-        expect(date1.hashCode, isNot(equals(date2.hashCode)),
-            reason: 'Different objects should (usually) have different hashCodes');
+        expect(
+          date1.hashCode,
+          isNot(equals(date2.hashCode)),
+          reason: 'Different objects should (usually) have different hashCodes',
+        );
       });
     });
 

@@ -144,10 +144,7 @@ class _QiblaTabState extends State<QiblaTab> {
         const SizedBox(height: 8),
         Text(
           'Face towards Mecca',
-          style: GoogleFonts.poppins(
-            fontSize: 16,
-            color: Colors.grey,
-          ),
+          style: GoogleFonts.poppins(fontSize: 16, color: Colors.grey),
         ),
       ],
     );
@@ -155,9 +152,7 @@ class _QiblaTabState extends State<QiblaTab> {
 
   Widget _buildCompassBody() {
     if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
     if (_error != null || !_hasCompass) {
@@ -249,10 +244,7 @@ class _QiblaTabState extends State<QiblaTab> {
                 const SizedBox(height: 4),
                 Text(
                   isAligned ? 'Ready to pray' : 'Rotate your device',
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    color: Colors.grey,
-                  ),
+                  style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey),
                 ),
               ],
             ),
@@ -352,18 +344,12 @@ class _QiblaTabState extends State<QiblaTab> {
         const SizedBox(height: 16),
         Text(
           'Calibrating compass...',
-          style: GoogleFonts.poppins(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
+          style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 8),
         Text(
           'Move your device in a figure-8 pattern',
-          style: GoogleFonts.poppins(
-            fontSize: 14,
-            color: Colors.grey,
-          ),
+          style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey),
           textAlign: TextAlign.center,
         ),
       ],
@@ -373,18 +359,11 @@ class _QiblaTabState extends State<QiblaTab> {
   Widget _buildErrorState() {
     return Column(
       children: [
-        Icon(
-          Icons.error_outline,
-          size: 64,
-          color: Colors.red.shade300,
-        ),
+        Icon(Icons.error_outline, size: 64, color: Colors.red.shade300),
         const SizedBox(height: 16),
         Text(
           _error ?? 'Compass not available',
-          style: GoogleFonts.poppins(
-            fontSize: 16,
-            color: Colors.grey,
-          ),
+          style: GoogleFonts.poppins(fontSize: 16, color: Colors.grey),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 16),
@@ -405,9 +384,10 @@ class _QiblaTabState extends State<QiblaTab> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: widget.darkMode
-            ? AppColors.primaryGreenDark.withValues(alpha: 0.3)
-            : AppColors.primaryGreenLight.withValues(alpha: 0.1),
+        color:
+            widget.darkMode
+                ? AppColors.primaryGreenDark.withValues(alpha: 0.3)
+                : AppColors.primaryGreenLight.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
       ),
       child: Column(
@@ -454,9 +434,10 @@ class _SimpleNeedlePainter extends CustomPainter {
     final centerX = size.width / 2;
 
     // Gold side (pointing to Qibla)
-    final goldPaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
+    final goldPaint =
+        Paint()
+          ..color = color
+          ..style = PaintingStyle.fill;
 
     final goldPath = Path();
     goldPath.moveTo(centerX, 0); // Top point
@@ -468,9 +449,10 @@ class _SimpleNeedlePainter extends CustomPainter {
     canvas.drawPath(goldPath, goldPaint);
 
     // Gray side (opposite)
-    final grayPaint = Paint()
-      ..color = darkMode ? Colors.grey.shade700 : Colors.grey.shade400
-      ..style = PaintingStyle.fill;
+    final grayPaint =
+        Paint()
+          ..color = darkMode ? Colors.grey.shade700 : Colors.grey.shade400
+          ..style = PaintingStyle.fill;
 
     final grayPath = Path();
     grayPath.moveTo(centerX, size.height); // Bottom point
@@ -483,17 +465,19 @@ class _SimpleNeedlePainter extends CustomPainter {
 
     // Outline
     canvas.drawPath(
-        goldPath,
-        Paint()
-          ..color = Colors.black.withValues(alpha: 0.2)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1);
+      goldPath,
+      Paint()
+        ..color = Colors.black.withValues(alpha: 0.2)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1,
+    );
     canvas.drawPath(
-        grayPath,
-        Paint()
-          ..color = Colors.black.withValues(alpha: 0.2)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1);
+      grayPath,
+      Paint()
+        ..color = Colors.black.withValues(alpha: 0.2)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1,
+    );
   }
 
   @override

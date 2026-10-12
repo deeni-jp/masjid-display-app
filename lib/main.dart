@@ -22,9 +22,7 @@ Future<void> main() async {
   await EnvConfig.initialize();
 
   // Initialize Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   // Initialize local storage
   await StorageService.init();
@@ -89,10 +87,7 @@ class _PrayerAppState extends State<PrayerApp> {
         secondary: AppColors.secondaryGold,
       ),
       textTheme: GoogleFonts.poppinsTextTheme(),
-      appBarTheme: const AppBarTheme(
-        centerTitle: true,
-        elevation: 0,
-      ),
+      appBarTheme: const AppBarTheme(centerTitle: true, elevation: 0),
       cardTheme: CardThemeData(
         elevation: 2,
         shape: RoundedRectangleBorder(
@@ -111,8 +106,10 @@ class _PrayerAppState extends State<PrayerApp> {
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
         ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
@@ -133,10 +130,7 @@ class _PrayerAppState extends State<PrayerApp> {
         secondary: AppColors.secondaryGold,
       ),
       textTheme: GoogleFonts.poppinsTextTheme(ThemeData.dark().textTheme),
-      appBarTheme: const AppBarTheme(
-        centerTitle: true,
-        elevation: 0,
-      ),
+      appBarTheme: const AppBarTheme(centerTitle: true, elevation: 0),
       cardTheme: CardThemeData(
         elevation: 2,
         shape: RoundedRectangleBorder(
@@ -155,8 +149,10 @@ class _PrayerAppState extends State<PrayerApp> {
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
         ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
@@ -172,10 +168,7 @@ class _PrayerAppState extends State<PrayerApp> {
       darkTheme: darkTheme,
       themeMode: _darkMode ? ThemeMode.dark : ThemeMode.light,
       debugShowCheckedModeBanner: false,
-      home: AuthWrapper(
-        onToggleTheme: _setDarkMode,
-        darkMode: _darkMode,
-      ),
+      home: AuthWrapper(onToggleTheme: _setDarkMode, darkMode: _darkMode),
     );
   }
 }
@@ -312,9 +305,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
     // Show auth screen if not signed in
     if (_currentUser == null) {
-      return AuthScreen(
-        onAuthSuccess: _onAuthSuccess,
-      );
+      return AuthScreen(onAuthSuccess: _onAuthSuccess);
     }
 
     // Show home page if signed in

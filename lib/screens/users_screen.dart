@@ -107,18 +107,21 @@ class _UsersScreenState extends State<UsersScreen>
     if (_tabController.index == 0) {
       // Filter active users
       setState(() {
-        _filteredUsers = _users.where((user) {
-          return user.email.toLowerCase().contains(lowerQuery) ||
-              (user.displayName?.toLowerCase().contains(lowerQuery) ?? false);
-        }).toList();
+        _filteredUsers =
+            _users.where((user) {
+              return user.email.toLowerCase().contains(lowerQuery) ||
+                  (user.displayName?.toLowerCase().contains(lowerQuery) ??
+                      false);
+            }).toList();
       });
     } else {
       // Filter deleted users
       setState(() {
-        _filteredDeletedUsers = _deletedUsers.where((log) {
-          return log.email.toLowerCase().contains(lowerQuery) ||
-              log.displayName.toLowerCase().contains(lowerQuery);
-        }).toList();
+        _filteredDeletedUsers =
+            _deletedUsers.where((log) {
+              return log.email.toLowerCase().contains(lowerQuery) ||
+                  log.displayName.toLowerCase().contains(lowerQuery);
+            }).toList();
       });
     }
   }
@@ -126,21 +129,22 @@ class _UsersScreenState extends State<UsersScreen>
   Future<void> _showUserManagementDialog(AppUser user) async {
     await showDialog(
       context: context,
-      builder: (context) => _UserManagementDialog(
-        user: user,
-        onRoleChange: () {
-          Navigator.pop(context);
-          _changeUserRole(user);
-        },
-        onPasswordReset: () {
-          Navigator.pop(context);
-          _handlePasswordReset(user);
-        },
-        onDelete: () {
-          Navigator.pop(context);
-          _handleDeleteUser(user);
-        },
-      ),
+      builder:
+          (context) => _UserManagementDialog(
+            user: user,
+            onRoleChange: () {
+              Navigator.pop(context);
+              _changeUserRole(user);
+            },
+            onPasswordReset: () {
+              Navigator.pop(context);
+              _handlePasswordReset(user);
+            },
+            onDelete: () {
+              Navigator.pop(context);
+              _handleDeleteUser(user);
+            },
+          ),
     );
   }
 
@@ -199,29 +203,30 @@ class _UsersScreenState extends State<UsersScreen>
   Future<void> _handlePasswordReset(AppUser user) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppStyles.radiusLarge),
-        ),
-        title: Text(
-          'Send Password Reset Email?',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-        ),
-        content: Text(
-          'A password reset email will be sent to:\n${user.email}',
-          style: GoogleFonts.poppins(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+      builder:
+          (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppStyles.radiusLarge),
+            ),
+            title: Text(
+              'Send Password Reset Email?',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            ),
+            content: Text(
+              'A password reset email will be sent to:\n${user.email}',
+              style: GoogleFonts.poppins(),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Send Email'),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Send Email'),
-          ),
-        ],
-      ),
     );
 
     if (confirmed != true) return;
@@ -310,44 +315,45 @@ class _UsersScreenState extends State<UsersScreen>
   Future<void> _handlePermanentlyDeleteLog(DeletionLog log) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppStyles.radiusLarge),
-        ),
-        title: Row(
-          children: [
-            const Icon(Icons.delete_forever, color: Colors.red, size: 28),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'Delete Forever',
-                style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w600,
-                  color: Colors.red,
+      builder:
+          (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppStyles.radiusLarge),
+            ),
+            title: Row(
+              children: [
+                const Icon(Icons.delete_forever, color: Colors.red, size: 28),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Delete Forever',
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.red,
+                    ),
+                  ),
                 ),
+              ],
+            ),
+            content: Text(
+              'Permanently delete this deletion log? This will remove all audit records for ${log.email}. This action cannot be undone.',
+              style: GoogleFonts.poppins(),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
               ),
-            ),
-          ],
-        ),
-        content: Text(
-          'Permanently delete this deletion log? This will remove all audit records for ${log.email}. This action cannot be undone.',
-          style: GoogleFonts.poppins(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Delete Forever'),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Delete Forever'),
-          ),
-        ],
-      ),
     );
 
     if (confirmed != true) return;
@@ -384,35 +390,35 @@ class _UsersScreenState extends State<UsersScreen>
   }
 
   Future<void> _showFullUserData(DeletionLog log) async {
-    final jsonString =
-        const JsonEncoder.withIndent('  ').convert(log.userData);
+    final jsonString = const JsonEncoder.withIndent('  ').convert(log.userData);
 
     await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppStyles.radiusLarge),
-        ),
-        title: Text(
-          'Full User Data',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-        ),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: SingleChildScrollView(
-            child: SelectableText(
-              jsonString,
-              style: GoogleFonts.sourceCodePro(fontSize: 12),
+      builder:
+          (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppStyles.radiusLarge),
             ),
+            title: Text(
+              'Full User Data',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            ),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: SingleChildScrollView(
+                child: SelectableText(
+                  jsonString,
+                  style: GoogleFonts.sourceCodePro(fontSize: 12),
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Close'),
+              ),
+            ],
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
     );
   }
 
@@ -428,14 +434,8 @@ class _UsersScreenState extends State<UsersScreen>
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
-            Tab(
-              icon: Icon(Icons.people),
-              text: 'Active Users',
-            ),
-            Tab(
-              icon: Icon(Icons.history),
-              text: 'Deleted Users',
-            ),
+            Tab(icon: Icon(Icons.people), text: 'Active Users'),
+            Tab(icon: Icon(Icons.history), text: 'Deleted Users'),
           ],
         ),
       ),
@@ -453,18 +453,20 @@ class _UsersScreenState extends State<UsersScreen>
                   decoration: InputDecoration(
                     hintText: 'Search by email...',
                     prefixIcon: const Icon(Icons.search),
-                    suffixIcon: _searchController.text.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () {
-                              _searchController.clear();
-                              _filterUsers('');
-                            },
-                          )
-                        : null,
+                    suffixIcon:
+                        _searchController.text.isNotEmpty
+                            ? IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                _searchController.clear();
+                                _filterUsers('');
+                              },
+                            )
+                            : null,
                     border: OutlineInputBorder(
-                      borderRadius:
-                          BorderRadius.circular(AppStyles.radiusMedium),
+                      borderRadius: BorderRadius.circular(
+                        AppStyles.radiusMedium,
+                      ),
                     ),
                     filled: true,
                     fillColor: Theme.of(context).cardColor,
@@ -476,15 +478,14 @@ class _UsersScreenState extends State<UsersScreen>
               // Stats Row
               Padding(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: AppStyles.paddingMedium),
+                  horizontal: AppStyles.paddingMedium,
+                ),
                 child: _buildStatsRow(),
               ),
               const SizedBox(height: 8),
 
               // User List
-              Expanded(
-                child: _buildUserList(),
-              ),
+              Expanded(child: _buildUserList()),
             ],
           ),
 
@@ -531,13 +532,7 @@ class _UsersScreenState extends State<UsersScreen>
             ),
           ),
           const SizedBox(width: 4),
-          Text(
-            label,
-            style: GoogleFonts.poppins(
-              fontSize: 12,
-              color: color,
-            ),
-          ),
+          Text(label, style: GoogleFonts.poppins(fontSize: 12, color: color)),
         ],
       ),
     );
@@ -629,15 +624,16 @@ class _UsersScreenState extends State<UsersScreen>
             decoration: InputDecoration(
               hintText: 'Search deleted users...',
               prefixIcon: const Icon(Icons.search),
-              suffixIcon: _searchController.text.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () {
-                        _searchController.clear();
-                        _filterUsers('');
-                      },
-                    )
-                  : null,
+              suffixIcon:
+                  _searchController.text.isNotEmpty
+                      ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          _filterUsers('');
+                        },
+                      )
+                      : null,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
               ),
@@ -652,12 +648,15 @@ class _UsersScreenState extends State<UsersScreen>
         if (!_loading)
           Padding(
             padding: const EdgeInsets.symmetric(
-                horizontal: AppStyles.paddingMedium),
+              horizontal: AppStyles.paddingMedium,
+            ),
             child: Row(
               children: [
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.red.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(AppStyles.radiusSmall),
@@ -689,9 +688,7 @@ class _UsersScreenState extends State<UsersScreen>
         const SizedBox(height: 8),
 
         // Deleted Users List
-        Expanded(
-          child: _buildDeletedUserList(),
-        ),
+        Expanded(child: _buildDeletedUserList()),
       ],
     );
   }
@@ -830,12 +827,15 @@ class _DeletedUserCardState extends State<_DeletedUserCard> {
               Row(
                 children: [
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.red.withValues(alpha: 0.1),
-                      borderRadius:
-                          BorderRadius.circular(AppStyles.radiusSmall),
+                      borderRadius: BorderRadius.circular(
+                        AppStyles.radiusSmall,
+                      ),
                       border: Border.all(
                         color: Colors.red.withValues(alpha: 0.5),
                         width: 1,
@@ -883,8 +883,9 @@ class _DeletedUserCardState extends State<_DeletedUserCard> {
                   _buildDetailRow('Deleted By', widget.log.deletedByEmail),
                   _buildDetailRow(
                     'Deleted At',
-                    DateFormat('MMM d, yyyy \'at\' h:mm a')
-                        .format(widget.log.deletedAt),
+                    DateFormat(
+                      'MMM d, yyyy \'at\' h:mm a',
+                    ).format(widget.log.deletedAt),
                   ),
                   const SizedBox(height: 12),
                   ElevatedButton.icon(
@@ -940,10 +941,7 @@ class _UserCard extends StatelessWidget {
   final AppUser user;
   final VoidCallback onManage;
 
-  const _UserCard({
-    required this.user,
-    required this.onManage,
-  });
+  const _UserCard({required this.user, required this.onManage});
 
   @override
   Widget build(BuildContext context) {
@@ -1092,10 +1090,7 @@ class _UserManagementDialog extends StatelessWidget {
             decoration: BoxDecoration(
               color: Theme.of(context).cardColor,
               borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
-              border: Border.all(
-                color: Colors.grey.shade300,
-                width: 1,
-              ),
+              border: Border.all(color: Colors.grey.shade300, width: 1),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1196,10 +1191,7 @@ class _UserManagementDialog extends StatelessWidget {
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(AppStyles.radiusSmall),
-        border: Border.all(
-          color: color.withValues(alpha: 0.5),
-          width: 1,
-        ),
+        border: Border.all(color: color.withValues(alpha: 0.5), width: 1),
       ),
       child: Text(
         role.displayName,
@@ -1270,98 +1262,101 @@ class _DeleteConfirmationDialogState extends State<_DeleteConfirmationDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-          // Warning Text
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.red.shade50,
-              borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
-              border: Border.all(color: Colors.red.shade200),
-            ),
-            child: Text(
-              'This will prevent the user from accessing the app. Their account will be marked as deleted and logged for audit purposes. Note: The user will not be able to sign up again with the same email.',
-              style: GoogleFonts.poppins(
-                fontSize: 13,
-                color: Colors.red.shade900,
-                height: 1.4,
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // User Email Display
-          Text(
-            'User to delete:',
-            style: GoogleFonts.poppins(
-              fontSize: 12,
-              color: Colors.grey.shade700,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
-              borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
-              border: Border.all(color: Colors.grey.shade300),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.email, size: 20, color: Colors.grey),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    widget.user.email,
-                    style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                    ),
+              // Warning Text
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
+                  border: Border.all(color: Colors.red.shade200),
+                ),
+                child: Text(
+                  'This will prevent the user from accessing the app. Their account will be marked as deleted and logged for audit purposes. Note: The user will not be able to sign up again with the same email.',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    color: Colors.red.shade900,
+                    height: 1.4,
                   ),
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // Email Confirmation Field
-          Text(
-            'Type the email address to confirm:',
-            style: GoogleFonts.poppins(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _emailController,
-            scrollPadding: const EdgeInsets.all(20), // Auto-scroll when focused
-            decoration: InputDecoration(
-              hintText: 'Enter email address',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
               ),
-              filled: true,
-              fillColor: Theme.of(context).cardColor,
-            ),
-            onChanged: (_) => setState(() {}),
-          ),
-          const SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-          // Acknowledgment Checkbox
-          CheckboxListTile(
-            value: _acknowledged,
-            onChanged: (value) => setState(() => _acknowledged = value ?? false),
-            controlAffinity: ListTileControlAffinity.leading,
-            contentPadding: EdgeInsets.zero,
-            title: Text(
-              'I understand this action is permanent',
-              style: GoogleFonts.poppins(fontSize: 13),
-            ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
-            ),
-          ),
+              // User Email Display
+              Text(
+                'User to delete:',
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  color: Colors.grey.shade700,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).cardColor,
+                  borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.email, size: 20, color: Colors.grey),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        widget.user.email,
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Email Confirmation Field
+              Text(
+                'Type the email address to confirm:',
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _emailController,
+                scrollPadding: const EdgeInsets.all(
+                  20,
+                ), // Auto-scroll when focused
+                decoration: InputDecoration(
+                  hintText: 'Enter email address',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
+                  ),
+                  filled: true,
+                  fillColor: Theme.of(context).cardColor,
+                ),
+                onChanged: (_) => setState(() {}),
+              ),
+              const SizedBox(height: 20),
+
+              // Acknowledgment Checkbox
+              CheckboxListTile(
+                value: _acknowledged,
+                onChanged:
+                    (value) => setState(() => _acknowledged = value ?? false),
+                controlAffinity: ListTileControlAffinity.leading,
+                contentPadding: EdgeInsets.zero,
+                title: Text(
+                  'I understand this action is permanent',
+                  style: GoogleFonts.poppins(fontSize: 13),
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
+                ),
+              ),
             ],
           ),
         ),
@@ -1402,33 +1397,35 @@ class _RoleSelectionDialog extends StatelessWidget {
       ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
-        children: UserRole.values.map((role) {
-          final isSelected = role == currentRole;
-          return ListTile(
-            leading: Icon(
-              _getRoleIcon(role),
-              color: _getRoleColor(role),
-            ),
-            title: Text(
-              role.displayName,
-              style: GoogleFonts.poppins(
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-              ),
-            ),
-            subtitle: Text(
-              _getRoleDescription(role),
-              style: GoogleFonts.poppins(fontSize: 12),
-            ),
-            trailing: isSelected
-                ? Icon(Icons.check_circle,
-                    color: Theme.of(context).colorScheme.primary)
-                : null,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
-            ),
-            onTap: () => Navigator.pop(context, role),
-          );
-        }).toList(),
+        children:
+            UserRole.values.map((role) {
+              final isSelected = role == currentRole;
+              return ListTile(
+                leading: Icon(_getRoleIcon(role), color: _getRoleColor(role)),
+                title: Text(
+                  role.displayName,
+                  style: GoogleFonts.poppins(
+                    fontWeight:
+                        isSelected ? FontWeight.w600 : FontWeight.normal,
+                  ),
+                ),
+                subtitle: Text(
+                  _getRoleDescription(role),
+                  style: GoogleFonts.poppins(fontSize: 12),
+                ),
+                trailing:
+                    isSelected
+                        ? Icon(
+                          Icons.check_circle,
+                          color: Theme.of(context).colorScheme.primary,
+                        )
+                        : null,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
+                ),
+                onTap: () => Navigator.pop(context, role),
+              );
+            }).toList(),
       ),
       actions: [
         TextButton(

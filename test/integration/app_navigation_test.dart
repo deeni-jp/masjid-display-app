@@ -26,15 +26,10 @@ void main() {
         MaterialApp(
           home: Scaffold(
             appBar: AppBar(title: const Text('Prayer Times')),
-            body: const Center(
-              child: Text('Welcome to Prayer Times App'),
-            ),
+            body: const Center(child: Text('Welcome to Prayer Times App')),
             bottomNavigationBar: BottomNavigationBar(
               items: const [
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.home),
-                  label: 'Home',
-                ),
+                BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
                 BottomNavigationBarItem(
                   icon: Icon(Icons.access_time),
                   label: 'Prayers',
@@ -75,11 +70,7 @@ void main() {
 
       // Note: This is a template. You would replace with actual app code
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Center(
-            child: Text('Prayer Times Feature'),
-          ),
-        ),
+        const MaterialApp(home: Center(child: Text('Prayer Times Feature'))),
       );
 
       await tester.pumpAndSettle();
@@ -94,8 +85,7 @@ void main() {
     // 2. Launch the full app with dependencies
     // 3. Test complete user flows
 
-    testWidgets('Example: Complete user workflow',
-        (WidgetTester tester) async {
+    testWidgets('Example: Complete user workflow', (WidgetTester tester) async {
       // Example workflow:
       // - Launch app
       // - Wait for data to load
@@ -111,11 +101,7 @@ void main() {
       // - User interactions
 
       // For now, this is a placeholder showing the structure
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: Placeholder(),
-        ),
-      );
+      await tester.pumpWidget(const MaterialApp(home: Placeholder()));
 
       await tester.pumpAndSettle();
     });

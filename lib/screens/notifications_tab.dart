@@ -19,7 +19,7 @@ class NotificationsTab extends StatefulWidget {
   final bool notifLoaded;
   final bool adminMode; // True for Admin AND Moderator
   final void Function(List<MosqueNotification> notifications)
-      onNotificationsUpdated;
+  onNotificationsUpdated;
 
   const NotificationsTab({
     super.key,
@@ -39,9 +39,10 @@ class _NotificationsTabState extends State<NotificationsTab> {
   List<MosqueNotification> get _filteredNotifications {
     // For admin/moderator, show all (including inactive)
     // For public users, show only active
-    final baseList = widget.adminMode
-        ? widget.notifications.where((n) => !n.isExpired).toList()
-        : widget.notifications.activeOnly;
+    final baseList =
+        widget.adminMode
+            ? widget.notifications.where((n) => !n.isExpired).toList()
+            : widget.notifications.activeOnly;
 
     switch (_currentFilter) {
       case NotificationFilter.all:
@@ -75,9 +76,7 @@ class _NotificationsTabState extends State<NotificationsTab> {
         _buildFilterChips(context),
 
         // Notifications list
-        Expanded(
-          child: _buildNotificationsList(context),
-        ),
+        Expanded(child: _buildNotificationsList(context)),
       ],
     );
   }
@@ -112,10 +111,7 @@ class _NotificationsTabState extends State<NotificationsTab> {
                   widget.adminMode
                       ? '$activeCount active, ${totalCount - activeCount} inactive'
                       : '$activeCount notifications',
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    color: Colors.grey,
-                  ),
+                  style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey),
                 ),
               ],
             ),
@@ -137,51 +133,55 @@ class _NotificationsTabState extends State<NotificationsTab> {
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.all(AppStyles.paddingMedium),
       child: Row(
-        children: NotificationFilter.values.map((filter) {
-          final isSelected = _currentFilter == filter;
-          final count = _getFilterCount(filter);
+        children:
+            NotificationFilter.values.map((filter) {
+              final isSelected = _currentFilter == filter;
+              final count = _getFilterCount(filter);
 
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: FilterChip(
-              selected: isSelected,
-              showCheckmark: false,
-              label: Text(
-                count > 0
-                    ? '${filter.displayName} ($count)'
-                    : filter.displayName,
-              ),
-              avatar: Icon(
-                filter.icon,
-                size: 16,
-                color: isSelected
-                    ? Theme.of(context).colorScheme.onPrimary
-                    : Theme.of(context).colorScheme.primary,
-              ),
-              onSelected: (_) {
-                setState(() => _currentFilter = filter);
-              },
-              selectedColor: Theme.of(context).colorScheme.primary,
-              labelStyle: GoogleFonts.poppins(
-                fontSize: 12,
-                color: isSelected
-                    ? Colors.white
-                    : Theme.of(context).colorScheme.primary,
-                fontWeight: FontWeight.w500,
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-          );
-        }).toList(),
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: FilterChip(
+                  selected: isSelected,
+                  showCheckmark: false,
+                  label: Text(
+                    count > 0
+                        ? '${filter.displayName} ($count)'
+                        : filter.displayName,
+                  ),
+                  avatar: Icon(
+                    filter.icon,
+                    size: 16,
+                    color:
+                        isSelected
+                            ? Theme.of(context).colorScheme.onPrimary
+                            : Theme.of(context).colorScheme.primary,
+                  ),
+                  onSelected: (_) {
+                    setState(() => _currentFilter = filter);
+                  },
+                  selectedColor: Theme.of(context).colorScheme.primary,
+                  labelStyle: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color:
+                        isSelected
+                            ? Colors.white
+                            : Theme.of(context).colorScheme.primary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              );
+            }).toList(),
       ),
     );
   }
 
   int _getFilterCount(NotificationFilter filter) {
-    final baseList = widget.adminMode
-        ? widget.notifications.where((n) => !n.isExpired).toList()
-        : widget.notifications.activeOnly;
+    final baseList =
+        widget.adminMode
+            ? widget.notifications.where((n) => !n.isExpired).toList()
+            : widget.notifications.activeOnly;
 
     switch (filter) {
       case NotificationFilter.all:
@@ -229,8 +229,11 @@ class _NotificationsTabState extends State<NotificationsTab> {
               notification: notification,
               adminMode: widget.adminMode,
               onTap: (n) => _showNotificationDetail(context, n),
-              onEdit: () =>
-                  _showCreateEditDialog(context, notification: notification),
+              onEdit:
+                  () => _showCreateEditDialog(
+                    context,
+                    notification: notification,
+                  ),
               onDelete: () => _confirmDelete(context, notification),
             ),
           );
@@ -245,15 +248,17 @@ class _NotificationsTabState extends State<NotificationsTab> {
       widget.onNotificationsUpdated(notifications);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to refresh: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to refresh: $e')));
       }
     }
   }
 
   void _showNotificationDetail(
-      BuildContext context, MosqueNotification notification) {
+    BuildContext context,
+    MosqueNotification notification,
+  ) {
     NotificationDetailSheet.show(
       context,
       notification,
@@ -264,38 +269,41 @@ class _NotificationsTabState extends State<NotificationsTab> {
   }
 
   Future<void> _confirmDelete(
-      BuildContext context, MosqueNotification notification) async {
+    BuildContext context,
+    MosqueNotification notification,
+  ) async {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
 
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppStyles.radiusLarge),
-        ),
-        title: Text(
-          'Delete Notification',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-        ),
-        content: Text(
-          'Are you sure you want to delete "${notification.title.isNotEmpty ? notification.title : 'this notification'}"?\n\nThis action cannot be undone.',
-          style: GoogleFonts.poppins(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+      builder:
+          (dialogContext) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppStyles.radiusLarge),
             ),
-            child: const Text('Delete'),
+            title: Text(
+              'Delete Notification',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            ),
+            content: Text(
+              'Are you sure you want to delete "${notification.title.isNotEmpty ? notification.title : 'this notification'}"?\n\nThis action cannot be undone.',
+              style: GoogleFonts.poppins(),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Delete'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
 
     if (confirm != true) return;
@@ -336,10 +344,12 @@ class _NotificationsTabState extends State<NotificationsTab> {
     final isEditing = notification != null;
 
     // Controllers
-    final titleController =
-        TextEditingController(text: notification?.title ?? '');
-    final messageController =
-        TextEditingController(text: notification?.message ?? '');
+    final titleController = TextEditingController(
+      text: notification?.title ?? '',
+    );
+    final messageController = TextEditingController(
+      text: notification?.message ?? '',
+    );
 
     // State
     NotificationType selectedType =
@@ -348,7 +358,8 @@ class _NotificationsTabState extends State<NotificationsTab> {
         notification?.priority ?? NotificationPriority.regular;
     bool isActive = notification?.active ?? true;
     DateTime? eventTime = notification?.eventTime;
-    DateTime expiresAt = notification?.expiresAt ??
+    DateTime expiresAt =
+        notification?.expiresAt ??
         DateTime.now().add(AppConstants.defaultAnnouncementExpiry);
 
     // Image: a newly picked one, or removal of the existing one
@@ -367,8 +378,10 @@ class _NotificationsTabState extends State<NotificationsTab> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(AppStyles.radiusLarge),
               ),
-              insetPadding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+              insetPadding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 24,
+              ),
               child: Container(
                 width: MediaQuery.of(dialogContext).size.width * 0.9,
                 constraints: const BoxConstraints(maxWidth: 400),
@@ -397,8 +410,8 @@ class _NotificationsTabState extends State<NotificationsTab> {
                           const Spacer(),
                           IconButton(
                             icon: const Icon(Icons.close),
-                            onPressed: () =>
-                                Navigator.pop(dialogContext, false),
+                            onPressed:
+                                () => Navigator.pop(dialogContext, false),
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
                           ),
@@ -432,14 +445,17 @@ class _NotificationsTabState extends State<NotificationsTab> {
                                 selectedType = type;
                                 // Auto-adjust expiry based on type
                                 if (type == NotificationType.alert) {
-                                  expiresAt = DateTime.now()
-                                      .add(AppConstants.defaultAlertExpiry);
+                                  expiresAt = DateTime.now().add(
+                                    AppConstants.defaultAlertExpiry,
+                                  );
                                 } else if (type == NotificationType.event) {
-                                  expiresAt = DateTime.now()
-                                      .add(AppConstants.defaultEventExpiry);
+                                  expiresAt = DateTime.now().add(
+                                    AppConstants.defaultEventExpiry,
+                                  );
                                 } else {
                                   expiresAt = DateTime.now().add(
-                                      AppConstants.defaultAnnouncementExpiry);
+                                    AppConstants.defaultAnnouncementExpiry,
+                                  );
                                 }
                               }),
                             ),
@@ -459,7 +475,8 @@ class _NotificationsTabState extends State<NotificationsTab> {
                               dialogContext,
                               selectedPriority,
                               (priority) => setDialogState(
-                                  () => selectedPriority = priority),
+                                () => selectedPriority = priority,
+                              ),
                             ),
                             const SizedBox(height: 16),
 
@@ -471,7 +488,8 @@ class _NotificationsTabState extends State<NotificationsTab> {
                                 hintText: 'Enter notification title',
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(
-                                      AppStyles.radiusMedium),
+                                    AppStyles.radiusMedium,
+                                  ),
                                 ),
                                 prefixIcon: const Icon(Icons.title),
                               ),
@@ -484,11 +502,11 @@ class _NotificationsTabState extends State<NotificationsTab> {
                               decoration: InputDecoration(
                                 labelText: 'Message',
                                 hintText: 'Enter notification message',
-                                helperText:
-                                    'Add a message, an image, or both',
+                                helperText: 'Add a message, an image, or both',
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(
-                                      AppStyles.radiusMedium),
+                                    AppStyles.radiusMedium,
+                                  ),
                                 ),
                                 prefixIcon: const Icon(Icons.message),
                                 alignLabelWithHint: true,
@@ -502,9 +520,10 @@ class _NotificationsTabState extends State<NotificationsTab> {
                             // Image (optional)
                             _buildImagePicker(
                               dialogContext,
-                              existing: hadImage && !removeImage
-                                  ? notification
-                                  : null,
+                              existing:
+                                  hadImage && !removeImage
+                                      ? notification
+                                      : null,
                               newImage: newImage,
                               busy: preparingImage,
                               onPick: () async {
@@ -520,8 +539,9 @@ class _NotificationsTabState extends State<NotificationsTab> {
                                   }
                                 } catch (e) {
                                   if (dialogContext.mounted) {
-                                    ScaffoldMessenger.of(dialogContext)
-                                        .showSnackBar(
+                                    ScaffoldMessenger.of(
+                                      dialogContext,
+                                    ).showSnackBar(
                                       SnackBar(
                                         content: Text(
                                           e is NoticeImageException
@@ -534,14 +554,16 @@ class _NotificationsTabState extends State<NotificationsTab> {
                                 } finally {
                                   if (dialogContext.mounted) {
                                     setDialogState(
-                                        () => preparingImage = false);
+                                      () => preparingImage = false,
+                                    );
                                   }
                                 }
                               },
-                              onRemove: () => setDialogState(() {
-                                newImage = null;
-                                removeImage = hadImage;
-                              }),
+                              onRemove:
+                                  () => setDialogState(() {
+                                    newImage = null;
+                                    removeImage = hadImage;
+                                  }),
                             ),
                             const SizedBox(height: 16),
 
@@ -552,13 +574,14 @@ class _NotificationsTabState extends State<NotificationsTab> {
                                 label: 'Event Time',
                                 icon: Icons.event,
                                 value: eventTime,
-                                onChanged: (dt) => setDialogState(() {
-                                  eventTime = dt;
-                                  // Set expiry to event time
-                                  if (dt != null) {
-                                    expiresAt = dt;
-                                  }
-                                }),
+                                onChanged:
+                                    (dt) => setDialogState(() {
+                                      eventTime = dt;
+                                      // Set expiry to event time
+                                      if (dt != null) {
+                                        expiresAt = dt;
+                                      }
+                                    }),
                               ),
                               const SizedBox(height: 16),
                             ],
@@ -583,13 +606,15 @@ class _NotificationsTabState extends State<NotificationsTab> {
                               decoration: BoxDecoration(
                                 border: Border.all(color: Colors.grey.shade300),
                                 borderRadius: BorderRadius.circular(
-                                    AppStyles.radiusMedium),
+                                  AppStyles.radiusMedium,
+                                ),
                               ),
                               child: SwitchListTile(
                                 title: Text(
                                   'Visible to Users',
                                   style: GoogleFonts.poppins(
-                                      fontWeight: FontWeight.w500),
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
                                 subtitle: Text(
                                   isActive
@@ -602,14 +627,16 @@ class _NotificationsTabState extends State<NotificationsTab> {
                                   ),
                                 ),
                                 value: isActive,
-                                onChanged: (v) =>
-                                    setDialogState(() => isActive = v),
+                                onChanged:
+                                    (v) => setDialogState(() => isActive = v),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(
-                                      AppStyles.radiusMedium),
+                                    AppStyles.radiusMedium,
+                                  ),
                                 ),
-                                contentPadding:
-                                    const EdgeInsets.symmetric(horizontal: 12),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                ),
                               ),
                             ),
                           ],
@@ -625,41 +652,44 @@ class _NotificationsTabState extends State<NotificationsTab> {
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           TextButton(
-                            onPressed: () =>
-                                Navigator.pop(dialogContext, false),
+                            onPressed:
+                                () => Navigator.pop(dialogContext, false),
                             child: const Text('Cancel'),
                           ),
                           const SizedBox(width: 8),
                           ElevatedButton(
-                            onPressed: preparingImage
-                                ? null
-                                : () {
-                                    final hasImageNow = newImage != null ||
-                                        (hadImage && !removeImage);
-                                    if (messageController.text
-                                            .trim()
-                                            .isEmpty &&
-                                        !hasImageNow) {
-                                      ScaffoldMessenger.of(dialogContext)
-                                          .showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                              'Add a message or an image'),
-                                        ),
-                                      );
-                                      return;
-                                    }
-                                    Navigator.pop(dialogContext, true);
-                                  },
+                            onPressed:
+                                preparingImage
+                                    ? null
+                                    : () {
+                                      final hasImageNow =
+                                          newImage != null ||
+                                          (hadImage && !removeImage);
+                                      if (messageController.text
+                                              .trim()
+                                              .isEmpty &&
+                                          !hasImageNow) {
+                                        ScaffoldMessenger.of(
+                                          dialogContext,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              'Add a message or an image',
+                                            ),
+                                          ),
+                                        );
+                                        return;
+                                      }
+                                      Navigator.pop(dialogContext, true);
+                                    },
                             style: ElevatedButton.styleFrom(
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(
-                                    AppStyles.radiusMedium),
+                                  AppStyles.radiusMedium,
+                                ),
                               ),
                             ),
-                            child: Text(
-                              isEditing ? 'Update' : 'Create',
-                            ),
+                            child: Text(isEditing ? 'Update' : 'Create'),
                           ),
                         ],
                       ),
@@ -745,9 +775,11 @@ class _NotificationsTabState extends State<NotificationsTab> {
         );
 
         if (kDebugMode) {
-          print(sent
-              ? '✅ Push notification sent successfully'
-              : '❌ Failed to send push notification');
+          print(
+            sent
+                ? '✅ Push notification sent successfully'
+                : '❌ Failed to send push notification',
+          );
         }
       }
 
@@ -761,8 +793,9 @@ class _NotificationsTabState extends State<NotificationsTab> {
       // Update local list
       final updatedList = List<MosqueNotification>.from(widget.notifications);
       if (isEditing) {
-        final index =
-            updatedList.indexWhere((n) => n.id == savedNotification.id);
+        final index = updatedList.indexWhere(
+          (n) => n.id == savedNotification.id,
+        );
         if (index >= 0) {
           updatedList[index] = savedNotification;
         }
@@ -783,7 +816,8 @@ class _NotificationsTabState extends State<NotificationsTab> {
         scaffoldMessenger.showSnackBar(
           SnackBar(
             content: Text(
-                isEditing ? 'Notification updated' : 'Notification created'),
+              isEditing ? 'Notification updated' : 'Notification created',
+            ),
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
@@ -855,21 +889,22 @@ class _NotificationsTabState extends State<NotificationsTab> {
           children: [
             OutlinedButton.icon(
               onPressed: busy ? null : onPick,
-              icon: busy
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Icon(
-                      hasAny ? Icons.swap_horiz : Icons.add_photo_alternate,
-                    ),
+              icon:
+                  busy
+                      ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                      : Icon(
+                        hasAny ? Icons.swap_horiz : Icons.add_photo_alternate,
+                      ),
               label: Text(
                 busy
                     ? 'Preparing...'
                     : hasAny
-                        ? 'Change'
-                        : 'Add image',
+                    ? 'Change'
+                    : 'Add image',
               ),
             ),
             if (hasAny && !busy) ...[
@@ -898,54 +933,58 @@ class _NotificationsTabState extends State<NotificationsTab> {
     void Function(NotificationType) onSelected,
   ) {
     return Row(
-      children: NotificationType.values.map((type) {
-        final isSelected = type == selected;
-        final color = _getTypeColor(type);
+      children:
+          NotificationType.values.map((type) {
+            final isSelected = type == selected;
+            final color = _getTypeColor(type);
 
-        return Expanded(
-          child: Padding(
-            padding: EdgeInsets.only(
-              right: type != NotificationType.values.last ? 6 : 0,
-            ),
-            child: InkWell(
-              onTap: () => onSelected(type),
-              borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? color.withValues(alpha: 0.15)
-                      : Colors.grey.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
-                  border: Border.all(
-                    color: isSelected ? color : Colors.transparent,
-                    width: 2,
-                  ),
+            return Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  right: type != NotificationType.values.last ? 6 : 0,
                 ),
-                child: Column(
-                  children: [
-                    Icon(
-                      type.icon,
-                      color: isSelected ? color : Colors.grey,
-                      size: 20,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      type.displayName,
-                      style: GoogleFonts.poppins(
-                        fontSize: 10,
-                        fontWeight:
-                            isSelected ? FontWeight.w600 : FontWeight.w500,
-                        color: isSelected ? color : Colors.grey,
+                child: InkWell(
+                  onTap: () => onSelected(type),
+                  borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color:
+                          isSelected
+                              ? color.withValues(alpha: 0.15)
+                              : Colors.grey.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(
+                        AppStyles.radiusMedium,
+                      ),
+                      border: Border.all(
+                        color: isSelected ? color : Colors.transparent,
+                        width: 2,
                       ),
                     ),
-                  ],
+                    child: Column(
+                      children: [
+                        Icon(
+                          type.icon,
+                          color: isSelected ? color : Colors.grey,
+                          size: 20,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          type.displayName,
+                          style: GoogleFonts.poppins(
+                            fontSize: 10,
+                            fontWeight:
+                                isSelected ? FontWeight.w600 : FontWeight.w500,
+                            color: isSelected ? color : Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
-        );
-      }).toList(),
+            );
+          }).toList(),
     );
   }
 
@@ -955,45 +994,49 @@ class _NotificationsTabState extends State<NotificationsTab> {
     void Function(NotificationPriority) onSelected,
   ) {
     return Row(
-      children: NotificationPriority.values.map((priority) {
-        final isSelected = priority == selected;
+      children:
+          NotificationPriority.values.map((priority) {
+            final isSelected = priority == selected;
 
-        return Expanded(
-          child: Padding(
-            padding: EdgeInsets.only(
-              right: priority != NotificationPriority.values.last ? 6 : 0,
-            ),
-            child: InkWell(
-              onTap: () => onSelected(priority),
-              borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? priority.backgroundColor
-                      : Colors.grey.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
-                  border: Border.all(
-                    color: isSelected ? priority.color : Colors.transparent,
-                    width: 2,
-                  ),
+            return Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  right: priority != NotificationPriority.values.last ? 6 : 0,
                 ),
-                child: Center(
-                  child: Text(
-                    priority.displayName,
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      fontWeight:
-                          isSelected ? FontWeight.w600 : FontWeight.w500,
-                      color: isSelected ? priority.color : Colors.grey,
+                child: InkWell(
+                  onTap: () => onSelected(priority),
+                  borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: BoxDecoration(
+                      color:
+                          isSelected
+                              ? priority.backgroundColor
+                              : Colors.grey.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(
+                        AppStyles.radiusMedium,
+                      ),
+                      border: Border.all(
+                        color: isSelected ? priority.color : Colors.transparent,
+                        width: 2,
+                      ),
+                    ),
+                    child: Center(
+                      child: Text(
+                        priority.displayName,
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.w500,
+                          color: isSelected ? priority.color : Colors.grey,
+                        ),
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ),
-        );
-      }).toList(),
+            );
+          }).toList(),
     );
   }
 

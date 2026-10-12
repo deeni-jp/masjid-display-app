@@ -10,11 +10,10 @@ jobs:
   analyze:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.28.0"
           channel: "stable"
 
       - name: Create .env file
@@ -47,11 +46,10 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.28.0"
           channel: "stable"
 
       - name: Create .env file
@@ -63,6 +61,18 @@ jobs:
 
       - name: Install dependencies
         run: flutter pub get
+
+      # Firebase config for Android (kept out of git). The secret holds the
+      # full contents of android/app/google-services.json.
+      - name: Create google-services.json
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -z "$GOOGLE_SERVICES_JSON" ]; then
+            echo "::error::GOOGLE_SERVICES_JSON secret is not set"
+            exit 1
+          fi
+          printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
 
       # Decode keystore from base64
       - name: Decode keystore
@@ -86,13 +96,13 @@ jobs:
         run: flutter build appbundle --release
 
       - name: Upload APK
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
 
       - name: Upload App Bundle
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: release-aab
           path: build/app/outputs/bundle/release/app-release.aab
@@ -103,17 +113,17 @@ jobs:
         run: |
           rm -f android/app/upload-keystore.jks
           rm -f android/key.properties
+          rm -f android/app/google-services.json
 
   build-ios:
     needs: analyze
     runs-on: macos-latest
     if: github.event_name == 'push'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.28.0"
           channel: "stable"
 
       - name: Create .env file
@@ -130,7 +140,7 @@ jobs:
         run: flutter build ios --release --no-codesign
 
       - name: Upload iOS build
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ios-build
           path: build/ios/iphoneos/
@@ -140,7 +150,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
@@ -158,15 +168,15 @@ jobs:
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Download APK
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: release-apk
 
       - name: Download App Bundle
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: release-aab
 

@@ -20,8 +20,9 @@ void main() {
       );
     });
 
-    testWidgets('displays notification title and message',
-        (WidgetTester tester) async {
+    testWidgets('displays notification title and message', (
+      WidgetTester tester,
+    ) async {
       // Arrange & Act
       await tester.pumpWidget(
         MaterialApp(
@@ -92,8 +93,9 @@ void main() {
       expect(tappedNotification?.id, testNotification.id);
     });
 
-    testWidgets('shows admin actions in admin mode',
-        (WidgetTester tester) async {
+    testWidgets('shows admin actions in admin mode', (
+      WidgetTester tester,
+    ) async {
       // Arrange & Act
       await tester.pumpWidget(
         MaterialApp(
@@ -112,8 +114,9 @@ void main() {
       expect(find.byIcon(Icons.more_vert), findsOneWidget);
     });
 
-    testWidgets('does not show admin actions when not in admin mode',
-        (WidgetTester tester) async {
+    testWidgets('does not show admin actions when not in admin mode', (
+      WidgetTester tester,
+    ) async {
       // Arrange & Act
       await tester.pumpWidget(
         MaterialApp(
@@ -130,8 +133,9 @@ void main() {
       expect(find.byIcon(Icons.more_vert), findsNothing);
     });
 
-    testWidgets('shows read more text for long messages',
-        (WidgetTester tester) async {
+    testWidgets('shows read more text for long messages', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       final longNotification = MosqueNotification.create(
         title: 'Long Message',
@@ -156,8 +160,9 @@ void main() {
       expect(find.text('Tap to read more'), findsOneWidget);
     });
 
-    testWidgets('high priority notification has thicker border',
-        (WidgetTester tester) async {
+    testWidgets('high priority notification has thicker border', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       final highPriorityNotification = MosqueNotification.create(
         title: 'Urgent',
@@ -180,10 +185,12 @@ void main() {
 
       // Assert
       final container = tester.widget<Container>(
-        find.descendant(
-          of: find.byType(InkWell),
-          matching: find.byType(Container),
-        ).first,
+        find
+            .descendant(
+              of: find.byType(InkWell),
+              matching: find.byType(Container),
+            )
+            .first,
       );
 
       final decoration = container.decoration as BoxDecoration;
@@ -198,11 +205,7 @@ void main() {
     testWidgets('displays empty state message', (WidgetTester tester) async {
       // Arrange & Act
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: EmptyNotificationState(),
-          ),
-        ),
+        const MaterialApp(home: Scaffold(body: EmptyNotificationState())),
       );
 
       // Assert
@@ -236,14 +239,13 @@ void main() {
       expect(addCalled, isTrue);
     });
 
-    testWidgets('does not show add button when not in admin mode',
-        (WidgetTester tester) async {
+    testWidgets('does not show add button when not in admin mode', (
+      WidgetTester tester,
+    ) async {
       // Arrange & Act
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: EmptyNotificationState(adminMode: false),
-          ),
+          home: Scaffold(body: EmptyNotificationState(adminMode: false)),
         ),
       );
 
@@ -304,8 +306,9 @@ void main() {
       expect(tapped, isTrue);
     });
 
-    testWidgets('does not display if notification should not show',
-        (WidgetTester tester) async {
+    testWidgets('does not display if notification should not show', (
+      WidgetTester tester,
+    ) async {
       // Arrange - Create an inactive notification
       final inactiveNotification = testNotification.copyWith(active: false);
 

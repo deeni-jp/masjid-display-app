@@ -128,11 +128,7 @@ class NotificationCard extends StatelessWidget {
         color: _getTypeColor().withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
       ),
-      child: Icon(
-        notification.type.icon,
-        color: _getTypeColor(),
-        size: 24,
-      ),
+      child: Icon(notification.type.icon, color: _getTypeColor(), size: 24),
     );
   }
 
@@ -161,11 +157,7 @@ class NotificationCard extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            notification.type.icon,
-            size: 12,
-            color: _getTypeColor(),
-          ),
+          Icon(notification.type.icon, size: 12, color: _getTypeColor()),
           const SizedBox(width: 4),
           Text(
             notification.type.displayName,
@@ -190,20 +182,13 @@ class NotificationCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(AppStyles.radiusSmall),
-        border: Border.all(
-          color: color.withValues(alpha: 0.5),
-          width: 1,
-        ),
+        border: Border.all(color: color.withValues(alpha: 0.5), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (notification.isHighPriority) ...[
-            Icon(
-              Icons.priority_high,
-              size: 12,
-              color: color,
-            ),
+            Icon(Icons.priority_high, size: 12, color: color),
             const SizedBox(width: 2),
           ],
           Text(
@@ -232,11 +217,7 @@ class NotificationCard extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.schedule,
-            size: 12,
-            color: color,
-          ),
+          Icon(Icons.schedule, size: 12, color: color),
           const SizedBox(width: 4),
           Text(
             notification.expiryText,
@@ -253,10 +234,7 @@ class NotificationCard extends StatelessWidget {
 
   Widget _buildAdminActions(BuildContext context) {
     return PopupMenuButton<String>(
-      icon: Icon(
-        Icons.more_vert,
-        color: Colors.grey[600],
-      ),
+      icon: Icon(Icons.more_vert, color: Colors.grey[600]),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
       ),
@@ -267,28 +245,29 @@ class NotificationCard extends StatelessWidget {
           onDelete!();
         }
       },
-      itemBuilder: (context) => [
-        PopupMenuItem(
-          value: 'edit',
-          child: Row(
-            children: [
-              const Icon(Icons.edit, size: 18),
-              const SizedBox(width: 8),
-              Text('Edit', style: GoogleFonts.poppins()),
-            ],
-          ),
-        ),
-        PopupMenuItem(
-          value: 'delete',
-          child: Row(
-            children: [
-              const Icon(Icons.delete, size: 18, color: Colors.red),
-              const SizedBox(width: 8),
-              Text('Delete', style: GoogleFonts.poppins(color: Colors.red)),
-            ],
-          ),
-        ),
-      ],
+      itemBuilder:
+          (context) => [
+            PopupMenuItem(
+              value: 'edit',
+              child: Row(
+                children: [
+                  const Icon(Icons.edit, size: 18),
+                  const SizedBox(width: 8),
+                  Text('Edit', style: GoogleFonts.poppins()),
+                ],
+              ),
+            ),
+            PopupMenuItem(
+              value: 'delete',
+              child: Row(
+                children: [
+                  const Icon(Icons.delete, size: 18, color: Colors.red),
+                  const SizedBox(width: 8),
+                  Text('Delete', style: GoogleFonts.poppins(color: Colors.red)),
+                ],
+              ),
+            ),
+          ],
     );
   }
 
@@ -300,12 +279,10 @@ class NotificationCard extends StatelessWidget {
           Icon(Icons.event, size: 14, color: Colors.grey[600]),
           const SizedBox(width: 4),
           Text(
-            DateFormat('MMM d, yyyy â€¢ hh:mm a')
-                .format(notification.eventTime!),
-            style: GoogleFonts.poppins(
-              fontSize: 11,
-              color: Colors.grey[600],
-            ),
+            DateFormat(
+              'MMM d, yyyy â€¢ hh:mm a',
+            ).format(notification.eventTime!),
+            style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[600]),
           ),
           const Spacer(),
         ] else ...[
@@ -314,10 +291,7 @@ class NotificationCard extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             DateFormat('MMM d, yyyy').format(notification.createdAt),
-            style: GoogleFonts.poppins(
-              fontSize: 11,
-              color: Colors.grey[600],
-            ),
+            style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[600]),
           ),
           const Spacer(),
         ],
@@ -328,10 +302,7 @@ class NotificationCard extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             notification.postedByRole,
-            style: GoogleFonts.poppins(
-              fontSize: 11,
-              color: Colors.grey[600],
-            ),
+            style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[600]),
           ),
         ],
       ],
@@ -465,9 +436,10 @@ class HighPriorityNotificationCard extends StatelessWidget {
                           style: GoogleFonts.poppins(
                             fontSize: 10,
                             fontWeight: FontWeight.w500,
-                            color: notification.timeUntilExpiry.inHours < 6
-                                ? Colors.red
-                                : Colors.grey[600],
+                            color:
+                                notification.timeUntilExpiry.inHours < 6
+                                    ? Colors.red
+                                    : Colors.grey[600],
                           ),
                         ),
                       ],
@@ -617,9 +589,10 @@ class _RotatingHighPriorityCardState extends State<RotatingHighPriorityCard> {
                   margin: const EdgeInsets.symmetric(horizontal: 2),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(2),
-                    color: index == _currentIndex
-                        ? Theme.of(context).colorScheme.primary
-                        : Colors.grey.withValues(alpha: 0.3),
+                    color:
+                        index == _currentIndex
+                            ? Theme.of(context).colorScheme.primary
+                            : Colors.grey.withValues(alpha: 0.3),
                   ),
                 ),
               ),
@@ -668,10 +641,7 @@ class EmptyNotificationState extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               'Check back later for updates\nfrom the mosque',
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: Colors.grey,
-              ),
+              style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey),
               textAlign: TextAlign.center,
             ),
             if (adminMode && onAddNotification != null) ...[
@@ -684,8 +654,10 @@ class EmptyNotificationState extends StatelessWidget {
                   style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
                 ),
                 style: ElevatedButton.styleFrom(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
                   ),
@@ -727,12 +699,13 @@ class NotificationDetailSheet extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => NotificationDetailSheet(
-        notification: notification,
-        adminMode: adminMode,
-        onEdit: onEdit,
-        onDelete: onDelete,
-      ),
+      builder:
+          (context) => NotificationDetailSheet(
+            notification: notification,
+            adminMode: adminMode,
+            onEdit: onEdit,
+            onDelete: onDelete,
+          ),
     );
   }
 
@@ -769,13 +742,11 @@ class NotificationDetailSheet extends StatelessWidget {
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       color: _getTypeColor().withValues(alpha: 0.1),
-                      borderRadius:
-                          BorderRadius.circular(AppStyles.radiusMedium),
+                      borderRadius: BorderRadius.circular(
+                        AppStyles.radiusMedium,
+                      ),
                     ),
-                    child: Icon(
-                      notification.type.icon,
-                      color: _getTypeColor(),
-                    ),
+                    child: Icon(notification.type.icon, color: _getTypeColor()),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -818,31 +789,38 @@ class NotificationDetailSheet extends StatelessWidget {
                           onDelete!();
                         }
                       },
-                      itemBuilder: (context) => [
-                        PopupMenuItem(
-                          value: 'edit',
-                          child: Row(
-                            children: [
-                              const Icon(Icons.edit, size: 18),
-                              const SizedBox(width: 8),
-                              Text('Edit', style: GoogleFonts.poppins()),
-                            ],
-                          ),
-                        ),
-                        PopupMenuItem(
-                          value: 'delete',
-                          child: Row(
-                            children: [
-                              const Icon(Icons.delete,
-                                  size: 18, color: Colors.red),
-                              const SizedBox(width: 8),
-                              Text('Delete',
-                                  style:
-                                      GoogleFonts.poppins(color: Colors.red)),
-                            ],
-                          ),
-                        ),
-                      ],
+                      itemBuilder:
+                          (context) => [
+                            PopupMenuItem(
+                              value: 'edit',
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.edit, size: 18),
+                                  const SizedBox(width: 8),
+                                  Text('Edit', style: GoogleFonts.poppins()),
+                                ],
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: 'delete',
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.delete,
+                                    size: 18,
+                                    color: Colors.red,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Delete',
+                                    style: GoogleFonts.poppins(
+                                      color: Colors.red,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                     ),
                 ],
               ),
@@ -873,10 +851,7 @@ class NotificationDetailSheet extends StatelessWidget {
                       if (notification.hasMessage)
                         Text(
                           notification.message,
-                          style: GoogleFonts.poppins(
-                            fontSize: 15,
-                            height: 1.6,
-                          ),
+                          style: GoogleFonts.poppins(fontSize: 15, height: 1.6),
                         ),
                     ],
                   ),
@@ -913,9 +888,10 @@ class NotificationDetailSheet extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isDark
-            ? Colors.grey.shade800.withValues(alpha: 0.5)
-            : Colors.grey.shade100,
+        color:
+            isDark
+                ? Colors.grey.shade800.withValues(alpha: 0.5)
+                : Colors.grey.shade100,
         borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
       ),
       child: Column(
@@ -924,8 +900,9 @@ class NotificationDetailSheet extends StatelessWidget {
             context,
             Icons.access_time,
             'Created',
-            DateFormat('EEEE, MMM d, yyyy â€¢ hh:mm a')
-                .format(notification.createdAt),
+            DateFormat(
+              'EEEE, MMM d, yyyy â€¢ hh:mm a',
+            ).format(notification.createdAt),
           ),
           if (notification.isEvent && notification.eventTime != null) ...[
             const SizedBox(height: 8),
@@ -933,8 +910,9 @@ class NotificationDetailSheet extends StatelessWidget {
               context,
               Icons.event,
               'Event Time',
-              DateFormat('EEEE, MMM d, yyyy â€¢ hh:mm a')
-                  .format(notification.eventTime!),
+              DateFormat(
+                'EEEE, MMM d, yyyy â€¢ hh:mm a',
+              ).format(notification.eventTime!),
             ),
           ],
           const SizedBox(height: 8),
@@ -942,8 +920,9 @@ class NotificationDetailSheet extends StatelessWidget {
             context,
             Icons.timer,
             'Expires',
-            DateFormat('MMM d, yyyy â€¢ hh:mm a')
-                .format(notification.expiresAt),
+            DateFormat(
+              'MMM d, yyyy â€¢ hh:mm a',
+            ).format(notification.expiresAt),
             valueColor:
                 notification.timeUntilExpiry.inHours < 6 ? Colors.red : null,
           ),
@@ -977,10 +956,7 @@ class NotificationDetailSheet extends StatelessWidget {
         const SizedBox(width: 8),
         Text(
           '$label: ',
-          style: GoogleFonts.poppins(
-            fontSize: 12,
-            color: labelColor,
-          ),
+          style: GoogleFonts.poppins(fontSize: 12, color: labelColor),
         ),
         Expanded(
           child: Text(
@@ -1013,11 +989,7 @@ class NotificationBanner extends StatelessWidget {
   final MosqueNotification notification;
   final void Function(MosqueNotification)? onTap;
 
-  const NotificationBanner({
-    super.key,
-    required this.notification,
-    this.onTap,
-  });
+  const NotificationBanner({super.key, required this.notification, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -1035,11 +1007,7 @@ class NotificationChip extends StatelessWidget {
   final MosqueNotification notification;
   final VoidCallback? onTap;
 
-  const NotificationChip({
-    super.key,
-    required this.notification,
-    this.onTap,
-  });
+  const NotificationChip({super.key, required this.notification, this.onTap});
 
   @override
   Widget build(BuildContext context) {

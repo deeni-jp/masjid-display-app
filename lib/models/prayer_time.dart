@@ -6,11 +6,7 @@ class PrayerTime {
   final String waqt;
   final String iqama;
 
-  PrayerTime({
-    required this.name,
-    required this.waqt,
-    required this.iqama,
-  });
+  PrayerTime({required this.name, required this.waqt, required this.iqama});
 
   /// Parse time string to DateTime for today
   DateTime? getWaqtTime() {
@@ -52,8 +48,9 @@ class PrayerTime {
 
     final cleaned = raw.replaceAll(RegExp(r"\(.*?\)"), '').trim();
 
-    final timeMatch = RegExp(r'([0-9]{1,2}:[0-9]{2}(?:\s*[apAP][\.]?[mM][\.]?)?)')
-        .firstMatch(cleaned);
+    final timeMatch = RegExp(
+      r'([0-9]{1,2}:[0-9]{2}(?:\s*[apAP][\.]?[mM][\.]?)?)',
+    ).firstMatch(cleaned);
     String? timeToken = timeMatch?.group(1)?.trim();
     if (timeToken == null) {
       final m2 = RegExp(r'([0-9]{1,2}:[0-9]{2})').firstMatch(cleaned);
@@ -63,7 +60,9 @@ class PrayerTime {
 
     timeToken = timeToken.replaceAll('.', '').toUpperCase();
     timeToken = timeToken.replaceAllMapped(
-        RegExp(r'([0-9])([AP]M)$'), (m) => '${m.group(1)} ${m.group(2)}');
+      RegExp(r'([0-9])([AP]M)$'),
+      (m) => '${m.group(1)} ${m.group(2)}',
+    );
 
     int hour = 0;
     int minute = 0;
@@ -105,8 +104,9 @@ class PrayerTime {
 
   /// Trim time string to show only the time part
   static String trimTime(String raw) {
-    final m =
-        RegExp(r'([0-9]{1,2}:[0-9]{2}(?:\s*[APMapm\.]{0,5})?)').firstMatch(raw);
+    final m = RegExp(
+      r'([0-9]{1,2}:[0-9]{2}(?:\s*[APMapm\.]{0,5})?)',
+    ).firstMatch(raw);
     return m?.group(1) ?? raw;
   }
 
@@ -124,11 +124,7 @@ class PrayerTime {
   }
 
   /// Copy with new values
-  PrayerTime copyWith({
-    String? name,
-    String? waqt,
-    String? iqama,
-  }) {
+  PrayerTime copyWith({String? name, String? waqt, String? iqama}) {
     return PrayerTime(
       name: name ?? this.name,
       waqt: waqt ?? this.waqt,
@@ -155,21 +151,21 @@ class PrayerSchedule {
   List<PrayerTime> getAllPrayers() {
     final prayers = <PrayerTime>[];
     for (final name in timings.keys) {
-      prayers.add(PrayerTime.fromMaps(
-        name: name,
-        timings: timings,
-        iqamaMap: iqamaMap,
-      ));
+      prayers.add(
+        PrayerTime.fromMaps(name: name, timings: timings, iqamaMap: iqamaMap),
+      );
     }
 
     // Add Jummah prayer with Dhuhr waqt and custom iqama
     final dhuhrWaqt = timings['Dhuhr'];
     if (dhuhrWaqt != null) {
-      prayers.add(PrayerTime(
-        name: 'Jummah',
-        waqt: dhuhrWaqt,
-        iqama: iqamaMap['Jummah'] ?? '12:30',
-      ));
+      prayers.add(
+        PrayerTime(
+          name: 'Jummah',
+          waqt: dhuhrWaqt,
+          iqama: iqamaMap['Jummah'] ?? '12:30',
+        ),
+      );
     }
 
     return prayers;
@@ -187,27 +183,28 @@ class PrayerSchedule {
     final prayers = <PrayerTime>[];
     for (final name in order) {
       if (timings.containsKey(name)) {
-        prayers.add(PrayerTime.fromMaps(
-          name: name,
-          timings: timings,
-          iqamaMap: iqamaMap,
-        ));
+        prayers.add(
+          PrayerTime.fromMaps(name: name, timings: timings, iqamaMap: iqamaMap),
+        );
       }
     }
     // Add Jummah at the end (uses Dhuhr waqt)
     if (timings.containsKey('Dhuhr')) {
-      prayers.add(PrayerTime(
-        name: 'Jummah',
-        waqt: timings['Dhuhr']!,
-        iqama: iqamaMap['Jummah'] ?? '12:30',
-      ));
+      prayers.add(
+        PrayerTime(
+          name: 'Jummah',
+          waqt: timings['Dhuhr']!,
+          iqama: iqamaMap['Jummah'] ?? '12:30',
+        ),
+      );
     }
     return prayers;
   }
 
-  /// Find the next prayer
-  PrayerTime? getNextPrayer() {
-    final now = DateTime.now();
+  /// Find the next prayer. [now] defaults to the current time (tests can
+  /// pass a fixed time on today's date).
+  PrayerTime? getNextPrayer({DateTime? now}) {
+    now ??= DateTime.now();
     final isFriday = now.weekday == DateTime.friday;
     final prayers = getPrayersInOrder();
 
@@ -231,19 +228,25 @@ class PrayerSchedule {
     return prayers.isNotEmpty ? prayers.first : null;
   }
 
-  /// Get time remaining until next prayer
-  Duration getTimeToNextPrayer() {
-    final nextPrayer = getNextPrayer();
+  /// Get time remaining until next prayer. [now] defaults to the current
+  /// time (tests can pass a fixed time on today's date).
+  Duration getTimeToNextPrayer({DateTime? now}) {
+    now ??= DateTime.now();
+    final nextPrayer = getNextPrayer(now: now);
     if (nextPrayer == null) return Duration.zero;
 
-    final now = DateTime.now();
     final nextTime = nextPrayer.getNextTime();
     if (nextTime == null) return Duration.zero;
 
     // If it's tomorrow's prayer
     if (nextTime.isBefore(now)) {
       final tomorrow = DateTime(
-          now.year, now.month, now.day + 1, nextTime.hour, nextTime.minute);
+        now.year,
+        now.month,
+        now.day + 1,
+        nextTime.hour,
+        nextTime.minute,
+      );
       return tomorrow.difference(now);
     }
 

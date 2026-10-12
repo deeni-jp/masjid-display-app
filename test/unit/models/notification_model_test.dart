@@ -23,13 +23,16 @@ void main() {
       expect(NotificationType.fromString('alert'), NotificationType.alert);
       expect(NotificationType.fromString('ALERT'), NotificationType.alert);
       expect(
-          NotificationType.fromString('announcement'),
-          NotificationType.announcement);
+        NotificationType.fromString('announcement'),
+        NotificationType.announcement,
+      );
     });
 
     test('fromString defaults to announcement for unknown values', () {
-      expect(NotificationType.fromString('unknown'),
-          NotificationType.announcement);
+      expect(
+        NotificationType.fromString('unknown'),
+        NotificationType.announcement,
+      );
       expect(NotificationType.fromString(''), NotificationType.announcement);
       expect(NotificationType.fromString(null), NotificationType.announcement);
     });
@@ -55,30 +58,44 @@ void main() {
     });
 
     test('backgroundColor returns correct colors', () {
-      expect(NotificationPriority.high.backgroundColor,
-          const Color(0xFFFFF3E0));
-      expect(NotificationPriority.regular.backgroundColor,
-          const Color(0xFFE3F2FD));
       expect(
-          NotificationPriority.low.backgroundColor, const Color(0xFFF5F5F5));
+        NotificationPriority.high.backgroundColor,
+        const Color(0xFFFFF3E0),
+      );
+      expect(
+        NotificationPriority.regular.backgroundColor,
+        const Color(0xFFE3F2FD),
+      );
+      expect(NotificationPriority.low.backgroundColor, const Color(0xFFF5F5F5));
     });
 
     test('fromString parses correctly', () {
-      expect(NotificationPriority.fromString('high'), NotificationPriority.high);
-      expect(NotificationPriority.fromString('HIGH'), NotificationPriority.high);
+      expect(
+        NotificationPriority.fromString('high'),
+        NotificationPriority.high,
+      );
+      expect(
+        NotificationPriority.fromString('HIGH'),
+        NotificationPriority.high,
+      );
       expect(NotificationPriority.fromString('low'), NotificationPriority.low);
       expect(NotificationPriority.fromString('LOW'), NotificationPriority.low);
-      expect(NotificationPriority.fromString('regular'),
-          NotificationPriority.regular);
+      expect(
+        NotificationPriority.fromString('regular'),
+        NotificationPriority.regular,
+      );
     });
 
     test('fromString defaults to regular for unknown values', () {
-      expect(NotificationPriority.fromString('unknown'),
-          NotificationPriority.regular);
       expect(
-          NotificationPriority.fromString(''), NotificationPriority.regular);
+        NotificationPriority.fromString('unknown'),
+        NotificationPriority.regular,
+      );
+      expect(NotificationPriority.fromString(''), NotificationPriority.regular);
       expect(
-          NotificationPriority.fromString(null), NotificationPriority.regular);
+        NotificationPriority.fromString(null),
+        NotificationPriority.regular,
+      );
     });
 
     test('toFirestore returns correct string', () {
@@ -128,26 +145,29 @@ void main() {
       expect(notification.expiresAt, expiresAt);
     });
 
-    test('legacy() creates notification with backward-compatible parameters', () {
-      final timestamp = DateTime.now();
+    test(
+      'legacy() creates notification with backward-compatible parameters',
+      () {
+        final timestamp = DateTime.now();
 
-      final notification = MosqueNotification.legacy(
-        title: 'Legacy Title',
-        message: 'Legacy Message',
-        active: true,
-        postedBy: 'admin@mosque.com',
-        timestamp: timestamp,
-      );
+        final notification = MosqueNotification.legacy(
+          title: 'Legacy Title',
+          message: 'Legacy Message',
+          active: true,
+          postedBy: 'admin@mosque.com',
+          timestamp: timestamp,
+        );
 
-      expect(notification.title, 'Legacy Title');
-      expect(notification.message, 'Legacy Message');
-      expect(notification.active, true);
-      expect(notification.postedBy, 'admin@mosque.com');
-      expect(notification.createdAt, timestamp);
-      expect(notification.type, NotificationType.announcement);
-      expect(notification.priority, NotificationPriority.regular);
-      expect(notification.postedByRole, 'Staff');
-    });
+        expect(notification.title, 'Legacy Title');
+        expect(notification.message, 'Legacy Message');
+        expect(notification.active, true);
+        expect(notification.postedBy, 'admin@mosque.com');
+        expect(notification.createdAt, timestamp);
+        expect(notification.type, NotificationType.announcement);
+        expect(notification.priority, NotificationPriority.regular);
+        expect(notification.postedByRole, 'Staff');
+      },
+    );
 
     test('fromMap() creates notification from map', () {
       final createdAt = DateTime.now();
@@ -207,8 +227,7 @@ void main() {
     });
 
     test('fromJsonString() returns empty on invalid JSON', () {
-      final notification =
-          MosqueNotification.fromJsonString('invalid json {');
+      final notification = MosqueNotification.fromJsonString('invalid json {');
 
       expect(notification.id, '');
       expect(notification.title, '');
@@ -336,9 +355,10 @@ void main() {
     });
 
     test('toFirestore clears image fields when there is no image', () {
-      final data = MosqueNotification.empty()
-          .copyWith(imageWidth: 800, imageHeight: 600)
-          .toFirestore();
+      final data =
+          MosqueNotification.empty()
+              .copyWith(imageWidth: 800, imageHeight: 600)
+              .toFirestore();
 
       expect(data['hasImage'], false);
       expect(data['imageWidth'], isNull);
@@ -452,19 +472,23 @@ void main() {
         priority: NotificationPriority.high,
       );
 
-      expect(notification.effectivePriorityColor,
-          NotificationPriority.high.color);
-    });
-
-    test('effectivePriorityBgColor returns light red for high priority alert',
-        () {
-      final notification = MosqueNotification.empty().copyWith(
-        type: NotificationType.alert,
-        priority: NotificationPriority.high,
+      expect(
+        notification.effectivePriorityColor,
+        NotificationPriority.high.color,
       );
-
-      expect(notification.effectivePriorityBgColor, const Color(0xFFFFEBEE));
     });
+
+    test(
+      'effectivePriorityBgColor returns light red for high priority alert',
+      () {
+        final notification = MosqueNotification.empty().copyWith(
+          type: NotificationType.alert,
+          priority: NotificationPriority.high,
+        );
+
+        expect(notification.effectivePriorityBgColor, const Color(0xFFFFEBEE));
+      },
+    );
 
     test('timeUntilExpiry calculates correct duration', () {
       final futureExpiry = DateTime.now().add(const Duration(hours: 24));
@@ -669,8 +693,10 @@ void main() {
       final excluding = testList.excludingHighPriority;
 
       expect(excluding.every((n) => !n.isHighPriority), true);
-      expect(excluding.any((n) => n.priority == NotificationPriority.high),
-          false);
+      expect(
+        excluding.any((n) => n.priority == NotificationPriority.high),
+        false,
+      );
     });
 
     test('sortedByExpiry sorts by expiry date', () {
@@ -708,22 +734,27 @@ void main() {
       expect(grouped[NotificationType.announcement]?.length, 2);
     });
 
-    test('priorityNotification returns high priority notification closest to expiry',
-        () {
-      final priority = testList.priorityNotification;
+    test(
+      'priorityNotification returns high priority notification closest to expiry',
+      () {
+        final priority = testList.priorityNotification;
 
-      expect(priority, isNotNull);
-      expect(priority!.priority, NotificationPriority.high);
-      expect(priority.id, '1');
-    });
+        expect(priority, isNotNull);
+        expect(priority!.priority, NotificationPriority.high);
+        expect(priority.id, '1');
+      },
+    );
 
-    test('priorityNotification returns null when no high priority notifications',
-        () {
-      final listWithoutHighPriority = testList
-          .where((n) => n.priority != NotificationPriority.high)
-          .toList();
+    test(
+      'priorityNotification returns null when no high priority notifications',
+      () {
+        final listWithoutHighPriority =
+            testList
+                .where((n) => n.priority != NotificationPriority.high)
+                .toList();
 
-      expect(listWithoutHighPriority.priorityNotification, null);
-    });
+        expect(listWithoutHighPriority.priorityNotification, null);
+      },
+    );
   });
 }

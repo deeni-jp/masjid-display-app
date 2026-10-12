@@ -44,7 +44,8 @@ class FCMNotificationSender {
           dotenv.env['FCM_CLIENT_EMAIL'] == null) {
         if (kDebugMode) {
           print(
-              '⚠️ FCM credentials not configured in .env file. Please add FCM_* variables to .env');
+            '⚠️ FCM credentials not configured in .env file. Please add FCM_* variables to .env',
+          );
         }
         return null;
       }
@@ -92,9 +93,10 @@ class FCMNotificationSender {
         'message': {
           'topic': topic,
           'notification': {
-            'title': notification.title.isNotEmpty
-                ? notification.title
-                : 'New Mosque Notification',
+            'title':
+                notification.title.isNotEmpty
+                    ? notification.title
+                    : 'New Mosque Notification',
             'body': _body(notification),
           },
           'data': {
@@ -107,17 +109,19 @@ class FCMNotificationSender {
             'priority': _getAndroidPriority(notification.priority),
             'notification': {
               'channel_id': _getChannelId(notification.priority),
-              'sound': notification.priority != NotificationPriority.low
-                  ? 'default'
-                  : null,
+              'sound':
+                  notification.priority != NotificationPriority.low
+                      ? 'default'
+                      : null,
             },
           },
           'apns': {
             'payload': {
               'aps': {
-                'sound': notification.priority != NotificationPriority.low
-                    ? 'default'
-                    : null,
+                'sound':
+                    notification.priority != NotificationPriority.low
+                        ? 'default'
+                        : null,
                 'badge': 1,
               },
             },
@@ -174,9 +178,10 @@ class FCMNotificationSender {
         'message': {
           'token': fcmToken,
           'notification': {
-            'title': notification.title.isNotEmpty
-                ? notification.title
-                : 'New Mosque Notification',
+            'title':
+                notification.title.isNotEmpty
+                    ? notification.title
+                    : 'New Mosque Notification',
             'body': _body(notification),
           },
           'data': {
@@ -235,7 +240,8 @@ class FCMNotificationSender {
 
     if (kDebugMode) {
       print(
-          '✅ Push notifications sent to $successCount/${fcmTokens.length} users');
+        '✅ Push notifications sent to $successCount/${fcmTokens.length} users',
+      );
     }
 
     return successCount > 0;

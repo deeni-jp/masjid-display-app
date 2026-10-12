@@ -125,9 +125,10 @@ class AppUser {
       displayName: map['displayName']?.toString(),
       role: UserRole.fromString(map['role']?.toString()),
       createdAt: DateTime.fromMillisecondsSinceEpoch(map['createdAt'] ?? 0),
-      lastLogin: map['lastLogin'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(map['lastLogin'])
-          : null,
+      lastLogin:
+          map['lastLogin'] != null
+              ? DateTime.fromMillisecondsSinceEpoch(map['lastLogin'])
+              : null,
     );
   }
 

@@ -108,11 +108,14 @@ class StorageService {
 
     try {
       final parsed = json.decode(raw) as List<dynamic>;
-      final notifications = parsed
-          .map((item) =>
-              MosqueNotification.fromMap(item as Map<String, dynamic>))
-          .where((n) => !n.isExpired) // Filter out expired
-          .toList();
+      final notifications =
+          parsed
+              .map(
+                (item) =>
+                    MosqueNotification.fromMap(item as Map<String, dynamic>),
+              )
+              .where((n) => !n.isExpired) // Filter out expired
+              .toList();
 
       return notifications;
     } catch (e) {
@@ -147,7 +150,8 @@ class StorageService {
 
   /// Save notifications list to cache
   static Future<void> saveNotifications(
-      List<MosqueNotification> notifications) async {
+    List<MosqueNotification> notifications,
+  ) async {
     final prefs = await _getPrefs();
 
     // Filter out expired notifications before saving
@@ -163,8 +167,9 @@ class StorageService {
     final notifications = await getNotifications();
 
     // Check if notification already exists
-    final existingIndex =
-        notifications.indexWhere((n) => n.id == notification.id);
+    final existingIndex = notifications.indexWhere(
+      (n) => n.id == notification.id,
+    );
     if (existingIndex >= 0) {
       notifications[existingIndex] = notification;
     } else {
@@ -176,7 +181,8 @@ class StorageService {
 
   /// Update a notification in cache
   static Future<void> updateNotification(
-      MosqueNotification notification) async {
+    MosqueNotification notification,
+  ) async {
     final notifications = await getNotifications();
 
     final index = notifications.indexWhere((n) => n.id == notification.id);
@@ -246,12 +252,16 @@ class StorageService {
       final legacy = await _getLegacyNotification();
       if (legacy != null && legacy.hasContent) {
         // Add to new list
-        await addNotification(legacy.copyWith(
-          id: 'legacy_${DateTime.now().millisecondsSinceEpoch}',
-          type: NotificationType.announcement,
-          priority: NotificationPriority.regular,
-          expiresAt: DateTime.now().add(AppConstants.defaultAnnouncementExpiry),
-        ));
+        await addNotification(
+          legacy.copyWith(
+            id: 'legacy_${DateTime.now().millisecondsSinceEpoch}',
+            type: NotificationType.announcement,
+            priority: NotificationPriority.regular,
+            expiresAt: DateTime.now().add(
+              AppConstants.defaultAnnouncementExpiry,
+            ),
+          ),
+        );
 
         // Clear legacy storage
         final prefs = await _getPrefs();

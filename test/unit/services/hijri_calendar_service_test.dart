@@ -25,11 +25,12 @@ void main() {
     });
 
     group('API Fetching', () {
-      test('successful API fetch creates HijriDate with correct URL format',
-          () async {
-        // Arrange
-        final testDate = DateTime(2025, 12, 3);
-        final responseBody = '''
+      test(
+        'successful API fetch creates HijriDate with correct URL format',
+        () async {
+          // Arrange
+          final testDate = DateTime(2025, 12, 3);
+          final responseBody = '''
 {
   "code": 200,
   "status": "OK",
@@ -53,31 +54,36 @@ void main() {
   }
 }''';
 
-        when(mockClient.get(any)).thenAnswer(
-            (_) async => http.Response(responseBody, 200));
+          when(
+            mockClient.get(any),
+          ).thenAnswer((_) async => http.Response(responseBody, 200));
 
-        // Act
-        final result = await HijriCalendarService.fetchHijriDate(
-          date: testDate,
-          client: mockClient,
-        );
+          // Act
+          final result = await HijriCalendarService.fetchHijriDate(
+            date: testDate,
+            client: mockClient,
+          );
 
-        // Assert
-        expect(result.day, 2);
-        expect(result.month, 6);
-        expect(result.year, 1447);
-        expect(result.monthNameEnglish, 'Jumada al-Akhirah');
-        expect(result.weekdayNameEnglish, 'Wednesday');
-        final captured = verify(mockClient.get(captureAny)).captured;
-        expect(captured.length, 1);
-        expect(captured[0].toString(),
-            'https://api.aladhan.com/v1/gToH/03-12-2025');
-      });
+          // Assert
+          expect(result.day, 2);
+          expect(result.month, 6);
+          expect(result.year, 1447);
+          expect(result.monthNameEnglish, 'Jumada al-Akhirah');
+          expect(result.weekdayNameEnglish, 'Wednesday');
+          final captured = verify(mockClient.get(captureAny)).captured;
+          expect(captured.length, 1);
+          expect(
+            captured[0].toString(),
+            'https://api.aladhan.com/v1/gToH/03-12-2025',
+          );
+        },
+      );
 
       test('null date defaults to today', () async {
         // Arrange
         final now = DateTime.now();
-        final dateStr = '${now.day.toString().padLeft(2, '0')}-'
+        final dateStr =
+            '${now.day.toString().padLeft(2, '0')}-'
             '${now.month.toString().padLeft(2, '0')}-'
             '${now.year}';
 
@@ -105,8 +111,9 @@ void main() {
   }
 }''';
 
-        when(mockClient.get(any)).thenAnswer(
-            (_) async => http.Response(responseBody, 200));
+        when(
+          mockClient.get(any),
+        ).thenAnswer((_) async => http.Response(responseBody, 200));
 
         // Act
         final result = await HijriCalendarService.fetchHijriDate(
@@ -117,14 +124,17 @@ void main() {
         expect(result, isNotNull);
         final captured = verify(mockClient.get(captureAny)).captured;
         expect(captured.length, 1);
-        expect(captured[0].toString(),
-            'https://api.aladhan.com/v1/gToH/$dateStr');
+        expect(
+          captured[0].toString(),
+          'https://api.aladhan.com/v1/gToH/$dateStr',
+        );
       });
 
       test('HTTP 404 error throws HijriServiceException', () async {
         // Arrange
-        when(mockClient.get(any))
-            .thenAnswer((_) async => http.Response('Not Found', 404));
+        when(
+          mockClient.get(any),
+        ).thenAnswer((_) async => http.Response('Not Found', 404));
 
         // Act & Assert
         expect(
@@ -135,8 +145,9 @@ void main() {
 
       test('HTTP 500 error throws HijriServiceException', () async {
         // Arrange
-        when(mockClient.get(any)).thenAnswer(
-            (_) async => http.Response('Internal Server Error', 500));
+        when(
+          mockClient.get(any),
+        ).thenAnswer((_) async => http.Response('Internal Server Error', 500));
 
         // Act & Assert
         expect(
@@ -153,8 +164,9 @@ void main() {
           'data': null,
         });
 
-        when(mockClient.get(any))
-            .thenAnswer((_) async => http.Response(responseBody, 200));
+        when(
+          mockClient.get(any),
+        ).thenAnswer((_) async => http.Response(responseBody, 200));
 
         // Act & Assert
         expect(
@@ -165,8 +177,9 @@ void main() {
 
       test('invalid JSON throws HijriServiceException', () async {
         // Arrange
-        when(mockClient.get(any))
-            .thenAnswer((_) async => http.Response('invalid json', 200));
+        when(
+          mockClient.get(any),
+        ).thenAnswer((_) async => http.Response('invalid json', 200));
 
         // Act & Assert
         expect(
@@ -177,8 +190,9 @@ void main() {
 
       test('network timeout throws HijriServiceException', () async {
         // Arrange
-        when(mockClient.get(any))
-            .thenAnswer((_) async => throw Exception('Connection timeout'));
+        when(
+          mockClient.get(any),
+        ).thenAnswer((_) async => throw Exception('Connection timeout'));
 
         // Act & Assert
         expect(
@@ -265,35 +279,40 @@ void main() {
         expect(result!.isCacheValid, isFalse);
       });
 
-      test('edge case: cache created 23:59 yesterday, checked 00:01 today is invalid',
-          () async {
-        // Arrange
-        final yesterday = DateTime.now().subtract(const Duration(days: 1));
-        final yesterdayAt2359 = DateTime(
-          yesterday.year,
-          yesterday.month,
-          yesterday.day,
-          23,
-          59,
-        );
+      test(
+        'edge case: cache created 23:59 yesterday, checked 00:01 today is invalid',
+        () async {
+          // Arrange
+          final yesterday = DateTime.now().subtract(const Duration(days: 1));
+          final yesterdayAt2359 = DateTime(
+            yesterday.year,
+            yesterday.month,
+            yesterday.day,
+            23,
+            59,
+          );
 
-        final cachedDate = testHijriDate.copyWith(
-          gregorianDate: yesterday,
-          cachedAt: yesterdayAt2359,
-        );
-        await StorageService.setString(
-          AppConstants.keyHijriDate,
-          jsonEncode(cachedDate.toJson()),
-        );
+          final cachedDate = testHijriDate.copyWith(
+            gregorianDate: yesterday,
+            cachedAt: yesterdayAt2359,
+          );
+          await StorageService.setString(
+            AppConstants.keyHijriDate,
+            jsonEncode(cachedDate.toJson()),
+          );
 
-        // Act
-        final result = await HijriCalendarService.getCachedHijriDate();
+          // Act
+          final result = await HijriCalendarService.getCachedHijriDate();
 
-        // Assert
-        expect(result, isNotNull);
-        expect(result!.isCacheValid, isFalse,
-            reason: 'Cache from yesterday should be invalid even if <24h');
-      });
+          // Assert
+          expect(result, isNotNull);
+          expect(
+            result!.isCacheValid,
+            isFalse,
+            reason: 'Cache from yesterday should be invalid even if <24h',
+          );
+        },
+      );
 
       test('corrupted cache is cleared and returns null', () async {
         // Arrange - Invalid JSON
@@ -309,8 +328,9 @@ void main() {
         expect(result, isNull);
 
         // Verify cache was cleared
-        final cacheExists =
-            await StorageService.containsKey(AppConstants.keyHijriDate);
+        final cacheExists = await StorageService.containsKey(
+          AppConstants.keyHijriDate,
+        );
         expect(cacheExists, isFalse);
       });
 
@@ -387,8 +407,9 @@ void main() {
   }
 }''';
 
-        when(mockClient.get(any))
-            .thenAnswer((_) async => http.Response(responseBody, 200));
+        when(
+          mockClient.get(any),
+        ).thenAnswer((_) async => http.Response(responseBody, 200));
 
         // Act
         final result = await HijriCalendarService.getHijriDate(
@@ -431,8 +452,9 @@ void main() {
   }
 }''';
 
-        when(mockClient.get(any))
-            .thenAnswer((_) async => http.Response(responseBody, 200));
+        when(
+          mockClient.get(any),
+        ).thenAnswer((_) async => http.Response(responseBody, 200));
 
         // Act
         final result = await HijriCalendarService.getHijriDate(
@@ -455,8 +477,9 @@ void main() {
           jsonEncode(staleCache.toJson()),
         );
 
-        when(mockClient.get(any))
-            .thenAnswer((_) async => throw Exception('Network error'));
+        when(
+          mockClient.get(any),
+        ).thenAnswer((_) async => throw Exception('Network error'));
 
         // Act
         final result = await HijriCalendarService.getHijriDate(
@@ -464,8 +487,11 @@ void main() {
         );
 
         // Assert
-        expect(result.day, staleCache.day,
-            reason: 'Should return stale cache on network error');
+        expect(
+          result.day,
+          staleCache.day,
+          reason: 'Should return stale cache on network error',
+        );
         expect(result.isCacheValid, isFalse);
       });
 
@@ -473,8 +499,9 @@ void main() {
         // Arrange - No cache
         await StorageService.remove(AppConstants.keyHijriDate);
 
-        when(mockClient.get(any))
-            .thenAnswer((_) async => throw Exception('Network error'));
+        when(
+          mockClient.get(any),
+        ).thenAnswer((_) async => throw Exception('Network error'));
 
         // Act & Assert
         expect(
@@ -526,8 +553,9 @@ void main() {
   }
 }''';
 
-        when(mockClient.get(any))
-            .thenAnswer((_) async => http.Response(responseBody, 200));
+        when(
+          mockClient.get(any),
+        ).thenAnswer((_) async => http.Response(responseBody, 200));
 
         final result = await HijriCalendarService.getHijriDate(
           client: mockClient,

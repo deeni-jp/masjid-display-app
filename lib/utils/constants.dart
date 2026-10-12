@@ -223,19 +223,17 @@ class AppStyles {
     return BoxDecoration(
       color: color.withValues(alpha: 0.1),
       borderRadius: BorderRadius.circular(radiusSmall),
-      border: Border.all(
-        color: color.withValues(alpha: 0.5),
-        width: 1,
-      ),
+      border: Border.all(color: color.withValues(alpha: 0.5), width: 1),
     );
   }
 
   // Ticker Decoration
   static BoxDecoration tickerDecoration(bool darkMode) {
     return BoxDecoration(
-      color: darkMode
-          ? AppColors.tickerBackground
-          : AppColors.tickerBackgroundLight,
+      color:
+          darkMode
+              ? AppColors.tickerBackground
+              : AppColors.tickerBackgroundLight,
       boxShadow: [
         BoxShadow(
           color: Colors.black.withValues(alpha: 0.1),

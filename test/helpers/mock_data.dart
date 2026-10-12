@@ -38,18 +38,12 @@ class MockData {
         'Imsak': '05:20',
         'Midnight': '00:30',
       },
-      'date': {
-        'readable': '01 Jan 2024',
-        'timestamp': '1704067200',
-      },
+      'date': {'readable': '01 Jan 2024', 'timestamp': '1704067200'},
       'meta': {
         'latitude': 35.531,
         'longitude': 139.565,
         'timezone': 'Asia/Tokyo',
-        'method': {
-          'id': 2,
-          'name': 'Islamic Society of North America (ISNA)',
-        },
+        'method': {'id': 2, 'name': 'Islamic Society of North America (ISNA)'},
       },
     },
   };
@@ -96,8 +90,12 @@ class MockData {
     'type': 'announcement',
     'priority': 'regular',
     'active': true,
-    'createdAt': Timestamp.fromDate(DateTime.now().subtract(const Duration(days: 1))),
-    'expiresAt': Timestamp.fromDate(DateTime.now().add(const Duration(days: 6))),
+    'createdAt': Timestamp.fromDate(
+      DateTime.now().subtract(const Duration(days: 1)),
+    ),
+    'expiresAt': Timestamp.fromDate(
+      DateTime.now().add(const Duration(days: 6)),
+    ),
     'postedBy': 'admin@test.com',
     'postedByRole': 'admin',
   };
@@ -109,9 +107,15 @@ class MockData {
     'type': 'event',
     'priority': 'high',
     'active': true,
-    'eventTime': Timestamp.fromDate(DateTime.now().add(const Duration(days: 2))),
-    'createdAt': Timestamp.fromDate(DateTime.now().subtract(const Duration(hours: 12))),
-    'expiresAt': Timestamp.fromDate(DateTime.now().add(const Duration(days: 3))),
+    'eventTime': Timestamp.fromDate(
+      DateTime.now().add(const Duration(days: 2)),
+    ),
+    'createdAt': Timestamp.fromDate(
+      DateTime.now().subtract(const Duration(hours: 12)),
+    ),
+    'expiresAt': Timestamp.fromDate(
+      DateTime.now().add(const Duration(days: 3)),
+    ),
     'postedBy': 'moderator@test.com',
     'postedByRole': 'moderator',
   };
@@ -123,8 +127,12 @@ class MockData {
     'type': 'alert',
     'priority': 'high',
     'active': true,
-    'createdAt': Timestamp.fromDate(DateTime.now().subtract(const Duration(hours: 2))),
-    'expiresAt': Timestamp.fromDate(DateTime.now().add(const Duration(hours: 22))),
+    'createdAt': Timestamp.fromDate(
+      DateTime.now().subtract(const Duration(hours: 2)),
+    ),
+    'expiresAt': Timestamp.fromDate(
+      DateTime.now().add(const Duration(hours: 22)),
+    ),
     'postedBy': 'admin@test.com',
     'postedByRole': 'admin',
   };
@@ -136,8 +144,12 @@ class MockData {
     'type': 'announcement',
     'priority': 'low',
     'active': true,
-    'createdAt': Timestamp.fromDate(DateTime.now().subtract(const Duration(days: 10))),
-    'expiresAt': Timestamp.fromDate(DateTime.now().subtract(const Duration(days: 1))),
+    'createdAt': Timestamp.fromDate(
+      DateTime.now().subtract(const Duration(days: 10)),
+    ),
+    'expiresAt': Timestamp.fromDate(
+      DateTime.now().subtract(const Duration(days: 1)),
+    ),
     'postedBy': 'admin@test.com',
     'postedByRole': 'admin',
   };

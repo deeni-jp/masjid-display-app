@@ -94,10 +94,16 @@ class NoticeImageService {
   static img.Image _fitWithin(img.Image image, int max) {
     if (image.width <= max && image.height <= max) return image;
     return image.width >= image.height
-        ? img.copyResize(image,
-            width: max, interpolation: img.Interpolation.average)
-        : img.copyResize(image,
-            height: max, interpolation: img.Interpolation.average);
+        ? img.copyResize(
+          image,
+          width: max,
+          interpolation: img.Interpolation.average,
+        )
+        : img.copyResize(
+          image,
+          height: max,
+          interpolation: img.Interpolation.average,
+        );
   }
 
   // ============ LOADING ============
@@ -122,10 +128,9 @@ class NoticeImageService {
     // Drop older versions of this notice's image.
     _cache.removeWhere((k, _) => k.startsWith('${notification.id}@'));
 
-    final future =
-        FirebaseService.getNotificationImage(notification.id).catchError((
-      Object e,
-    ) {
+    final future = FirebaseService.getNotificationImage(
+      notification.id,
+    ).catchError((Object e) {
       _cache.remove(key); // allow a retry next time
       throw e;
     });

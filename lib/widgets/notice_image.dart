@@ -61,10 +61,7 @@ class _NoticeImageState extends State<NoticeImage> {
     return LayoutBuilder(
       builder: (context, c) {
         final maxW = c.maxWidth.isFinite ? c.maxWidth : 320.0;
-        final maxH = math.min(
-          widget.maxHeight ?? double.infinity,
-          c.maxHeight,
-        );
+        final maxH = math.min(widget.maxHeight ?? double.infinity, c.maxHeight);
 
         var width = maxW;
         var height = width / ratio;
@@ -91,12 +88,14 @@ class _NoticeImageState extends State<NoticeImage> {
                       fit: BoxFit.contain,
                       gaplessPlayback: true,
                       filterQuality: FilterQuality.medium,
-                      semanticLabel: widget.notification.title.isNotEmpty
-                          ? widget.notification.title
-                          : 'Notice image',
+                      semanticLabel:
+                          widget.notification.title.isNotEmpty
+                              ? widget.notification.title
+                              : 'Notice image',
                     );
                   }
-                  final failed = snapshot.hasError ||
+                  final failed =
+                      snapshot.hasError ||
                       snapshot.connectionState == ConnectionState.done;
                   return _Placeholder(failed: failed);
                 },

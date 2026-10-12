@@ -131,7 +131,9 @@ class MoreTab extends StatelessWidget {
             // Avatar
             CircleAvatar(
               radius: 28,
-              backgroundColor: _getRoleColor(currentUser.role).withValues(alpha: 0.2),
+              backgroundColor: _getRoleColor(
+                currentUser.role,
+              ).withValues(alpha: 0.2),
               child: Text(
                 currentUser.email.isNotEmpty
                     ? currentUser.email[0].toUpperCase()
@@ -197,11 +199,7 @@ class MoreTab extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            _getRoleIcon(role),
-            size: 14,
-            color: _getRoleColor(role),
-          ),
+          Icon(_getRoleIcon(role), size: 14, color: _getRoleColor(role)),
           const SizedBox(width: 4),
           Text(
             role.displayName,
@@ -298,8 +296,10 @@ class MoreTab extends StatelessWidget {
               ),
               if (trailing != null)
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.primaryContainer,
                     borderRadius: BorderRadius.circular(AppStyles.radiusSmall),
@@ -360,9 +360,10 @@ class MoreTab extends StatelessWidget {
       padding: const EdgeInsets.all(AppStyles.paddingLarge),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: darkMode
-              ? AppColors.headerGradientDark
-              : AppColors.headerGradientLight,
+          colors:
+              darkMode
+                  ? AppColors.headerGradientDark
+                  : AppColors.headerGradientLight,
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -379,11 +380,7 @@ class MoreTab extends StatelessWidget {
                   color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(AppStyles.radiusSmall),
                 ),
-                child: const Icon(
-                  Icons.mosque,
-                  color: Colors.white,
-                  size: 24,
-                ),
+                child: const Icon(Icons.mosque, color: Colors.white, size: 24),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -426,10 +423,7 @@ class MoreTab extends StatelessWidget {
         Expanded(
           child: Text(
             text,
-            style: GoogleFonts.poppins(
-              fontSize: 13,
-              color: Colors.white70,
-            ),
+            style: GoogleFonts.poppins(fontSize: 13, color: Colors.white70),
           ),
         ),
       ],
@@ -447,10 +441,11 @@ class MoreTab extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ProfileScreen(
-          currentUser: currentUser,
-          onUserChanged: onUserChanged,
-        ),
+        builder:
+            (context) => ProfileScreen(
+              currentUser: currentUser,
+              onUserChanged: onUserChanged,
+            ),
       ),
     );
   }
@@ -458,33 +453,34 @@ class MoreTab extends StatelessWidget {
   Future<void> _signOut(BuildContext context) async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppStyles.radiusLarge),
-        ),
-        title: Text(
-          'Sign Out',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-        ),
-        content: Text(
-          'Are you sure you want to sign out?',
-          style: GoogleFonts.poppins(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+      builder:
+          (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppStyles.radiusLarge),
             ),
-            child: const Text('Sign Out'),
+            title: Text(
+              'Sign Out',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            ),
+            content: Text(
+              'Are you sure you want to sign out?',
+              style: GoogleFonts.poppins(),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Sign Out'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
 
     if (confirm != true) return;
@@ -494,9 +490,9 @@ class MoreTab extends StatelessWidget {
       onUserChanged(null);
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Sign out failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Sign out failed: $e')));
       }
     }
   }
@@ -512,80 +508,79 @@ class MoreTab extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => _SettingsBottomSheet(
-        initialDarkMode: darkMode,
-        onToggleTheme: onToggleTheme,
-        defaultLocation: defaultLocation,
-      ),
+      builder:
+          (context) => _SettingsBottomSheet(
+            initialDarkMode: darkMode,
+            onToggleTheme: onToggleTheme,
+            defaultLocation: defaultLocation,
+          ),
     );
   }
 
   void _showAboutDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppStyles.radiusLarge),
-        ),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(AppStyles.radiusSmall),
+      builder:
+          (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppStyles.radiusLarge),
+            ),
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(AppStyles.radiusSmall),
+                  ),
+                  child: Icon(
+                    Icons.mosque,
+                    color: Theme.of(context).colorScheme.primary,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'About',
+                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  AppConstants.appName,
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Version ${AppConstants.appVersion}',
+                  style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Stay connected with accurate prayer times and mosque announcements.',
+                  style: GoogleFonts.poppins(fontSize: 14),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Made with ❤️ for the community',
+                  style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Close'),
               ),
-              child: Icon(
-                Icons.mosque,
-                color: Theme.of(context).colorScheme.primary,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              'About',
-              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              AppConstants.appName,
-              style: GoogleFonts.poppins(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Version ${AppConstants.appVersion}',
-              style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Stay connected with accurate prayer times and mosque announcements.',
-              style: GoogleFonts.poppins(fontSize: 14),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Made with ❤️ for the community',
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                color: Colors.grey,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            ],
           ),
-        ],
-      ),
     );
   }
 }
@@ -684,7 +679,8 @@ class _SettingsBottomSheetState extends State<_SettingsBottomSheet> {
                 ElevatedButton(
                   onPressed: () async {
                     await StorageService.setDefaultLocation(
-                        _controller.text.trim());
+                      _controller.text.trim(),
+                    );
                     if (context.mounted) {
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(

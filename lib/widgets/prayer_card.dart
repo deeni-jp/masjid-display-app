@@ -27,12 +27,13 @@ class PrayerCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(AppStyles.radiusLarge),
-        border: isNext
-            ? Border.all(
-                color: Theme.of(context).colorScheme.primary,
-                width: 2,
-              )
-            : null,
+        border:
+            isNext
+                ? Border.all(
+                  color: Theme.of(context).colorScheme.primary,
+                  width: 2,
+                )
+                : null,
         boxShadow: AppStyles.cardShadowLight,
       ),
       child: Padding(
@@ -142,19 +143,17 @@ class PrayerCard extends StatelessWidget {
       children: [
         Text(
           '$label: ',
-          style: GoogleFonts.poppins(
-            fontSize: 13,
-            color: Colors.grey,
-          ),
+          style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey),
         ),
         Text(
           time,
           style: GoogleFonts.poppins(
             fontSize: 13,
             fontWeight: isSecondary ? FontWeight.w400 : FontWeight.w600,
-            color: isSecondary
-                ? Colors.grey
-                : Theme.of(context).textTheme.bodyLarge?.color,
+            color:
+                isSecondary
+                    ? Colors.grey
+                    : Theme.of(context).textTheme.bodyLarge?.color,
           ),
         ),
       ],
@@ -179,9 +178,12 @@ class CompactPrayerRow extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: isNext
-            ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3)
-            : Colors.transparent,
+        color:
+            isNext
+                ? Theme.of(
+                  context,
+                ).colorScheme.primaryContainer.withValues(alpha: 0.3)
+                : Colors.transparent,
         border: Border(
           bottom: BorderSide(
             color: Colors.grey.withValues(alpha: 0.1),
@@ -206,8 +208,9 @@ class CompactPrayerRow extends StatelessWidget {
                     height: 32,
                     decoration: BoxDecoration(
                       color: prayerColor.withValues(alpha: 0.1),
-                      borderRadius:
-                          BorderRadius.circular(AppStyles.radiusSmall),
+                      borderRadius: BorderRadius.circular(
+                        AppStyles.radiusSmall,
+                      ),
                     ),
                     child: Icon(
                       AppColors.getPrayerIcon(prayer.name),
@@ -261,11 +264,7 @@ class PrayerChip extends StatelessWidget {
   final PrayerTime prayer;
   final bool isActive;
 
-  const PrayerChip({
-    super.key,
-    required this.prayer,
-    this.isActive = false,
-  });
+  const PrayerChip({super.key, required this.prayer, this.isActive = false});
 
   @override
   Widget build(BuildContext context) {

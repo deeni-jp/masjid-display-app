@@ -62,10 +62,7 @@ extension WidgetTesterExtensions on WidgetTester {
   }
 
   /// Drag to scroll
-  Future<void> dragToScroll(
-    Finder scrollable,
-    double delta,
-  ) async {
+  Future<void> dragToScroll(Finder scrollable, double delta) async {
     await drag(scrollable, Offset(0, delta));
     await pumpAndSettle();
   }

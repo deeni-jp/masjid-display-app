@@ -34,9 +34,10 @@ class NextPrayerCard extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: darkMode
-                ? AppColors.nextPrayerGradientDark
-                : AppColors.nextPrayerGradientLight,
+            colors:
+                darkMode
+                    ? AppColors.nextPrayerGradientDark
+                    : AppColors.nextPrayerGradientLight,
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -66,9 +67,10 @@ class NextPrayerCard extends StatelessWidget {
                           style: GoogleFonts.poppins(
                             fontSize: 28,
                             fontWeight: FontWeight.w700,
-                            color: darkMode
-                                ? Colors.white
-                                : AppColors.primaryGreen,
+                            color:
+                                darkMode
+                                    ? Colors.white
+                                    : AppColors.primaryGreen,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -102,16 +104,18 @@ class NextPrayerCard extends StatelessWidget {
   }
 
   Widget _buildPrayerIcon(BuildContext context) {
-    final prayerColor = nextPrayer != null
-        ? AppColors.getPrayerColor(nextPrayer!.name)
-        : AppColors.primaryGreen;
+    final prayerColor =
+        nextPrayer != null
+            ? AppColors.getPrayerColor(nextPrayer!.name)
+            : AppColors.primaryGreen;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: darkMode
-            ? Colors.white.withValues(alpha: 0.1)
-            : prayerColor.withValues(alpha: 0.1),
+        color:
+            darkMode
+                ? Colors.white.withValues(alpha: 0.1)
+                : prayerColor.withValues(alpha: 0.1),
         shape: BoxShape.circle,
       ),
       child: Icon(
@@ -184,9 +188,10 @@ class NextPrayerCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: darkMode
-            ? Colors.black.withValues(alpha: 0.2)
-            : Colors.white.withValues(alpha: 0.5),
+        color:
+            darkMode
+                ? Colors.black.withValues(alpha: 0.2)
+                : Colors.white.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
       ),
       child: Row(
@@ -219,11 +224,7 @@ class NextPrayerCard extends StatelessWidget {
   }) {
     return Row(
       children: [
-        Icon(
-          icon,
-          size: 20,
-          color: darkMode ? Colors.white70 : Colors.black54,
-        ),
+        Icon(icon, size: 20, color: darkMode ? Colors.white70 : Colors.black54),
         const SizedBox(width: 8),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,

@@ -58,23 +58,19 @@ class HijriCalendarService {
 
     try {
       final url = Uri.parse('$_baseUrl/gToH/$dateStr');
-      final response = await httpClient.get(url).timeout(
-        const Duration(seconds: 10),
-      );
+      final response = await httpClient
+          .get(url)
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode != 200) {
-        throw HijriServiceException(
-          'HTTP error: ${response.statusCode}',
-        );
+        throw HijriServiceException('HTTP error: ${response.statusCode}');
       }
 
       final body = json.decode(response.body) as Map<String, dynamic>;
 
       // Check API status code
       if (body['code'] != 200) {
-        throw HijriServiceException(
-          'API error: ${body['status']}',
-        );
+        throw HijriServiceException('API error: ${body['status']}');
       }
 
       return HijriDate.fromApiResponse(body['data'] as Map<String, dynamic>);

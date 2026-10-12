@@ -19,11 +19,7 @@ void main() {
     testWidgets('displays prayer name', (WidgetTester tester) async {
       // Arrange & Act
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: PrayerCard(prayer: testPrayer),
-          ),
-        ),
+        MaterialApp(home: Scaffold(body: PrayerCard(prayer: testPrayer))),
       );
 
       // Assert
@@ -33,11 +29,7 @@ void main() {
     testWidgets('displays waqt and iqama times', (WidgetTester tester) async {
       // Arrange & Act
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: PrayerCard(prayer: testPrayer),
-          ),
-        ),
+        MaterialApp(home: Scaffold(body: PrayerCard(prayer: testPrayer))),
       );
 
       // Assert
@@ -45,17 +37,13 @@ void main() {
       expect(find.text('05:45 AM'), findsOneWidget);
     });
 
-    testWidgets('shows NEXT badge when isNext is true',
-        (WidgetTester tester) async {
+    testWidgets('shows NEXT badge when isNext is true', (
+      WidgetTester tester,
+    ) async {
       // Arrange & Act
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: PrayerCard(
-              prayer: testPrayer,
-              isNext: true,
-            ),
-          ),
+          home: Scaffold(body: PrayerCard(prayer: testPrayer, isNext: true)),
         ),
       );
 
@@ -63,17 +51,13 @@ void main() {
       expect(find.text('NEXT'), findsOneWidget);
     });
 
-    testWidgets('does not show NEXT badge when isNext is false',
-        (WidgetTester tester) async {
+    testWidgets('does not show NEXT badge when isNext is false', (
+      WidgetTester tester,
+    ) async {
       // Arrange & Act
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: PrayerCard(
-              prayer: testPrayer,
-              isNext: false,
-            ),
-          ),
+          home: Scaffold(body: PrayerCard(prayer: testPrayer, isNext: false)),
         ),
       );
 
@@ -81,8 +65,7 @@ void main() {
       expect(find.text('NEXT'), findsNothing);
     });
 
-    testWidgets('shows edit button in admin mode',
-        (WidgetTester tester) async {
+    testWidgets('shows edit button in admin mode', (WidgetTester tester) async {
       // Arrange
       bool editCalled = false;
 
@@ -109,16 +92,14 @@ void main() {
       expect(editCalled, isTrue);
     });
 
-    testWidgets('does not show edit button when not in admin mode',
-        (WidgetTester tester) async {
+    testWidgets('does not show edit button when not in admin mode', (
+      WidgetTester tester,
+    ) async {
       // Arrange & Act
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: PrayerCard(
-              prayer: testPrayer,
-              adminMode: false,
-            ),
+            body: PrayerCard(prayer: testPrayer, adminMode: false),
           ),
         ),
       );
@@ -131,21 +112,15 @@ void main() {
       // Arrange & Act
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: PrayerCard(
-              prayer: testPrayer,
-              isNext: true,
-            ),
-          ),
+          home: Scaffold(body: PrayerCard(prayer: testPrayer, isNext: true)),
         ),
       );
 
       // Assert - Find the container with border
       final container = tester.widget<Container>(
-        find.ancestor(
-          of: find.text('Fajr'),
-          matching: find.byType(Container),
-        ).first,
+        find
+            .ancestor(of: find.text('Fajr'), matching: find.byType(Container))
+            .first,
       );
 
       final decoration = container.decoration as BoxDecoration;
@@ -164,15 +139,12 @@ void main() {
       );
     });
 
-    testWidgets('displays prayer information in compact format',
-        (WidgetTester tester) async {
+    testWidgets('displays prayer information in compact format', (
+      WidgetTester tester,
+    ) async {
       // Arrange & Act
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: CompactPrayerRow(prayer: testPrayer),
-          ),
-        ),
+        MaterialApp(home: Scaffold(body: CompactPrayerRow(prayer: testPrayer))),
       );
 
       // Assert
@@ -186,18 +158,13 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: CompactPrayerRow(
-              prayer: testPrayer,
-              isNext: true,
-            ),
+            body: CompactPrayerRow(prayer: testPrayer, isNext: true),
           ),
         ),
       );
 
       // Assert - check if highlighted
-      final container = tester.widget<Container>(
-        find.byType(Container).first,
-      );
+      final container = tester.widget<Container>(find.byType(Container).first);
 
       final decoration = container.decoration as BoxDecoration;
       expect(decoration.color, isNotNull);
@@ -217,15 +184,12 @@ void main() {
       );
     });
 
-    testWidgets('displays prayer name and iqama time',
-        (WidgetTester tester) async {
+    testWidgets('displays prayer name and iqama time', (
+      WidgetTester tester,
+    ) async {
       // Arrange & Act
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: PrayerChip(prayer: testPrayer),
-          ),
-        ),
+        MaterialApp(home: Scaffold(body: PrayerChip(prayer: testPrayer))),
       );
 
       // Assert
@@ -236,11 +200,7 @@ void main() {
     testWidgets('displays prayer icon', (WidgetTester tester) async {
       // Arrange & Act
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: PrayerChip(prayer: testPrayer),
-          ),
-        ),
+        MaterialApp(home: Scaffold(body: PrayerChip(prayer: testPrayer))),
       );
 
       // Assert

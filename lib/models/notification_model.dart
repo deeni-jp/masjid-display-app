@@ -238,7 +238,8 @@ class MosqueNotification {
       postedByRole: data['postedByRole']?.toString() ?? 'Staff',
       createdAt: _parseDateTime(data['createdAt']) ?? DateTime.now(),
       eventTime: _parseDateTime(data['eventTime']),
-      expiresAt: _parseDateTime(data['expiresAt']) ??
+      expiresAt:
+          _parseDateTime(data['expiresAt']) ??
           DateTime.now().add(const Duration(days: 7)),
       hasImage: data['hasImage'] == true,
       imageWidth: (data['imageWidth'] as num?)?.toInt(),
@@ -259,17 +260,21 @@ class MosqueNotification {
       postedBy: map['postedBy']?.toString() ?? '',
       postedByRole: map['postedByRole']?.toString() ?? 'Staff',
       createdAt: DateTime.fromMillisecondsSinceEpoch(map['createdAt'] ?? 0),
-      eventTime: map['eventTime'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(map['eventTime'])
-          : null,
-      expiresAt: DateTime.fromMillisecondsSinceEpoch(map['expiresAt'] ??
-          DateTime.now().add(const Duration(days: 7)).millisecondsSinceEpoch),
+      eventTime:
+          map['eventTime'] != null
+              ? DateTime.fromMillisecondsSinceEpoch(map['eventTime'])
+              : null,
+      expiresAt: DateTime.fromMillisecondsSinceEpoch(
+        map['expiresAt'] ??
+            DateTime.now().add(const Duration(days: 7)).millisecondsSinceEpoch,
+      ),
       hasImage: map['hasImage'] == true,
       imageWidth: (map['imageWidth'] as num?)?.toInt(),
       imageHeight: (map['imageHeight'] as num?)?.toInt(),
-      imageUpdatedAt: map['imageUpdatedAt'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(map['imageUpdatedAt'])
-          : null,
+      imageUpdatedAt:
+          map['imageUpdatedAt'] != null
+              ? DateTime.fromMillisecondsSinceEpoch(map['imageUpdatedAt'])
+              : null,
     );
   }
 
@@ -331,17 +336,19 @@ class MosqueNotification {
       'active': active,
       'postedBy': postedBy,
       'postedByRole': postedByRole,
-      'createdAt': useServerTimestamp
-          ? FieldValue.serverTimestamp()
-          : Timestamp.fromDate(createdAt),
+      'createdAt':
+          useServerTimestamp
+              ? FieldValue.serverTimestamp()
+              : Timestamp.fromDate(createdAt),
       'eventTime': eventTime != null ? Timestamp.fromDate(eventTime!) : null,
       'expiresAt': Timestamp.fromDate(expiresAt),
       'hasImage': hasImage,
       'imageWidth': hasImage ? imageWidth : null,
       'imageHeight': hasImage ? imageHeight : null,
-      'imageUpdatedAt': hasImage && imageUpdatedAt != null
-          ? Timestamp.fromDate(imageUpdatedAt!)
-          : null,
+      'imageUpdatedAt':
+          hasImage && imageUpdatedAt != null
+              ? Timestamp.fromDate(imageUpdatedAt!)
+              : null,
     };
   }
 

@@ -9,10 +9,7 @@ import '../utils/constants.dart';
 class AuthScreen extends StatefulWidget {
   final void Function(AppUser user) onAuthSuccess;
 
-  const AuthScreen({
-    super.key,
-    required this.onAuthSuccess,
-  });
+  const AuthScreen({super.key, required this.onAuthSuccess});
 
   @override
   State<AuthScreen> createState() => _AuthScreenState();
@@ -87,11 +84,11 @@ class _AuthScreenState extends State<AuthScreen> {
   Future<AppUser?> _signUp() async {
     try {
       // Create Firebase Auth user
-      final credential =
-          await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
+      final credential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(
+            email: _emailController.text.trim(),
+            password: _passwordController.text.trim(),
+          );
 
       if (credential.user == null) {
         throw Exception('Failed to create account');
@@ -99,13 +96,15 @@ class _AuthScreenState extends State<AuthScreen> {
 
       // Update display name if provided
       if (_displayNameController.text.trim().isNotEmpty) {
-        await credential.user!
-            .updateDisplayName(_displayNameController.text.trim());
+        await credential.user!.updateDisplayName(
+          _displayNameController.text.trim(),
+        );
       }
 
       // Create user document in Firestore
-      final user =
-          await UserService.createOrUpdateUserOnSignIn(credential.user!);
+      final user = await UserService.createOrUpdateUserOnSignIn(
+        credential.user!,
+      );
       return user;
     } on FirebaseAuthException catch (e) {
       String message = 'Sign up failed';
@@ -155,8 +154,10 @@ class _AuthScreenState extends State<AuthScreen> {
                 children: [
                   Text(
                     'Enter your email address and we\'ll send you a link to reset your password.',
-                    style:
-                        GoogleFonts.poppins(fontSize: 14, color: Colors.grey),
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      color: Colors.grey,
+                    ),
                   ),
                   const SizedBox(height: 16),
 
@@ -167,12 +168,16 @@ class _AuthScreenState extends State<AuthScreen> {
                       decoration: BoxDecoration(
                         color: Colors.red.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                        border: Border.all(
+                          color: Colors.red.withValues(alpha: 0.3),
+                        ),
                       ),
                       child: Text(
                         errorMsg!,
                         style: GoogleFonts.poppins(
-                            fontSize: 12, color: Colors.red),
+                          fontSize: 12,
+                          color: Colors.red,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -185,8 +190,9 @@ class _AuthScreenState extends State<AuthScreen> {
                       labelText: 'Email',
                       prefixIcon: const Icon(Icons.email_outlined),
                       border: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppStyles.radiusMedium),
+                        borderRadius: BorderRadius.circular(
+                          AppStyles.radiusMedium,
+                        ),
                       ),
                     ),
                     keyboardType: TextInputType.emailAddress,
@@ -197,85 +203,92 @@ class _AuthScreenState extends State<AuthScreen> {
               ),
               actions: [
                 TextButton(
-                  onPressed: isLoading
-                      ? null
-                      : () => Navigator.pop(dialogContext, false),
+                  onPressed:
+                      isLoading
+                          ? null
+                          : () => Navigator.pop(dialogContext, false),
                   child: const Text('Cancel'),
                 ),
                 ElevatedButton(
-                  onPressed: isLoading
-                      ? null
-                      : () async {
-                          final email = emailController.text.trim();
+                  onPressed:
+                      isLoading
+                          ? null
+                          : () async {
+                            final email = emailController.text.trim();
 
-                          // Validation
-                          if (email.isEmpty) {
-                            setDialogState(
-                                () => errorMsg = 'Please enter your email');
-                            return;
-                          }
-                          if (!email.contains('@') || !email.contains('.')) {
-                            setDialogState(
-                                () => errorMsg = 'Please enter a valid email');
-                            return;
-                          }
-
-                          // Send reset email
-                          setDialogState(() {
-                            isLoading = true;
-                            errorMsg = null;
-                          });
-
-                          try {
-                            await FirebaseAuth.instance
-                                .sendPasswordResetEmail(email: email);
-                            if (dialogContext.mounted) {
-                              Navigator.pop(dialogContext, true);
+                            // Validation
+                            if (email.isEmpty) {
+                              setDialogState(
+                                () => errorMsg = 'Please enter your email',
+                              );
+                              return;
                             }
-                          } on FirebaseAuthException catch (e) {
-                            String message = 'Failed to send reset email';
-
-                            switch (e.code) {
-                              case 'user-not-found':
-                                message = 'No account found with this email';
-                                break;
-                              case 'invalid-email':
-                                message = 'Invalid email address';
-                                break;
-                              case 'too-many-requests':
-                                message =
-                                    'Too many attempts. Please try again later';
-                                break;
-                              default:
-                                message = e.message ?? message;
+                            if (!email.contains('@') || !email.contains('.')) {
+                              setDialogState(
+                                () => errorMsg = 'Please enter a valid email',
+                              );
+                              return;
                             }
 
+                            // Send reset email
                             setDialogState(() {
-                              isLoading = false;
-                              errorMsg = message;
+                              isLoading = true;
+                              errorMsg = null;
                             });
-                          } catch (e) {
-                            setDialogState(() {
-                              isLoading = false;
-                              errorMsg = 'An error occurred. Please try again';
-                            });
-                          }
-                        },
+
+                            try {
+                              await FirebaseAuth.instance
+                                  .sendPasswordResetEmail(email: email);
+                              if (dialogContext.mounted) {
+                                Navigator.pop(dialogContext, true);
+                              }
+                            } on FirebaseAuthException catch (e) {
+                              String message = 'Failed to send reset email';
+
+                              switch (e.code) {
+                                case 'user-not-found':
+                                  message = 'No account found with this email';
+                                  break;
+                                case 'invalid-email':
+                                  message = 'Invalid email address';
+                                  break;
+                                case 'too-many-requests':
+                                  message =
+                                      'Too many attempts. Please try again later';
+                                  break;
+                                default:
+                                  message = e.message ?? message;
+                              }
+
+                              setDialogState(() {
+                                isLoading = false;
+                                errorMsg = message;
+                              });
+                            } catch (e) {
+                              setDialogState(() {
+                                isLoading = false;
+                                errorMsg =
+                                    'An error occurred. Please try again';
+                              });
+                            }
+                          },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primaryGreen,
                     foregroundColor: Colors.white,
                   ),
-                  child: isLoading
-                      ? const SizedBox(
-                          height: 16,
-                          width: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
-                      : const Text('Send Reset Link'),
+                  child:
+                      isLoading
+                          ? const SizedBox(
+                            height: 16,
+                            width: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
+                            ),
+                          )
+                          : const Text('Send Reset Link'),
                 ),
               ],
             );
@@ -359,10 +372,7 @@ class _AuthScreenState extends State<AuthScreen> {
         const SizedBox(height: 8),
         Text(
           _isLogin ? 'Welcome back!' : 'Create your account',
-          style: GoogleFonts.poppins(
-            fontSize: 16,
-            color: Colors.grey,
-          ),
+          style: GoogleFonts.poppins(fontSize: 16, color: Colors.grey),
           textAlign: TextAlign.center,
         ),
       ],
@@ -512,8 +522,9 @@ class _AuthScreenState extends State<AuthScreen> {
                         : Icons.visibility_off,
                   ),
                   onPressed: () {
-                    setState(() =>
-                        _obscureConfirmPassword = !_obscureConfirmPassword);
+                    setState(
+                      () => _obscureConfirmPassword = !_obscureConfirmPassword,
+                    );
                   },
                 ),
                 border: OutlineInputBorder(
@@ -549,22 +560,23 @@ class _AuthScreenState extends State<AuthScreen> {
         ),
         disabledBackgroundColor: AppColors.primaryGreen.withValues(alpha: 0.5),
       ),
-      child: _isLoading
-          ? const SizedBox(
-              height: 20,
-              width: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+      child:
+          _isLoading
+              ? const SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+              : Text(
+                _isLogin ? 'Sign In' : 'Create Account',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            )
-          : Text(
-              _isLogin ? 'Sign In' : 'Create Account',
-              style: GoogleFonts.poppins(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
     );
   }
 
@@ -574,10 +586,7 @@ class _AuthScreenState extends State<AuthScreen> {
       children: [
         Text(
           _isLogin ? "Don't have an account?" : 'Already have an account?',
-          style: GoogleFonts.poppins(
-            fontSize: 14,
-            color: Colors.grey,
-          ),
+          style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey),
         ),
         TextButton(
           onPressed: _isLoading ? null : _toggleMode,

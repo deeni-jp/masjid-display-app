@@ -87,16 +87,10 @@ class LocationService {
   static Future<LocationResult> getCurrentLocationWithFallback() async {
     try {
       final location = await getCurrentLocation();
-      return LocationResult(
-        data: location,
-        usedDefault: location.isDefault,
-      );
+      return LocationResult(data: location, usedDefault: location.isDefault);
     } catch (e) {
       print('Failed to get location: $e. Using default.');
-      return LocationResult(
-        data: getDefaultLocation(),
-        usedDefault: true,
-      );
+      return LocationResult(data: getDefaultLocation(), usedDefault: true);
     }
   }
 
@@ -141,16 +135,17 @@ class LocationService {
       'https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=$latitude&lon=$longitude&accept-language=en',
     );
 
-    final response = await http.get(
-      uri,
-      headers: {
-        'User-Agent': 'PrayerApp/1.0 (contact@example.com)',
-      },
-    ).timeout(const Duration(seconds: 8));
+    final response = await http
+        .get(
+          uri,
+          headers: {'User-Agent': 'PrayerApp/1.0 (contact@example.com)'},
+        )
+        .timeout(const Duration(seconds: 8));
 
     if (response.statusCode != 200) {
       throw LocationServiceException(
-          'Geocoding failed: HTTP ${response.statusCode}');
+        'Geocoding failed: HTTP ${response.statusCode}',
+      );
     }
 
     final body = json.decode(response.body) as Map<String, dynamic>;
@@ -160,7 +155,8 @@ class LocationService {
       throw LocationServiceException('No address data found');
     }
 
-    final city = address['city'] ??
+    final city =
+        address['city'] ??
         address['town'] ??
         address['village'] ??
         address['county'] ??
@@ -168,10 +164,7 @@ class LocationService {
         'Unknown';
     final country = address['country'] ?? '';
 
-    return LocationInfo(
-      city: city.toString(),
-      country: country.toString(),
-    );
+    return LocationInfo(city: city.toString(), country: country.toString());
   }
 
   /// Get location by IP address (fallback)
@@ -182,7 +175,8 @@ class LocationService {
 
       if (response.statusCode != 200) {
         throw LocationServiceException(
-            'IP lookup failed: HTTP ${response.statusCode}');
+          'IP lookup failed: HTTP ${response.statusCode}',
+        );
       }
 
       final body = json.decode(response.body) as Map<String, dynamic>;
@@ -253,10 +247,7 @@ class LocationInfo {
   final String city;
   final String country;
 
-  LocationInfo({
-    required this.city,
-    required this.country,
-  });
+  LocationInfo({required this.city, required this.country});
 
   /// Get formatted location string
   String get formattedLocation {
@@ -275,10 +266,7 @@ class LocationResult {
   final LocationData data;
   final bool usedDefault;
 
-  LocationResult({
-    required this.data,
-    required this.usedDefault,
-  });
+  LocationResult({required this.data, required this.usedDefault});
 
   @override
   String toString() => 'LocationResult(data: $data, usedDefault: $usedDefault)';

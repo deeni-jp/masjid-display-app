@@ -106,12 +106,12 @@ class FirebaseService {
       .collection('notification_images');
 
   static Map<String, dynamic> _imageDoc(PreparedImage image) => {
-        'data': Blob(image.bytes),
-        'contentType': NoticeImageService.contentType,
-        'width': image.width,
-        'height': image.height,
-        'updatedAt': FieldValue.serverTimestamp(),
-      };
+    'data': Blob(image.bytes),
+    'contentType': NoticeImageService.contentType,
+    'width': image.width,
+    'height': image.height,
+    'updatedAt': FieldValue.serverTimestamp(),
+  };
 
   /// The image bytes attached to a notice, or null if there are none.
   static Future<Uint8List?> getNotificationImage(String notificationId) async {
@@ -129,12 +129,13 @@ class FirebaseService {
     try {
       final now = DateTime.now();
 
-      final snapshot = await _notificationsRef
-          .where('active', isEqualTo: true)
-          .where('expiresAt', isGreaterThan: Timestamp.fromDate(now))
-          .orderBy('expiresAt')
-          .limit(AppConstants.maxActiveNotifications)
-          .get();
+      final snapshot =
+          await _notificationsRef
+              .where('active', isEqualTo: true)
+              .where('expiresAt', isGreaterThan: Timestamp.fromDate(now))
+              .orderBy('expiresAt')
+              .limit(AppConstants.maxActiveNotifications)
+              .get();
 
       return snapshot.docs
           .map((doc) => MosqueNotification.fromFirestore(doc))
@@ -182,9 +183,12 @@ class FirebaseService {
       final user = _auth.currentUser;
 
       // Update postedBy with current user email if signed in
-      var updatedNotification = user != null
-          ? notification.copyWith(postedBy: user.email ?? notification.postedBy)
-          : notification;
+      var updatedNotification =
+          user != null
+              ? notification.copyWith(
+                postedBy: user.email ?? notification.postedBy,
+              )
+              : notification;
 
       if (image != null) {
         updatedNotification = updatedNotification.copyWith(
@@ -223,7 +227,8 @@ class FirebaseService {
     try {
       if (notification.id.isEmpty) {
         throw FirebaseServiceException(
-            'Notification ID is required for update');
+          'Notification ID is required for update',
+        );
       }
 
       var toSave = notification;
@@ -240,7 +245,10 @@ class FirebaseService {
 
       final imageRef = _imagesRef.doc(notification.id);
       final batch = _firestore.batch();
-      batch.update(_notificationsRef.doc(notification.id), toSave.toFirestore());
+      batch.update(
+        _notificationsRef.doc(notification.id),
+        toSave.toFirestore(),
+      );
       if (newImage != null) {
         batch.set(imageRef, _imageDoc(newImage));
       } else if (removeImage) {
@@ -289,10 +297,9 @@ class FirebaseService {
 
   /// Listen to active notifications changes
   static Stream<List<MosqueNotification>> listenToNotifications() {
-    return _notificationsRef
-        .where('active', isEqualTo: true)
-        .snapshots()
-        .map((snapshot) {
+    return _notificationsRef.where('active', isEqualTo: true).snapshots().map((
+      snapshot,
+    ) {
       final now = DateTime.now();
       return snapshot.docs
           .map((doc) => MosqueNotification.fromFirestore(doc))
@@ -308,9 +315,10 @@ class FirebaseService {
       final now = DateTime.now();
 
       // Query expired notifications
-      final snapshot = await _notificationsRef
-          .where('expiresAt', isLessThan: Timestamp.fromDate(now))
-          .get();
+      final snapshot =
+          await _notificationsRef
+              .where('expiresAt', isLessThan: Timestamp.fromDate(now))
+              .get();
 
       if (snapshot.docs.isEmpty) {
         return 0;
@@ -325,10 +333,11 @@ class FirebaseService {
         final snapshot = await _notificationsRef.get();
         final now = DateTime.now();
 
-        final expiredDocs = snapshot.docs.where((doc) {
-          final notification = MosqueNotification.fromFirestore(doc);
-          return notification.isExpired;
-        }).toList();
+        final expiredDocs =
+            snapshot.docs.where((doc) {
+              final notification = MosqueNotification.fromFirestore(doc);
+              return notification.isExpired;
+            }).toList();
 
         if (expiredDocs.isEmpty) {
           return 0;
@@ -345,12 +354,14 @@ class FirebaseService {
 
   /// Get notifications by type
   static Future<List<MosqueNotification>> getNotificationsByType(
-      NotificationType type) async {
+    NotificationType type,
+  ) async {
     try {
-      final snapshot = await _notificationsRef
-          .where('active', isEqualTo: true)
-          .where('type', isEqualTo: type.toFirestore())
-          .get();
+      final snapshot =
+          await _notificationsRef
+              .where('active', isEqualTo: true)
+              .where('type', isEqualTo: type.toFirestore())
+              .get();
 
       final now = DateTime.now();
       return snapshot.docs
@@ -364,12 +375,14 @@ class FirebaseService {
 
   /// Get notifications by priority
   static Future<List<MosqueNotification>> getNotificationsByPriority(
-      NotificationPriority priority) async {
+    NotificationPriority priority,
+  ) async {
     try {
-      final snapshot = await _notificationsRef
-          .where('active', isEqualTo: true)
-          .where('priority', isEqualTo: priority.toFirestore())
-          .get();
+      final snapshot =
+          await _notificationsRef
+              .where('active', isEqualTo: true)
+              .where('priority', isEqualTo: priority.toFirestore())
+              .get();
 
       final now = DateTime.now();
       return snapshot.docs
@@ -378,7 +391,8 @@ class FirebaseService {
           .toList();
     } catch (e) {
       throw FirebaseServiceException(
-          'Failed to get notifications by priority: $e');
+        'Failed to get notifications by priority: $e',
+      );
     }
   }
 
@@ -390,7 +404,8 @@ class FirebaseService {
       return highPriority.isNotEmpty ? highPriority.first : null;
     } catch (e) {
       throw FirebaseServiceException(
-          'Failed to get high priority notification: $e');
+        'Failed to get high priority notification: $e',
+      );
     }
   }
 
