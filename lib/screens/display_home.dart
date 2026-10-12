@@ -11,6 +11,7 @@ import '../models/hijri_date.dart';
 import '../models/notification_model.dart';
 import '../models/prayer_time.dart';
 import '../utils/design.dart';
+import '../widgets/notice_image.dart';
 
 class DisplayHome extends StatelessWidget {
   final PrayerSchedule? prayerSchedule;
@@ -38,9 +39,14 @@ class DisplayHome extends StatelessWidget {
   static const double _designWidth = 2000;
   static const double _designHeight = 1125;
 
+  /// Height of the footer row (ticker + donate tile).
+  static const double _footerHeight = 146;
+
   @override
   Widget build(BuildContext context) {
     final active = notifications.activeOnly.sortedByPriorityThenExpiry;
+    // Image-only notices have nothing to scroll in the footer ticker.
+    final tickerNotices = active.where((n) => n.hasMessage).toList();
     final p = DesignPalette.of(darkMode);
 
     return ColoredBox(
@@ -124,26 +130,41 @@ class DisplayHome extends StatelessWidget {
                                 onTap: onNotificationTap,
                               ),
                             ),
-                            SizedBox(height: gap),
-                            SizedBox(
-                              height: 186 * s,
-                              child: _SupportCard(s: s, p: p),
-                            ),
+                            // No ticker: the donate tile sits here instead
+                            // of alone in an otherwise empty footer.
+                            if (tickerNotices.isEmpty) ...[
+                              SizedBox(height: gap),
+                              SizedBox(
+                                height: _footerHeight * s,
+                                child: _DonateTile(s: s, p: p),
+                              ),
+                            ],
                           ],
                         ),
                       ),
                     ],
                   ),
                 ),
-                if (active.isNotEmpty) ...[
+                if (tickerNotices.isNotEmpty) ...[
                   SizedBox(height: gap),
                   SizedBox(
-                    height: 92 * s,
-                    child: _NoticeTicker(
-                      s: s,
-                      p: p,
-                      notices: active,
-                      onTap: onNotificationTap,
+                    height: _footerHeight * s,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: SizedBox(
+                            height: 92 * s,
+                            child: _NoticeTicker(
+                              s: s,
+                              p: p,
+                              notices: tickerNotices,
+                              onTap: onNotificationTap,
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: gap),
+                        _DonateTile(s: s, p: p),
+                      ],
                     ),
                   ),
                 ],
@@ -425,14 +446,14 @@ class _NextPrayerStrip extends StatelessWidget {
 
 // ──────────────────────────── Notices ─────────────────────────────
 
-(String, String) _noticeLabel(NotificationType type) {
+String _noticeLabel(NotificationType type) {
   switch (type) {
     case NotificationType.event:
-      return ('EVENT', 'فعالية');
+      return 'EVENT';
     case NotificationType.alert:
-      return ('ALERT', 'تنبيه');
+      return 'ALERT';
     case NotificationType.announcement:
-      return ('COMMUNITY NOTICE', 'إعلان للمجتمع');
+      return 'COMMUNITY NOTICE';
   }
 }
 
@@ -486,6 +507,11 @@ class _NoticeCarouselState extends State<_NoticeCarousel> {
     final p = widget.p;
     final notices = widget.notices;
     if (_index >= notices.length) _index = 0;
+    final current = notices.isEmpty ? null : notices[_index];
+    // Image-only notices get tighter padding so the image can be larger.
+    final imageOnly =
+        current != null && current.hasImage && !current.hasMessage;
+    final inset = imageOnly ? 22 * s : 42 * s;
 
     return Container(
       clipBehavior: Clip.antiAlias,
@@ -503,7 +529,16 @@ class _NoticeCarouselState extends State<_NoticeCarousel> {
             ),
           ),
           Padding(
-            padding: EdgeInsets.fromLTRB(42 * s, 34 * s, 42 * s, 30 * s),
+            // Extra bottom room when the dots are shown, so content (e.g. an
+            // image) never sits underneath them.
+            padding: EdgeInsets.fromLTRB(
+              inset,
+              imageOnly ? 22 * s : 34 * s,
+              inset,
+              notices.length > 1
+                  ? (imageOnly ? 54 * s : 66 * s)
+                  : (imageOnly ? 22 * s : 30 * s),
+            ),
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 600),
               child:
@@ -525,7 +560,9 @@ class _NoticeCarouselState extends State<_NoticeCarousel> {
   }
 
   Widget _buildNoticeSlide(double s, MosqueNotification n) {
-    final (label, labelAr) = _noticeLabel(n.type);
+    if (n.hasImage) return _buildImageSlide(s, n);
+
+    final label = _noticeLabel(n.type);
     final isArabicMessage = _arabicScript.hasMatch(n.message);
 
     return GestureDetector(
@@ -535,7 +572,7 @@ class _NoticeCarouselState extends State<_NoticeCarousel> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _chip(s, label, labelAr),
+          _chip(s, label),
           const Spacer(),
           Text(
             n.title,
@@ -579,6 +616,149 @@ class _NoticeCarouselState extends State<_NoticeCarousel> {
             ),
           ],
           const Spacer(flex: 2),
+        ],
+      ),
+    );
+  }
+
+  /// A notice with an image: the image takes the place of the description
+  /// and fills whatever height is left, keeping its proportions.
+  Widget _buildImageSlide(double s, MosqueNotification n) {
+    if (!n.hasMessage) return _buildImageOnlySlide(s, n);
+
+    final label = _noticeLabel(n.type);
+
+    return GestureDetector(
+      key: ValueKey('${n.id}-image'),
+      behavior: HitTestBehavior.opaque,
+      onTap: widget.onTap == null ? null : () => widget.onTap!(n),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _chip(s, label),
+          if (n.title.trim().isNotEmpty) ...[
+            SizedBox(height: 16 * s),
+            Text(
+              n.title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: DesignText.latin(
+                size: 40 * s,
+                weight: FontWeight.w800,
+                color: widget.p.title,
+                height: 1.1,
+                features: const [],
+              ),
+            ),
+          ],
+          SizedBox(height: 18 * s),
+          Expanded(child: NoticeImage(notification: n, borderRadius: 18 * s)),
+          if (n.isEvent && n.eventTime != null) ...[
+            SizedBox(height: 12 * s),
+            Text(
+              DateFormat('EEEE · h:mm a').format(n.eventTime!),
+              style: DesignText.latin(
+                size: 23 * s,
+                weight: FontWeight.w600,
+                color: widget.p.inkMuted,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// A notice with only an image: 20% of the card for the header (chip,
+  /// title, event time) and 80% for the image.
+  Widget _buildImageOnlySlide(double s, MosqueNotification n) {
+    final label = _noticeLabel(n.type);
+
+    return GestureDetector(
+      key: ValueKey('${n.id}-image-only'),
+      behavior: HitTestBehavior.opaque,
+      onTap: widget.onTap == null ? null : () => widget.onTap!(n),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            flex: 20,
+            // Shrinks to fit if a long title doesn't fit in the band; the
+            // width cap keeps titles wrapping instead of shrinking to a line.
+            child: LayoutBuilder(
+              builder:
+                  (context, c) => FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: c.maxWidth),
+                      // Chip and title side by side to keep the band short.
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 18 * s,
+                              vertical: 8 * s,
+                            ),
+                            decoration: BoxDecoration(
+                              color: widget.p.chip,
+                              borderRadius: BorderRadius.circular(100),
+                            ),
+                            child: Text(
+                              label,
+                              style: DesignText.latin(
+                                size: 18 * s,
+                                weight: FontWeight.w700,
+                                color: widget.p.chipText,
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 16 * s),
+                          Expanded(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (n.title.trim().isNotEmpty)
+                                  Text(
+                                    n.title,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: DesignText.latin(
+                                      size: 32 * s,
+                                      weight: FontWeight.w800,
+                                      color: widget.p.title,
+                                      height: 1.1,
+                                      features: const [],
+                                    ),
+                                  ),
+                                if (n.isEvent && n.eventTime != null)
+                                  Text(
+                                    DateFormat(
+                                      'EEEE · h:mm a',
+                                    ).format(n.eventTime!),
+                                    style: DesignText.latin(
+                                      size: 20 * s,
+                                      weight: FontWeight.w600,
+                                      color: widget.p.inkMuted,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+            ),
+          ),
+          SizedBox(height: 12 * s),
+          Expanded(
+            flex: 80,
+            child: NoticeImage(notification: n, borderRadius: 18 * s),
+          ),
         ],
       ),
     );
@@ -639,7 +819,8 @@ class _NoticeCarouselState extends State<_NoticeCarousel> {
     );
   }
 
-  Widget _chip(double s, String label, String labelAr) {
+  /// Label chip, with an optional Arabic label beside it.
+  Widget _chip(double s, String label, [String? labelAr]) {
     return Row(
       children: [
         Container(
@@ -658,15 +839,17 @@ class _NoticeCarouselState extends State<_NoticeCarousel> {
             ),
           ),
         ),
-        SizedBox(width: 16 * s),
-        Flexible(
-          child: Text(
-            labelAr,
-            overflow: TextOverflow.ellipsis,
-            textDirection: TextDirection.rtl,
-            style: DesignText.arabic(size: 20 * s, color: widget.p.chipText),
+        if (labelAr != null) ...[
+          SizedBox(width: 16 * s),
+          Flexible(
+            child: Text(
+              labelAr,
+              overflow: TextOverflow.ellipsis,
+              textDirection: TextDirection.rtl,
+              style: DesignText.arabic(size: 20 * s, color: widget.p.chipText),
+            ),
           ),
-        ),
+        ],
       ],
     );
   }
@@ -794,16 +977,6 @@ class _NoticeTickerState extends State<_NoticeTicker> {
                       weight: FontWeight.w800,
                       color: Colors.white,
                       letterSpacing: 1,
-                    ),
-                  ),
-                  SizedBox(width: 12 * s),
-                  Text(
-                    'إعلان',
-                    textDirection: TextDirection.rtl,
-                    style: DesignText.arabic(
-                      size: 22 * s,
-                      weight: FontWeight.w600,
-                      color: Colors.white,
                     ),
                   ),
                 ],
@@ -1058,30 +1231,35 @@ class _PrayerTable extends StatelessWidget {
   }
 }
 
-// ─────────────────────────── Support card ──────────────────────────
+// ─────────────────────────── Donate tile ───────────────────────────
 
-class _SupportCard extends StatelessWidget {
+/// Compact donation QR code with a "Donate" label.
+class _DonateTile extends StatelessWidget {
   final double s;
   final DesignPalette p;
 
-  const _SupportCard({required this.s, required this.p});
+  const _DonateTile({required this.s, required this.p});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.all(20 * s),
-      decoration: _cardDecoration(s, p),
+      padding: EdgeInsets.fromLTRB(6 * s, 6 * s, 30 * s, 6 * s),
+      decoration: BoxDecoration(
+        color: p.surface,
+        borderRadius: BorderRadius.circular(26 * s),
+        border: Border.all(color: p.border, width: 1.5),
+      ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           // White tile in both themes: scanners need a light quiet zone.
           AspectRatio(
             aspectRatio: 1,
             child: Container(
-              padding: EdgeInsets.all(10 * s),
+              padding: EdgeInsets.all(5 * s),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16 * s),
-                border: Border.all(color: p.border),
+                borderRadius: BorderRadius.circular(18 * s),
               ),
               child: Image.asset(
                 MasjidInfo.donationQrAsset,
@@ -1094,24 +1272,14 @@ class _SupportCard extends StatelessWidget {
               ),
             ),
           ),
-          SizedBox(width: 28 * s),
-          Expanded(
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Support the Masjid',
-                    style: DesignText.latin(
-                      size: 31 * s,
-                      weight: FontWeight.w800,
-                      color: p.title,
-                    ),
-                  ),
-                ],
-              ),
+          SizedBox(width: 22 * s),
+          Text(
+            'Donate',
+            style: DesignText.latin(
+              size: 36 * s,
+              weight: FontWeight.w800,
+              color: p.title,
+              features: const [],
             ),
           ),
         ],

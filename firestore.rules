@@ -72,6 +72,12 @@ service cloud.firestore {
       allow delete: if isModeratorOrAdmin();
     }
 
+    // Images attached to notices (one per notice, same id as the notice)
+    match /mosque/data/notification_images/{notificationId} {
+      allow read: if true;
+      allow write: if isModeratorOrAdmin();
+    }
+
     // Mosque collection - other documents (fallback)
     match /mosque/{document} {
       allow read: if true;

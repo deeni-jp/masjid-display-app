@@ -10,6 +10,7 @@ import '../models/hijri_date.dart';
 import '../services/location_service.dart';
 import '../utils/constants.dart';
 import '../utils/design.dart';
+import '../widgets/notice_image.dart';
 import 'display_home.dart';
 
 /// Home tab. Shows the masjid display on large screens
@@ -338,7 +339,6 @@ class HomeTab extends StatelessWidget {
   Widget _buildNoticeCard(DesignPalette p, MosqueNotification notice) {
     final hasArabic = RegExp(r'[؀-ۿ]').hasMatch(notice.message);
     final label = notice.isHighPriority ? 'IMPORTANT' : 'NOTICE';
-    final labelAr = notice.isHighPriority ? 'مهم' : 'إعلان';
     final labelColor =
         notice.isHighPriority
             ? DesignColors.red
@@ -370,26 +370,26 @@ class HomeTab extends StatelessWidget {
                       letterSpacing: 1.2,
                     ),
                   ),
-                  const Spacer(),
-                  Text(
-                    labelAr,
-                    textDirection: TextDirection.rtl,
-                    style: DesignText.arabic(size: 14, color: labelColor),
-                  ),
                 ],
               ),
-              const SizedBox(height: 8),
-              Text(
-                notice.title,
-                style: DesignText.latin(
-                  size: 18,
-                  weight: FontWeight.w700,
-                  color: p.ink,
-                  height: 1.3,
-                  features: const [],
+              if (notice.title.trim().isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  notice.title,
+                  style: DesignText.latin(
+                    size: 18,
+                    weight: FontWeight.w700,
+                    color: p.ink,
+                    height: 1.3,
+                    features: const [],
+                  ),
                 ),
-              ),
-              if (notice.message.trim().isNotEmpty &&
+              ],
+              // An image takes the place of the description.
+              if (notice.hasImage) ...[
+                const SizedBox(height: 10),
+                NoticeImage(notification: notice, maxHeight: 220),
+              ] else if (notice.hasMessage &&
                   notice.message.trim() != notice.title.trim()) ...[
                 const SizedBox(height: 4),
                 Text(

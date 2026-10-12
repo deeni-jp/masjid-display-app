@@ -113,6 +113,14 @@ class MosqueNotification {
   final DateTime? eventTime; // For event-type notifications
   final DateTime expiresAt; // Expiration date - notification deleted after this
 
+  // Optional image. The bytes live in a separate document
+  // (mosque/data/notification_images/{id}); these fields describe it so the
+  // UI can reserve the right space before it loads.
+  final bool hasImage;
+  final int? imageWidth;
+  final int? imageHeight;
+  final DateTime? imageUpdatedAt; // Changes whenever the image is replaced
+
   MosqueNotification({
     required this.id,
     required this.title,
@@ -125,6 +133,10 @@ class MosqueNotification {
     required this.createdAt,
     this.eventTime,
     required this.expiresAt,
+    this.hasImage = false,
+    this.imageWidth,
+    this.imageHeight,
+    this.imageUpdatedAt,
   });
 
   /// Create empty notification
@@ -154,6 +166,10 @@ class MosqueNotification {
     required String postedByRole,
     DateTime? eventTime,
     required DateTime expiresAt,
+    bool hasImage = false,
+    int? imageWidth,
+    int? imageHeight,
+    DateTime? imageUpdatedAt,
   }) {
     return MosqueNotification(
       id: '', // Will be set by Firestore
@@ -167,6 +183,10 @@ class MosqueNotification {
       createdAt: DateTime.now(),
       eventTime: eventTime,
       expiresAt: expiresAt,
+      hasImage: hasImage,
+      imageWidth: imageWidth,
+      imageHeight: imageHeight,
+      imageUpdatedAt: imageUpdatedAt,
     );
   }
 
@@ -220,6 +240,10 @@ class MosqueNotification {
       eventTime: _parseDateTime(data['eventTime']),
       expiresAt: _parseDateTime(data['expiresAt']) ??
           DateTime.now().add(const Duration(days: 7)),
+      hasImage: data['hasImage'] == true,
+      imageWidth: (data['imageWidth'] as num?)?.toInt(),
+      imageHeight: (data['imageHeight'] as num?)?.toInt(),
+      imageUpdatedAt: _parseDateTime(data['imageUpdatedAt']),
     );
   }
 
@@ -240,6 +264,12 @@ class MosqueNotification {
           : null,
       expiresAt: DateTime.fromMillisecondsSinceEpoch(map['expiresAt'] ??
           DateTime.now().add(const Duration(days: 7)).millisecondsSinceEpoch),
+      hasImage: map['hasImage'] == true,
+      imageWidth: (map['imageWidth'] as num?)?.toInt(),
+      imageHeight: (map['imageHeight'] as num?)?.toInt(),
+      imageUpdatedAt: map['imageUpdatedAt'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(map['imageUpdatedAt'])
+          : null,
     );
   }
 
@@ -279,6 +309,10 @@ class MosqueNotification {
       'createdAt': createdAt.millisecondsSinceEpoch,
       'eventTime': eventTime?.millisecondsSinceEpoch,
       'expiresAt': expiresAt.millisecondsSinceEpoch,
+      'hasImage': hasImage,
+      'imageWidth': imageWidth,
+      'imageHeight': imageHeight,
+      'imageUpdatedAt': imageUpdatedAt?.millisecondsSinceEpoch,
     };
   }
 
@@ -302,6 +336,12 @@ class MosqueNotification {
           : Timestamp.fromDate(createdAt),
       'eventTime': eventTime != null ? Timestamp.fromDate(eventTime!) : null,
       'expiresAt': Timestamp.fromDate(expiresAt),
+      'hasImage': hasImage,
+      'imageWidth': hasImage ? imageWidth : null,
+      'imageHeight': hasImage ? imageHeight : null,
+      'imageUpdatedAt': hasImage && imageUpdatedAt != null
+          ? Timestamp.fromDate(imageUpdatedAt!)
+          : null,
     };
   }
 
@@ -320,8 +360,18 @@ class MosqueNotification {
     return firstLine;
   }
 
-  /// Check if notification has content
-  bool get hasContent => message.trim().isNotEmpty;
+  /// Whether there is a text description
+  bool get hasMessage => message.trim().isNotEmpty;
+
+  /// Check if notification has content (a description, an image, or both)
+  bool get hasContent => hasMessage || hasImage;
+
+  /// Width / height of the image, if known
+  double? get imageAspectRatio {
+    final w = imageWidth, h = imageHeight;
+    if (!hasImage || w == null || h == null || w <= 0 || h <= 0) return null;
+    return w / h;
+  }
 
   /// Check if notification should be shown
   bool get shouldShow => active && hasContent && !isExpired;
@@ -394,6 +444,10 @@ class MosqueNotification {
     DateTime? createdAt,
     DateTime? eventTime,
     DateTime? expiresAt,
+    bool? hasImage,
+    int? imageWidth,
+    int? imageHeight,
+    DateTime? imageUpdatedAt,
   }) {
     return MosqueNotification(
       id: id ?? this.id,
@@ -407,6 +461,10 @@ class MosqueNotification {
       createdAt: createdAt ?? this.createdAt,
       eventTime: eventTime ?? this.eventTime,
       expiresAt: expiresAt ?? this.expiresAt,
+      hasImage: hasImage ?? this.hasImage,
+      imageWidth: imageWidth ?? this.imageWidth,
+      imageHeight: imageHeight ?? this.imageHeight,
+      imageUpdatedAt: imageUpdatedAt ?? this.imageUpdatedAt,
     );
   }
 

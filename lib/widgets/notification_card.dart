@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../models/notification_model.dart';
 import '../utils/constants.dart';
+import 'notice_image.dart';
 
 /// Full notification card for notifications tab
 class NotificationCard extends StatelessWidget {
@@ -78,13 +79,24 @@ class NotificationCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
 
+            // Image (if any)
+            if (notification.hasImage) ...[
+              NoticeImage(
+                notification: notification,
+                maxHeight: 160,
+                alignment: Alignment.centerLeft,
+              ),
+              if (notification.hasMessage) const SizedBox(height: 10),
+            ],
+
             // Message Body
-            Text(
-              notification.message,
-              style: GoogleFonts.poppins(fontSize: 14, height: 1.5),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
+            if (notification.hasMessage)
+              Text(
+                notification.message,
+                style: GoogleFonts.poppins(fontSize: 14, height: 1.5),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
 
             // Read More
             if (notification.message.length > 150) ...[
@@ -848,12 +860,25 @@ class NotificationDetailSheet extends StatelessWidget {
               Expanded(
                 child: SingleChildScrollView(
                   controller: scrollController,
-                  child: Text(
-                    notification.message,
-                    style: GoogleFonts.poppins(
-                      fontSize: 15,
-                      height: 1.6,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (notification.hasImage) ...[
+                        NoticeImage(
+                          notification: notification,
+                          maxHeight: MediaQuery.sizeOf(context).height * 0.6,
+                        ),
+                        if (notification.hasMessage) const SizedBox(height: 16),
+                      ],
+                      if (notification.hasMessage)
+                        Text(
+                          notification.message,
+                          style: GoogleFonts.poppins(
+                            fontSize: 15,
+                            height: 1.6,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ),

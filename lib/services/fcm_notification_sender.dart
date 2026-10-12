@@ -95,7 +95,7 @@ class FCMNotificationSender {
             'title': notification.title.isNotEmpty
                 ? notification.title
                 : 'New Mosque Notification',
-            'body': notification.message,
+            'body': _body(notification),
           },
           'data': {
             'notificationId': notification.id,
@@ -177,7 +177,7 @@ class FCMNotificationSender {
             'title': notification.title.isNotEmpty
                 ? notification.title
                 : 'New Mosque Notification',
-            'body': notification.message,
+            'body': _body(notification),
           },
           'data': {
             'notificationId': notification.id,
@@ -292,4 +292,10 @@ class FCMNotificationSender {
         return 'regular_channel';
     }
   }
+
+  /// Push body: the description, or a prompt for image-only notices.
+  static String _body(MosqueNotification notification) =>
+      notification.hasMessage
+          ? notification.message
+          : '📷 New image notice — open the app to view';
 }

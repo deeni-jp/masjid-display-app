@@ -1,9 +1,11 @@
 // lib/services/firebase_service.dart
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/notification_model.dart';
 import '../utils/constants.dart';
+import 'notice_image_service.dart';
 import 'prayer_service.dart';
 
 class FirebaseService {
@@ -96,6 +98,32 @@ class FirebaseService {
           .doc('data')
           .collection(AppConstants.collectionNotifications);
 
+  /// Notice images, one document per notice, keyed by the notice id.
+  /// Kept apart from the notices so the live notices listener stays small.
+  static CollectionReference<Map<String, dynamic>> get _imagesRef => _firestore
+      .collection(AppConstants.collectionMosque)
+      .doc('data')
+      .collection('notification_images');
+
+  static Map<String, dynamic> _imageDoc(PreparedImage image) => {
+        'data': Blob(image.bytes),
+        'contentType': NoticeImageService.contentType,
+        'width': image.width,
+        'height': image.height,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+  /// The image bytes attached to a notice, or null if there are none.
+  static Future<Uint8List?> getNotificationImage(String notificationId) async {
+    try {
+      final doc = await _imagesRef.doc(notificationId).get();
+      final data = doc.data()?['data'];
+      return data is Blob ? data.bytes : null;
+    } catch (e) {
+      throw FirebaseServiceException('Failed to load notice image: $e');
+    }
+  }
+
   /// Get all active notifications
   static Future<List<MosqueNotification>> getNotifications() async {
     try {
@@ -143,20 +171,40 @@ class FirebaseService {
     }
   }
 
-  /// Create a new notification
+  /// Create a new notification, optionally with an [image].
+  /// The notice and its image are written in one batch, so readers never see
+  /// a notice whose image isn't there yet.
   static Future<MosqueNotification> createNotification(
-      MosqueNotification notification) async {
+    MosqueNotification notification, {
+    PreparedImage? image,
+  }) async {
     try {
       final user = _auth.currentUser;
 
       // Update postedBy with current user email if signed in
-      final updatedNotification = user != null
+      var updatedNotification = user != null
           ? notification.copyWith(postedBy: user.email ?? notification.postedBy)
           : notification;
 
-      final docRef = await _notificationsRef.add(
+      if (image != null) {
+        updatedNotification = updatedNotification.copyWith(
+          hasImage: true,
+          imageWidth: image.width,
+          imageHeight: image.height,
+          imageUpdatedAt: DateTime.now(),
+        );
+      }
+
+      final docRef = _notificationsRef.doc();
+      final batch = _firestore.batch();
+      batch.set(
+        docRef,
         updatedNotification.toFirestore(useServerTimestamp: true),
       );
+      if (image != null) {
+        batch.set(_imagesRef.doc(docRef.id), _imageDoc(image));
+      }
+      await batch.commit();
 
       // Return notification with ID
       return updatedNotification.copyWith(id: docRef.id);
@@ -165,29 +213,68 @@ class FirebaseService {
     }
   }
 
-  /// Update an existing notification
-  static Future<void> updateNotification(
-      MosqueNotification notification) async {
+  /// Update an existing notification. Pass [newImage] to add or replace its
+  /// image, or [removeImage] to delete it. Returns the saved notification.
+  static Future<MosqueNotification> updateNotification(
+    MosqueNotification notification, {
+    PreparedImage? newImage,
+    bool removeImage = false,
+  }) async {
     try {
       if (notification.id.isEmpty) {
         throw FirebaseServiceException(
             'Notification ID is required for update');
       }
 
-      await _notificationsRef.doc(notification.id).update(
-            notification.toFirestore(),
-          );
+      var toSave = notification;
+      if (newImage != null) {
+        toSave = notification.copyWith(
+          hasImage: true,
+          imageWidth: newImage.width,
+          imageHeight: newImage.height,
+          imageUpdatedAt: DateTime.now(),
+        );
+      } else if (removeImage) {
+        toSave = notification.copyWith(hasImage: false);
+      }
+
+      final imageRef = _imagesRef.doc(notification.id);
+      final batch = _firestore.batch();
+      batch.update(_notificationsRef.doc(notification.id), toSave.toFirestore());
+      if (newImage != null) {
+        batch.set(imageRef, _imageDoc(newImage));
+      } else if (removeImage) {
+        batch.delete(imageRef);
+      }
+      await batch.commit();
+
+      return toSave;
     } catch (e) {
       throw FirebaseServiceException('Failed to update notification: $e');
     }
   }
 
-  /// Delete a notification
+  /// Delete a notification (and its image, if any)
   static Future<void> deleteNotification(String id) async {
     try {
-      await _notificationsRef.doc(id).delete();
+      await _deleteWithImages([id]);
     } catch (e) {
       throw FirebaseServiceException('Failed to delete notification: $e');
+    }
+  }
+
+  /// Deletes notices and their image documents. Deleting an image document
+  /// that doesn't exist is a no-op. Commits in chunks to stay under
+  /// Firestore's 500-writes-per-batch limit.
+  static Future<void> _deleteWithImages(List<String> ids) async {
+    const perBatch = 200; // 2 writes each
+    for (var i = 0; i < ids.length; i += perBatch) {
+      final batch = _firestore.batch();
+      for (final id in ids.skip(i).take(perBatch)) {
+        batch.delete(_notificationsRef.doc(id));
+        batch.delete(_imagesRef.doc(id));
+      }
+      await batch.commit();
     }
   }
 
@@ -229,12 +316,7 @@ class FirebaseService {
         return 0;
       }
 
-      // Batch delete
-      final batch = _firestore.batch();
-      for (final doc in snapshot.docs) {
-        batch.delete(doc.reference);
-      }
-      await batch.commit();
+      await _deleteWithImages(snapshot.docs.map((d) => d.id).toList());
 
       return snapshot.docs.length;
     } catch (e) {
@@ -252,11 +334,7 @@ class FirebaseService {
           return 0;
         }
 
-        final batch = _firestore.batch();
-        for (final doc in expiredDocs) {
-          batch.delete(doc.reference);
-        }
-        await batch.commit();
+        await _deleteWithImages(expiredDocs.map((d) => d.id).toList());
 
         return expiredDocs.length;
       } catch (e2) {

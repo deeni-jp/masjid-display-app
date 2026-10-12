@@ -292,6 +292,60 @@ void main() {
       expect(whitespaceNotification.hasContent, false);
     });
 
+    test('image-only notice has content and is shown', () {
+      final notification = MosqueNotification.empty().copyWith(
+        id: 'img',
+        active: true,
+        hasImage: true,
+        imageWidth: 1600,
+        imageHeight: 900,
+        expiresAt: DateTime.now().add(const Duration(days: 1)),
+      );
+
+      expect(notification.hasMessage, false);
+      expect(notification.hasContent, true);
+      expect(notification.shouldShow, true);
+      expect(notification.imageAspectRatio, closeTo(1600 / 900, 1e-9));
+      expect([notification].activeOnly, hasLength(1));
+    });
+
+    test('imageAspectRatio is null without an image or its size', () {
+      expect(MosqueNotification.empty().imageAspectRatio, isNull);
+      expect(
+        MosqueNotification.empty().copyWith(hasImage: true).imageAspectRatio,
+        isNull,
+      );
+    });
+
+    test('image fields survive toMap/fromMap', () {
+      final updatedAt = DateTime.fromMillisecondsSinceEpoch(1760000000000);
+      final original = MosqueNotification.empty().copyWith(
+        id: 'img',
+        hasImage: true,
+        imageWidth: 800,
+        imageHeight: 1200,
+        imageUpdatedAt: updatedAt,
+      );
+
+      final restored = MosqueNotification.fromMap(original.toMap());
+
+      expect(restored.hasImage, true);
+      expect(restored.imageWidth, 800);
+      expect(restored.imageHeight, 1200);
+      expect(restored.imageUpdatedAt, updatedAt);
+    });
+
+    test('toFirestore clears image fields when there is no image', () {
+      final data = MosqueNotification.empty()
+          .copyWith(imageWidth: 800, imageHeight: 600)
+          .toFirestore();
+
+      expect(data['hasImage'], false);
+      expect(data['imageWidth'], isNull);
+      expect(data['imageHeight'], isNull);
+      expect(data['imageUpdatedAt'], isNull);
+    });
+
     test('isExpired returns true when past expiry', () {
       final expiredNotification = MosqueNotification.empty().copyWith(
         expiresAt: DateTime.now().subtract(const Duration(days: 1)),

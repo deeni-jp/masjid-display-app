@@ -9,7 +9,9 @@ import '../services/firebase_service.dart';
 import '../services/storage_service.dart';
 import '../services/user_service.dart';
 import '../services/fcm_notification_sender.dart';
+import '../services/notice_image_service.dart';
 import '../utils/constants.dart';
+import '../widgets/notice_image.dart';
 import '../widgets/notification_card.dart';
 
 class NotificationsTab extends StatefulWidget {
@@ -349,6 +351,12 @@ class _NotificationsTabState extends State<NotificationsTab> {
     DateTime expiresAt = notification?.expiresAt ??
         DateTime.now().add(AppConstants.defaultAnnouncementExpiry);
 
+    // Image: a newly picked one, or removal of the existing one
+    final hadImage = notification?.hasImage ?? false;
+    PreparedImage? newImage;
+    bool removeImage = false;
+    bool preparingImage = false;
+
     final result = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
@@ -474,8 +482,10 @@ class _NotificationsTabState extends State<NotificationsTab> {
                             TextField(
                               controller: messageController,
                               decoration: InputDecoration(
-                                labelText: 'Message *',
+                                labelText: 'Message',
                                 hintText: 'Enter notification message',
+                                helperText:
+                                    'Add a message, an image, or both',
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(
                                       AppStyles.radiusMedium),
@@ -488,6 +498,52 @@ class _NotificationsTabState extends State<NotificationsTab> {
                               maxLength: 500,
                             ),
                             const SizedBox(height: 8),
+
+                            // Image (optional)
+                            _buildImagePicker(
+                              dialogContext,
+                              existing: hadImage && !removeImage
+                                  ? notification
+                                  : null,
+                              newImage: newImage,
+                              busy: preparingImage,
+                              onPick: () async {
+                                setDialogState(() => preparingImage = true);
+                                try {
+                                  final picked =
+                                      await NoticeImageService.pickAndPrepare();
+                                  if (picked != null && dialogContext.mounted) {
+                                    setDialogState(() {
+                                      newImage = picked;
+                                      removeImage = false;
+                                    });
+                                  }
+                                } catch (e) {
+                                  if (dialogContext.mounted) {
+                                    ScaffoldMessenger.of(dialogContext)
+                                        .showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          e is NoticeImageException
+                                              ? e.message
+                                              : 'Could not use this image: $e',
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                } finally {
+                                  if (dialogContext.mounted) {
+                                    setDialogState(
+                                        () => preparingImage = false);
+                                  }
+                                }
+                              },
+                              onRemove: () => setDialogState(() {
+                                newImage = null;
+                                removeImage = hadImage;
+                              }),
+                            ),
+                            const SizedBox(height: 16),
 
                             // Event Time (for event type)
                             if (selectedType == NotificationType.event) ...[
@@ -575,17 +631,26 @@ class _NotificationsTabState extends State<NotificationsTab> {
                           ),
                           const SizedBox(width: 8),
                           ElevatedButton(
-                            onPressed: () {
-                              if (messageController.text.trim().isEmpty) {
-                                ScaffoldMessenger.of(dialogContext)
-                                    .showSnackBar(
-                                  const SnackBar(
-                                      content: Text('Message is required')),
-                                );
-                                return;
-                              }
-                              Navigator.pop(dialogContext, true);
-                            },
+                            onPressed: preparingImage
+                                ? null
+                                : () {
+                                    final hasImageNow = newImage != null ||
+                                        (hadImage && !removeImage);
+                                    if (messageController.text
+                                            .trim()
+                                            .isEmpty &&
+                                        !hasImageNow) {
+                                      ScaffoldMessenger.of(dialogContext)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                              'Add a message or an image'),
+                                        ),
+                                      );
+                                      return;
+                                    }
+                                    Navigator.pop(dialogContext, true);
+                                  },
                             style: ElevatedButton.styleFrom(
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(
@@ -640,18 +705,32 @@ class _NotificationsTabState extends State<NotificationsTab> {
       createdAt: notification?.createdAt ?? DateTime.now(),
       eventTime: selectedType == NotificationType.event ? eventTime : null,
       expiresAt: expiresAt,
+      hasImage: hadImage,
+      imageWidth: notification?.imageWidth,
+      imageHeight: notification?.imageHeight,
+      imageUpdatedAt: notification?.imageUpdatedAt,
     );
 
     // Save
     try {
       MosqueNotification savedNotification;
 
+      final image = newImage;
       if (isEditing) {
-        await FirebaseService.updateNotification(newNotification);
-        savedNotification = newNotification;
+        savedNotification = await FirebaseService.updateNotification(
+          newNotification,
+          newImage: image,
+          removeImage: removeImage && image == null,
+        );
       } else {
-        savedNotification =
-            await FirebaseService.createNotification(newNotification);
+        savedNotification = await FirebaseService.createNotification(
+          newNotification,
+          image: image,
+        );
+      }
+      if (image != null) {
+        // Show it right away without downloading it again.
+        NoticeImageService.remember(savedNotification, image.bytes);
       }
 
       // Send push notification if the notification is active
@@ -724,6 +803,93 @@ class _NotificationsTabState extends State<NotificationsTab> {
       titleController.dispose();
       messageController.dispose();
     }
+  }
+
+  /// "Image (optional)" section of the notice form: preview plus
+  /// add / change / remove.
+  Widget _buildImagePicker(
+    BuildContext context, {
+    required MosqueNotification? existing,
+    required PreparedImage? newImage,
+    required bool busy,
+    required VoidCallback onPick,
+    required VoidCallback onRemove,
+  }) {
+    final hasAny = existing != null || newImage != null;
+    const previewHeight = 160.0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Image (optional)',
+          style: GoogleFonts.poppins(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey[700],
+          ),
+        ),
+        const SizedBox(height: 8),
+        if (newImage != null) ...[
+          Align(
+            alignment: Alignment.centerLeft,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: previewHeight),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
+                child: Image.memory(newImage.bytes, fit: BoxFit.contain),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ] else if (existing != null) ...[
+          NoticeImage(
+            notification: existing,
+            maxHeight: previewHeight,
+            borderRadius: AppStyles.radiusMedium,
+            alignment: Alignment.centerLeft,
+          ),
+          const SizedBox(height: 8),
+        ],
+        Row(
+          children: [
+            OutlinedButton.icon(
+              onPressed: busy ? null : onPick,
+              icon: busy
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Icon(
+                      hasAny ? Icons.swap_horiz : Icons.add_photo_alternate,
+                    ),
+              label: Text(
+                busy
+                    ? 'Preparing...'
+                    : hasAny
+                        ? 'Change'
+                        : 'Add image',
+              ),
+            ),
+            if (hasAny && !busy) ...[
+              const SizedBox(width: 8),
+              TextButton.icon(
+                onPressed: onRemove,
+                icon: const Icon(Icons.delete_outline),
+                label: const Text('Remove'),
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'One image. Large photos are resized automatically.',
+          style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey),
+        ),
+      ],
+    );
   }
 
   Widget _buildTypeSelector(
