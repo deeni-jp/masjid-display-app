@@ -1,5 +1,9 @@
 # Firebase Cloud Functions - Prayer Time Notifications
 
+> **Legacy – not deployed.** Cloud Functions need the paid Blaze plan; the
+> project runs on the free Spark plan. Notice pushes are sent by
+> [`push-worker/`](../push-worker/README.md) instead.
+
 This directory contains Firebase Cloud Functions that automatically send push notifications to all users when prayer waqt times are reached.
 
 ## Features

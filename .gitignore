@@ -58,3 +58,7 @@ GoogleService-Info.plist
 .env
 .env.local
 .env.production
+
+# Installed packages and generated reports
+node_modules/
+/coverage/
