@@ -2,16 +2,29 @@
 
 ## Unreleased
 
+### Masjid display
+- Footer ticker shows announcements and alerts only (no events).
+- Notices with only an image (no description) are shown full screen for 5
+  seconds instead of in the small notices card; never two in a row, and always
+  underneath the iqamah countdown / prayer screens.
+
+## 1.2.0 (13 October 2026)
+
+UI redesign, masjid display mode, production readiness and the masjid display
+PC setup. Deployed and running on the masjid display (Raspberry Pi).
+
 ### Masjid display PC
 - One-step kiosk setup for the masjid display: `masjid-display/setup.bat`
   (Windows) and `masjid-display/raspberry-pi/setup.sh` (Raspberry Pi OS) build
   the app, serve it on localhost only and open it full screen at every boot.
+- Notices card shows the full description: the text shrinks to fit the card
+  (ellipsis only if it still doesn't fit); long notices stay on screen longer
+  (10-30 s); notices with an image also show their description; event times
+  include the date.
 
 ### Documentation
 - Short README; detailed guides moved to `docs/`; added `CONTRIBUTING.md` and
   this changelog. Removed outdated guides and committed `node_modules`.
-
-## Production readiness
 
 ### Security
 - Push notifications are sent by a Cloudflare Worker (`push-worker/`); the
@@ -21,7 +34,7 @@
   themselves; only moderators/admins can write `mosque/*`; only admins can read
   other users' profiles.
 
-### Changes
+### Production readiness
 - App name "Darut Tauhid Masjid", masjid logo in the app, new launcher/web icons.
 - Compact, centred login page on wide screens (web).
 - Android app ID `com.dticc.app`; release signing from `key.properties`.
@@ -35,9 +48,9 @@
 - Checks run on every branch; all analyzer issues fixed; Android builds on
   `main`, iOS builds and rules deployment are manual.
 
-## UI redesign and masjid display (13 October 2026)
+### UI redesign and masjid display
 
-### New
+#### New
 - Masjid display mode for screens ≥ 900 px wide: large prayer table, clock with
   Gregorian and Hijri dates, rotating notices, next-prayer countdown, donation
   QR code, notice ticker.
@@ -49,7 +62,7 @@
   on the "Prayer in progress" screen.
 - Image attachments for notices.
 
-### Changed
+#### Changed
 - Redesigned mobile home, iqamah countdown and "Prayer in progress" screens to
   match `design/screens`.
 - Bottom navigation with English and Arabic labels.
@@ -58,7 +71,7 @@
 - Sunrise removed from the Prayers tab and never counted as the next prayer.
 - Prohibited-time alert implemented but disabled for now.
 
-### Fixed
+#### Fixed
 - Bottom navigation overflow on very small browser windows.
 - Notice dots switch to a "3 / 20" counter above 10 notices.
 

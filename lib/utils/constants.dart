@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 class AppConstants {
   // App Info
   static const String appName = 'Darut Tauhid Masjid';
-  static const String appVersion = '1.0.0';
+  static const String appVersion = '1.2.0';
 
   // Prayer Names
   static const List<String> prayerNames = [

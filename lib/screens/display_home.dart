@@ -14,7 +14,7 @@ import '../utils/design.dart';
 import '../widgets/notice_image.dart';
 import '../widgets/masjid_logo.dart';
 
-class DisplayHome extends StatelessWidget {
+class DisplayHome extends StatefulWidget {
   final PrayerSchedule? prayerSchedule;
   final PrayerTime? nextPrayer;
   final Duration timeToNext;
@@ -36,6 +36,103 @@ class DisplayHome extends StatelessWidget {
     this.darkMode = false,
   });
 
+  @override
+  State<DisplayHome> createState() => _DisplayHomeState();
+}
+
+/// Image-only notices are too small to see in the notices card, so they're
+/// shown full screen instead.
+bool _isImageOnly(MosqueNotification n) => n.hasImage && !n.hasMessage;
+
+/// One step of the notice rotation: a notice in the card, an image-only
+/// notice full screen, or (notice == null) just the normal screen.
+class _RotationStep {
+  final MosqueNotification? notice;
+  final bool fullScreen;
+  final Duration duration;
+
+  const _RotationStep(this.notice, this.duration, {this.fullScreen = false});
+}
+
+class _DisplayHomeState extends State<DisplayHome> {
+  static const _cardInterval = Duration(seconds: 10);
+  static const _maxCardInterval = Duration(seconds: 30);
+  static const _fullScreenDuration = Duration(seconds: 5);
+
+  /// Normal screen kept between two full-screen images, so the prayer times
+  /// stay visible even if every notice is an image.
+  static const _gapDuration = Duration(seconds: 10);
+
+  Timer? _timer;
+  int _step = 0;
+  String? _cardNoticeId;
+  MosqueNotification? _fullScreen;
+
+  List<MosqueNotification> get _active =>
+      widget.notifications.activeOnly.sortedByPriorityThenExpiry;
+
+  /// Longer notices stay in the card longer, so they can be read.
+  static Duration _cardDuration(MosqueNotification n) {
+    final chars = n.title.length + n.message.length;
+    final extraSeconds = ((chars - 120) / 25).ceil().clamp(0, 20);
+    final d = _cardInterval + Duration(seconds: extraSeconds);
+    return d > _maxCardInterval ? _maxCardInterval : d;
+  }
+
+  List<_RotationStep> _steps(List<MosqueNotification> active) {
+    final steps = <_RotationStep>[];
+    for (final n in active) {
+      if (_isImageOnly(n)) {
+        if (steps.isNotEmpty && steps.last.fullScreen) {
+          steps.add(const _RotationStep(null, _gapDuration));
+        }
+        steps.add(_RotationStep(n, _fullScreenDuration, fullScreen: true));
+      } else {
+        steps.add(_RotationStep(n, _cardDuration(n)));
+      }
+    }
+    // Also no two full-screen images in a row when the rotation wraps round.
+    if (steps.isNotEmpty && steps.last.fullScreen && steps.first.fullScreen) {
+      steps.add(const _RotationStep(null, _gapDuration));
+    }
+    return steps;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _showStep(0);
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _showStep(int index) {
+    _timer?.cancel();
+    final steps = _steps(_active);
+    if (steps.isEmpty) {
+      _step = 0;
+      _fullScreen = null;
+      _timer = Timer(_cardInterval, _next);
+      return;
+    }
+    _step = index % steps.length;
+    final step = steps[_step];
+    _fullScreen = step.fullScreen ? step.notice : null;
+    if (!step.fullScreen && step.notice != null) {
+      _cardNoticeId = step.notice!.id;
+    }
+    _timer = Timer(step.duration, _next);
+  }
+
+  void _next() {
+    if (!mounted) return;
+    setState(() => _showStep(_step + 1));
+  }
+
   /// Reference size of the design canvas; everything scales from it.
   static const double _designWidth = 2000;
   static const double _designHeight = 1125;
@@ -45,10 +142,68 @@ class DisplayHome extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final active = notifications.activeOnly.sortedByPriorityThenExpiry;
-    // Image-only notices have nothing to scroll in the footer ticker.
-    final tickerNotices = active.where((n) => n.hasMessage).toList();
+    final prayerSchedule = widget.prayerSchedule;
+    final nextPrayer = widget.nextPrayer;
+    final timeToNext = widget.timeToNext;
+    final darkMode = widget.darkMode;
+    final active = _active;
+    final cardNotices = active.where((n) => !_isImageOnly(n)).toList();
+    var cardIndex = cardNotices.indexWhere((n) => n.id == _cardNoticeId);
+    if (cardIndex < 0) cardIndex = 0;
+    // The ticker scrolls announcements and alerts (not events or images).
+    final tickerNotices =
+        active.where((n) => n.hasMessage && !n.isEvent).toList();
     final p = DesignPalette.of(darkMode);
+    // A deleted/expired notice disappears from full screen straight away.
+    final fullScreen =
+        _fullScreen == null
+            ? null
+            : active.where((n) => n.id == _fullScreen!.id).firstOrNull;
+
+    return Stack(
+      children: [
+        _buildScreen(
+          context,
+          p: p,
+          prayerSchedule: prayerSchedule,
+          nextPrayer: nextPrayer,
+          timeToNext: timeToNext,
+          cardNotices: cardNotices,
+          cardIndex: cardIndex,
+          tickerNotices: tickerNotices,
+        ),
+        // Drawn inside the home screen, so the prayer screens (iqamah
+        // countdown etc., drawn above the whole page) always cover it.
+        Positioned.fill(
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 500),
+            child:
+                fullScreen == null
+                    ? const SizedBox.shrink()
+                    : _FullScreenNotice(
+                      key: ValueKey('fullscreen-${fullScreen.id}'),
+                      notice: fullScreen,
+                      onClose: () => setState(() => _fullScreen = null),
+                    ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildScreen(
+    BuildContext context, {
+    required DesignPalette p,
+    required PrayerSchedule? prayerSchedule,
+    required PrayerTime? nextPrayer,
+    required Duration timeToNext,
+    required List<MosqueNotification> cardNotices,
+    required int cardIndex,
+    required List<MosqueNotification> tickerNotices,
+  }) {
+    final onOpenSettings = widget.onOpenSettings;
+    final onNotificationTap = widget.onNotificationTap;
+    final hijriDate = widget.hijriDate;
 
     return ColoredBox(
       color: p.background,
@@ -109,7 +264,7 @@ class DisplayHome extends StatelessWidget {
                             // With notices showing, the next-prayer countdown
                             // moves to a strip under the clock; otherwise the
                             // carousel shows it.
-                            if (active.isNotEmpty) ...[
+                            if (cardNotices.isNotEmpty) ...[
                               SizedBox(
                                 height: 96 * s,
                                 child: _NextPrayerStrip(
@@ -125,7 +280,8 @@ class DisplayHome extends StatelessWidget {
                               child: _NoticeCarousel(
                                 s: s,
                                 p: p,
-                                notices: active,
+                                notices: cardNotices,
+                                index: cardIndex,
                                 nextPrayer: nextPrayer,
                                 timeToNext: timeToNext,
                                 onTap: onNotificationTap,
@@ -446,12 +602,22 @@ String _noticeLabel(NotificationType type) {
   }
 }
 
+/// "Friday 17 Oct · 7:30 PM" for events with a time.
+String? _eventText(MosqueNotification n) {
+  if (!n.isEvent || n.eventTime == null) return null;
+  return DateFormat('EEEE d MMM · h:mm a').format(n.eventTime!);
+}
+
 final _arabicScript = RegExp(r'[؀-ۿ]');
 
 class _NoticeCarousel extends StatefulWidget {
   final double s;
   final DesignPalette p;
+
+  /// Notices for the card (not image-only ones) and the one to show; the
+  /// rotation is run by [DisplayHome].
   final List<MosqueNotification> notices;
+  final int index;
   final PrayerTime? nextPrayer;
   final Duration timeToNext;
   final void Function(MosqueNotification)? onTap;
@@ -460,6 +626,7 @@ class _NoticeCarousel extends StatefulWidget {
     required this.s,
     required this.p,
     required this.notices,
+    required this.index,
     required this.nextPrayer,
     required this.timeToNext,
     this.onTap,
@@ -470,15 +637,9 @@ class _NoticeCarousel extends StatefulWidget {
 }
 
 class _NoticeCarouselState extends State<_NoticeCarousel> {
-  static const _interval = Duration(seconds: 10);
-  static const _maxInterval = Duration(seconds: 30);
-  Timer? _timer;
-  int _index = 0;
-
   @override
   void initState() {
     super.initState();
-    _scheduleNext();
     // Text is measured to fit the card; measure again once the display
     // fonts have loaded.
     PaintingBinding.instance.systemFonts.addListener(_onFontsChanged);
@@ -486,28 +647,6 @@ class _NoticeCarouselState extends State<_NoticeCarousel> {
 
   void _onFontsChanged() {
     if (mounted) setState(() {});
-  }
-
-  /// Longer notices stay on screen longer, so they can be read.
-  Duration _durationFor(MosqueNotification? n) {
-    if (n == null) return _interval;
-    final chars = n.title.length + n.message.length;
-    final extraSeconds = ((chars - 120) / 25).ceil().clamp(0, 20);
-    final d = _interval + Duration(seconds: extraSeconds);
-    return d > _maxInterval ? _maxInterval : d;
-  }
-
-  void _scheduleNext() {
-    final notices = widget.notices;
-    final current =
-        notices.isEmpty ? null : notices[_index.clamp(0, notices.length - 1)];
-    _timer = Timer(_durationFor(current), () {
-      if (!mounted) return;
-      if (widget.notices.length > 1) {
-        setState(() => _index = (_index + 1) % widget.notices.length);
-      }
-      _scheduleNext();
-    });
   }
 
   bool _isArabic(String text) => _arabicScript.hasMatch(text);
@@ -602,7 +741,6 @@ class _NoticeCarouselState extends State<_NoticeCarousel> {
 
   @override
   void dispose() {
-    _timer?.cancel();
     PaintingBinding.instance.systemFonts.removeListener(_onFontsChanged);
     super.dispose();
   }
@@ -612,12 +750,7 @@ class _NoticeCarouselState extends State<_NoticeCarousel> {
     final s = widget.s;
     final p = widget.p;
     final notices = widget.notices;
-    if (_index >= notices.length) _index = 0;
-    final current = notices.isEmpty ? null : notices[_index];
-    // Image-only notices get tighter padding so the image can be larger.
-    final imageOnly =
-        current != null && current.hasImage && !current.hasMessage;
-    final inset = imageOnly ? 22 * s : 42 * s;
+    final index = notices.isEmpty ? 0 : widget.index % notices.length;
 
     return Container(
       clipBehavior: Clip.antiAlias,
@@ -638,19 +771,17 @@ class _NoticeCarouselState extends State<_NoticeCarousel> {
             // Extra bottom room when the dots are shown, so content (e.g. an
             // image) never sits underneath them.
             padding: EdgeInsets.fromLTRB(
-              inset,
-              imageOnly ? 22 * s : 34 * s,
-              inset,
-              notices.length > 1
-                  ? (imageOnly ? 54 * s : 66 * s)
-                  : (imageOnly ? 22 * s : 30 * s),
+              42 * s,
+              34 * s,
+              42 * s,
+              notices.length > 1 ? 66 * s : 30 * s,
             ),
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 600),
               child:
                   notices.isEmpty
                       ? _buildNextPrayerSlide(s)
-                      : _buildNoticeSlide(s, notices[_index]),
+                      : _buildNoticeSlide(s, notices[index]),
             ),
           ),
           if (notices.length > 1)
@@ -658,7 +789,7 @@ class _NoticeCarouselState extends State<_NoticeCarousel> {
               left: 0,
               right: 0,
               bottom: 30 * s,
-              child: _Dots(s: s, p: p, count: notices.length, index: _index),
+              child: _Dots(s: s, p: p, count: notices.length, index: index),
             ),
         ],
       ),
@@ -767,17 +898,9 @@ class _NoticeCarouselState extends State<_NoticeCarousel> {
     );
   }
 
-  /// "Friday 17 Oct · 7:30 PM" for events with a time.
-  String? _eventText(MosqueNotification n) {
-    if (!n.isEvent || n.eventTime == null) return null;
-    return DateFormat('EEEE d MMM · h:mm a').format(n.eventTime!);
-  }
-
-  /// A notice with an image: the image takes the place of the description
-  /// and fills whatever height is left, keeping its proportions.
+  /// A notice with an image and a description: the description on top, the
+  /// image filling the rest, keeping its proportions.
   Widget _buildImageSlide(double s, MosqueNotification n) {
-    if (!n.hasMessage) return _buildImageOnlySlide(s, n);
-
     final label = _noticeLabel(n.type);
 
     return GestureDetector(
@@ -841,99 +964,6 @@ class _NoticeCarouselState extends State<_NoticeCarousel> {
               ),
             ),
           ],
-        ],
-      ),
-    );
-  }
-
-  /// A notice with only an image: 20% of the card for the header (chip,
-  /// title, event time) and 80% for the image.
-  Widget _buildImageOnlySlide(double s, MosqueNotification n) {
-    final label = _noticeLabel(n.type);
-
-    return GestureDetector(
-      key: ValueKey('${n.id}-image-only'),
-      behavior: HitTestBehavior.opaque,
-      onTap: widget.onTap == null ? null : () => widget.onTap!(n),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            flex: 20,
-            // Shrinks to fit if a long title doesn't fit in the band; the
-            // width cap keeps titles wrapping instead of shrinking to a line.
-            child: LayoutBuilder(
-              builder:
-                  (context, c) => FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(maxWidth: c.maxWidth),
-                      // Chip and title side by side to keep the band short.
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 18 * s,
-                              vertical: 8 * s,
-                            ),
-                            decoration: BoxDecoration(
-                              color: widget.p.chip,
-                              borderRadius: BorderRadius.circular(100),
-                            ),
-                            child: Text(
-                              label,
-                              style: DesignText.latin(
-                                size: 18 * s,
-                                weight: FontWeight.w700,
-                                color: widget.p.chipText,
-                                letterSpacing: 1.2,
-                              ),
-                            ),
-                          ),
-                          SizedBox(width: 16 * s),
-                          Expanded(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                if (n.title.trim().isNotEmpty)
-                                  Text(
-                                    n.title,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: DesignText.latin(
-                                      size: 32 * s,
-                                      weight: FontWeight.w800,
-                                      color: widget.p.title,
-                                      height: 1.1,
-                                      features: const [],
-                                    ),
-                                  ),
-                                if (_eventText(n) case final eventText?)
-                                  Text(
-                                    eventText,
-                                    style: DesignText.latin(
-                                      size: 20 * s,
-                                      weight: FontWeight.w600,
-                                      color: widget.p.inkMuted,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-            ),
-          ),
-          SizedBox(height: 12 * s),
-          Expanded(
-            flex: 80,
-            child: NoticeImage(notification: n, borderRadius: 18 * s),
-          ),
         ],
       ),
     );
@@ -1038,6 +1068,103 @@ class _MessageFit {
   final int maxLines;
 
   const _MessageFit({required this.style, required this.maxLines});
+}
+
+/// An image-only notice shown over the whole display for a few seconds.
+class _FullScreenNotice extends StatelessWidget {
+  final MosqueNotification notice;
+  final VoidCallback onClose;
+
+  const _FullScreenNotice({
+    super.key,
+    required this.notice,
+    required this.onClose,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final eventText = _eventText(notice);
+    final hasTitle = notice.title.trim().isNotEmpty;
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onClose,
+      child: ColoredBox(
+        color: DesignColors.greenDeep,
+        child: LayoutBuilder(
+          builder: (context, c) {
+            // Same scale as the display layout (design width 2000).
+            final s = c.maxWidth / 2000;
+            return Padding(
+              padding: EdgeInsets.fromLTRB(40 * s, 36 * s, 40 * s, 28 * s),
+              child: Column(
+                children: [
+                  Expanded(
+                    child: NoticeImage(
+                      notification: notice,
+                      borderRadius: 20 * s,
+                    ),
+                  ),
+                  SizedBox(height: 22 * s),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 20 * s,
+                          vertical: 9 * s,
+                        ),
+                        decoration: BoxDecoration(
+                          color: DesignColors.gold,
+                          borderRadius: BorderRadius.circular(100),
+                        ),
+                        child: Text(
+                          _noticeLabel(notice.type),
+                          style: DesignText.latin(
+                            size: 20 * s,
+                            weight: FontWeight.w700,
+                            color: DesignColors.greenDeep,
+                            letterSpacing: 1.5,
+                          ),
+                        ),
+                      ),
+                      if (hasTitle) ...[
+                        SizedBox(width: 22 * s),
+                        Flexible(
+                          child: Text(
+                            notice.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: DesignText.latin(
+                              size: 40 * s,
+                              weight: FontWeight.w800,
+                              color: Colors.white,
+                              features: const [],
+                            ),
+                          ),
+                        ),
+                      ],
+                      if (eventText != null) ...[
+                        SizedBox(width: 22 * s),
+                        Text(
+                          eventText,
+                          style: DesignText.latin(
+                            size: 28 * s,
+                            weight: FontWeight.w600,
+                            color: Colors.white70,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
 }
 
 class _Dots extends StatelessWidget {
