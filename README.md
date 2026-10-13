@@ -45,27 +45,27 @@ starts it automatically at every boot. See
 
 ## Documentation
 
-| Guide | Contents |
-|---|---|
-| [Setup](docs/setup.md) | Development setup, `.env`, Firebase, first admin, configuration |
-| [Features](docs/features.md) | Roles, notices, iqamah sequence, display mode, UI behaviour |
-| [Push notifications](docs/push-notifications.md) | How pushes are sent, Android/iOS setup, troubleshooting |
-| [Deployment](docs/deployment.md) | Release builds, web, App Check, production checklist |
-| [CI/CD](docs/ci-cd.md) | GitHub Actions jobs, secrets and variables |
-| [Testing](docs/testing.md) | Running and writing tests |
-| [Security](docs/security.md) | Security model and reporting issues |
+| Guide                                            | Contents                                                        |
+| ------------------------------------------------ | --------------------------------------------------------------- |
+| [Setup](docs/setup.md)                           | Development setup, `.env`, Firebase, first admin, configuration |
+| [Features](docs/features.md)                     | Roles, notices, iqamah sequence, display mode, UI behaviour     |
+| [Push notifications](docs/push-notifications.md) | How pushes are sent, Android/iOS setup, troubleshooting         |
+| [Deployment](docs/deployment.md)                 | Release builds, web, App Check, production checklist            |
+| [CI/CD](docs/ci-cd.md)                           | GitHub Actions jobs, secrets and variables                      |
+| [Testing](docs/testing.md)                       | Running and writing tests                                       |
+| [Security](docs/security.md)                     | Security model and reporting issues                             |
 
 ## Project structure
 
-| Path | What's there |
-|---|---|
-| `lib/` | Flutter app: `models/`, `services/`, `screens/`, `widgets/`, `utils/` |
-| `test/` | Unit, widget and integration tests |
-| `push-worker/` | Cloudflare Worker that sends push notifications ([README](push-worker/README.md)) |
-| `masjid-display/` | Kiosk setup for the masjid display PC ([README](masjid-display/README.md)) |
-| `firestore.rules` | Firestore security rules |
-| `design/screens/` | UI design mockups |
-| `functions/` | Legacy Cloud Functions (need the paid Blaze plan; not deployed) |
+| Path              | What's there                                                                      |
+| ----------------- | --------------------------------------------------------------------------------- |
+| `lib/`            | Flutter app: `models/`, `services/`, `screens/`, `widgets/`, `utils/`             |
+| `test/`           | Unit, widget and integration tests                                                |
+| `push-worker/`    | Cloudflare Worker that sends push notifications ([README](push-worker/README.md)) |
+| `masjid-display/` | Kiosk setup for the masjid display PC ([README](masjid-display/README.md))        |
+| `firestore.rules` | Firestore security rules                                                          |
+| `design/screens/` | UI design mockups                                                                 |
+| `functions/`      | Legacy Cloud Functions (need the paid Blaze plan; not deployed)                   |
 
 ## Contributing
 
@@ -75,4 +75,4 @@ Push to a branch and open a pull request into `main`; see
 
 ## Contact
 
-dardticcjp@gmail.com
+dticcjp@gmail.com

@@ -38,7 +38,7 @@ committing anyway.
 
 ## Reporting a problem
 
-Email **dardticcjp@gmail.com** rather than opening a public issue.
+Email **dticcjp@gmail.com** rather than opening a public issue.
 
 ## Changing the rules
 

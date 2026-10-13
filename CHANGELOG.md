@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Notices
+- Weekly repeating events: post once with "Repeats weekly" (day(s), time and
+  an optional end date); the app always shows the next date, e.g. "Every
+  Friday · 7:30 PM · next 16 Oct". Nothing runs or is written each week (fits
+  the free Firebase plan). Edit the event to change it for all weeks; switch
+  it off or delete it to stop.
+- Fixed garbled "â€¢" characters in notice dates (now "•").
+
 ### Masjid display
 - Footer ticker shows announcements and alerts only (no events).
 - Notices with only an image (no description) are shown full screen for 5

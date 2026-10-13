@@ -206,7 +206,13 @@ class NotificationCard extends StatelessWidget {
 
   Widget _buildExpiryBadge() {
     final isUrgent = notification.timeUntilExpiry.inHours < 6;
-    final color = isUrgent ? Colors.red : Colors.orange;
+    final weekly = notification.expiryText == 'Weekly';
+    final color =
+        weekly
+            ? Colors.teal
+            : isUrgent
+            ? Colors.red
+            : Colors.orange;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -217,7 +223,7 @@ class NotificationCard extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.schedule, size: 12, color: color),
+          Icon(weekly ? Icons.repeat : Icons.schedule, size: 12, color: color),
           const SizedBox(width: 4),
           Text(
             notification.expiryText,
@@ -274,17 +280,26 @@ class NotificationCard extends StatelessWidget {
   Widget _buildFooter(BuildContext context) {
     return Row(
       children: [
-        // Event time (if event type)
-        if (notification.isEvent && notification.eventTime != null) ...[
-          Icon(Icons.event, size: 14, color: Colors.grey[600]),
-          const SizedBox(width: 4),
-          Text(
-            DateFormat(
-              'MMM d, yyyy â€¢ hh:mm a',
-            ).format(notification.eventTime!),
-            style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[600]),
+        // Event time (if event type); weekly events show the next date
+        if (notification.isEvent && notification.nextEventTime() != null) ...[
+          Icon(
+            notification.isRepeating ? Icons.repeat : Icons.event,
+            size: 14,
+            color: Colors.grey[600],
           ),
-          const Spacer(),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Text(
+              notification.isRepeating
+                  ? '${notification.repeatLabel} • next ${DateFormat('MMM d • hh:mm a').format(notification.nextEventTime()!)}'
+                  : DateFormat(
+                    'MMM d, yyyy • hh:mm a',
+                  ).format(notification.nextEventTime()!),
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[600]),
+            ),
+          ),
+          const SizedBox(width: 8),
         ] else ...[
           // Created date
           Icon(Icons.access_time, size: 14, color: Colors.grey[600]),
@@ -901,31 +916,45 @@ class NotificationDetailSheet extends StatelessWidget {
             Icons.access_time,
             'Created',
             DateFormat(
-              'EEEE, MMM d, yyyy â€¢ hh:mm a',
+              'EEEE, MMM d, yyyy • hh:mm a',
             ).format(notification.createdAt),
           ),
-          if (notification.isEvent && notification.eventTime != null) ...[
+          if (notification.isRepeating) ...[
+            const SizedBox(height: 8),
+            _buildMetaRow(
+              context,
+              Icons.repeat,
+              'Repeats',
+              notification.repeatUntil == null
+                  ? '${notification.repeatLabel}'
+                  : '${notification.repeatLabel}, until ${DateFormat('MMM d, yyyy').format(notification.repeatUntil!)}',
+            ),
+          ],
+          if (notification.isEvent && notification.nextEventTime() != null) ...[
             const SizedBox(height: 8),
             _buildMetaRow(
               context,
               Icons.event,
-              'Event Time',
+              notification.isRepeating ? 'Next' : 'Event Time',
               DateFormat(
-                'EEEE, MMM d, yyyy â€¢ hh:mm a',
-              ).format(notification.eventTime!),
+                'EEEE, MMM d, yyyy • hh:mm a',
+              ).format(notification.nextEventTime()!),
             ),
           ],
-          const SizedBox(height: 8),
-          _buildMetaRow(
-            context,
-            Icons.timer,
-            'Expires',
-            DateFormat(
-              'MMM d, yyyy â€¢ hh:mm a',
-            ).format(notification.expiresAt),
-            valueColor:
-                notification.timeUntilExpiry.inHours < 6 ? Colors.red : null,
-          ),
+          // A weekly event without an end date doesn't expire.
+          if (!notification.isRepeating) ...[
+            const SizedBox(height: 8),
+            _buildMetaRow(
+              context,
+              Icons.timer,
+              'Expires',
+              DateFormat(
+                'MMM d, yyyy • hh:mm a',
+              ).format(notification.expiresAt),
+              valueColor:
+                  notification.timeUntilExpiry.inHours < 6 ? Colors.red : null,
+            ),
+          ],
           if (notification.postedByRole.isNotEmpty) ...[
             const SizedBox(height: 8),
             _buildMetaRow(

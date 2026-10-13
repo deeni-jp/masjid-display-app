@@ -602,10 +602,16 @@ String _noticeLabel(NotificationType type) {
   }
 }
 
-/// "Friday 17 Oct · 7:30 PM" for events with a time.
+/// "Friday 17 Oct · 7:30 PM" for events with a time; for weekly events
+/// "Every Friday · 7:30 PM · next 17 Oct".
 String? _eventText(MosqueNotification n) {
-  if (!n.isEvent || n.eventTime == null) return null;
-  return DateFormat('EEEE d MMM · h:mm a').format(n.eventTime!);
+  final time = n.nextEventTime();
+  if (!n.isEvent || time == null) return null;
+  if (n.isRepeating) {
+    return '${n.repeatLabel} · ${DateFormat('h:mm a').format(time)}'
+        ' · next ${DateFormat('d MMM').format(time)}';
+  }
+  return DateFormat('EEEE d MMM · h:mm a').format(time);
 }
 
 final _arabicScript = RegExp(r'[؀-ۿ]');

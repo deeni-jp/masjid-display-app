@@ -361,11 +361,19 @@ class _NotificationsTabState extends State<NotificationsTab> {
         notification?.expiresAt ??
         DateTime.now().add(AppConstants.defaultAnnouncementExpiry);
 
+    // Weekly repeat (events only)
+    bool repeatWeekly = notification?.isRepeating ?? false;
+    final repeatDays = <int>{...?notification?.repeatWeekdays};
+    TimeOfDay? repeatTime = _parseTimeOfDay(notification?.repeatTime);
+    DateTime? repeatUntil = notification?.repeatUntil;
+
     // Image: a newly picked one, or removal of the existing one
     final hadImage = notification?.hasImage ?? false;
     PreparedImage? newImage;
     bool removeImage = false;
     bool preparingImage = false;
+    // Shown inside the dialog (a snackbar would be hidden behind it).
+    String? formError;
 
     final result = await showDialog<bool>(
       context: context,
@@ -566,8 +574,43 @@ class _NotificationsTabState extends State<NotificationsTab> {
                             ),
                             const SizedBox(height: 16),
 
-                            // Event Time (for event type)
+                            // Weekly repeat (for event type)
                             if (selectedType == NotificationType.event) ...[
+                              _buildRepeatSection(
+                                dialogContext,
+                                repeatWeekly: repeatWeekly,
+                                days: repeatDays,
+                                time: repeatTime,
+                                until: repeatUntil,
+                                onRepeatChanged:
+                                    (v) => setDialogState(() {
+                                      repeatWeekly = v;
+                                      // Back to a one-off event: replace
+                                      // the "no end" expiry with a normal one.
+                                      if (!v && expiresAt.year >= 2100) {
+                                        expiresAt = DateTime.now().add(
+                                          AppConstants.defaultEventExpiry,
+                                        );
+                                      }
+                                    }),
+                                onDayToggled:
+                                    (day) => setDialogState(() {
+                                      if (!repeatDays.remove(day)) {
+                                        repeatDays.add(day);
+                                      }
+                                    }),
+                                onTimeChanged:
+                                    (t) => setDialogState(() => repeatTime = t),
+                                onUntilChanged:
+                                    (d) =>
+                                        setDialogState(() => repeatUntil = d),
+                              ),
+                              const SizedBox(height: 16),
+                            ],
+
+                            // Event Time (for one-off events)
+                            if (selectedType == NotificationType.event &&
+                                !repeatWeekly) ...[
                               _buildDateTimePicker(
                                 dialogContext,
                                 label: 'Event Time',
@@ -585,20 +628,24 @@ class _NotificationsTabState extends State<NotificationsTab> {
                               const SizedBox(height: 16),
                             ],
 
-                            // Expiration Date
-                            _buildDateTimePicker(
-                              dialogContext,
-                              label: 'Expires At',
-                              icon: Icons.timer_off,
-                              value: expiresAt,
-                              onChanged: (dt) {
-                                if (dt != null) {
-                                  setDialogState(() => expiresAt = dt);
-                                }
-                              },
-                              isRequired: true,
-                            ),
-                            const SizedBox(height: 16),
+                            // Expiration Date (a repeating event ends on
+                            // its "Ends on" date instead)
+                            if (!(selectedType == NotificationType.event &&
+                                repeatWeekly)) ...[
+                              _buildDateTimePicker(
+                                dialogContext,
+                                label: 'Expires At',
+                                icon: Icons.timer_off,
+                                value: expiresAt,
+                                onChanged: (dt) {
+                                  if (dt != null) {
+                                    setDialogState(() => expiresAt = dt);
+                                  }
+                                },
+                                isRequired: true,
+                              ),
+                              const SizedBox(height: 16),
+                            ],
 
                             // Active toggle
                             Container(
@@ -645,6 +692,29 @@ class _NotificationsTabState extends State<NotificationsTab> {
 
                     // Actions
                     const Divider(height: 1),
+                    if (formError != null)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.error_outline,
+                              color: Colors.red,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                formError!,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 13,
+                                  color: Colors.red,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     Padding(
                       padding: const EdgeInsets.all(16),
                       child: Row(
@@ -668,14 +738,22 @@ class _NotificationsTabState extends State<NotificationsTab> {
                                               .trim()
                                               .isEmpty &&
                                           !hasImageNow) {
-                                        ScaffoldMessenger.of(
-                                          dialogContext,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              'Add a message or an image',
-                                            ),
-                                          ),
+                                        setDialogState(
+                                          () =>
+                                              formError =
+                                                  'Add a message or an image',
+                                        );
+                                        return;
+                                      }
+                                      if (selectedType ==
+                                              NotificationType.event &&
+                                          repeatWeekly &&
+                                          (repeatDays.isEmpty ||
+                                              repeatTime == null)) {
+                                        setDialogState(
+                                          () =>
+                                              formError =
+                                                  'Choose the day(s) and time it repeats',
                                         );
                                         return;
                                       }
@@ -721,6 +799,21 @@ class _NotificationsTabState extends State<NotificationsTab> {
       }
     } catch (_) {}
 
+    // A repeating event stays until the end of its last day (or, with no end
+    // date, until it's switched off or deleted).
+    final isRepeating =
+        selectedType == NotificationType.event &&
+        repeatWeekly &&
+        repeatDays.isNotEmpty &&
+        repeatTime != null;
+    if (isRepeating) {
+      final until = repeatUntil;
+      expiresAt =
+          until == null
+              ? DateTime(2100)
+              : DateTime(until.year, until.month, until.day, 23, 59);
+    }
+
     // Create notification object
     final newNotification = MosqueNotification(
       id: notification?.id ?? '',
@@ -732,8 +825,14 @@ class _NotificationsTabState extends State<NotificationsTab> {
       postedBy: postedBy,
       postedByRole: postedByRole,
       createdAt: notification?.createdAt ?? DateTime.now(),
-      eventTime: selectedType == NotificationType.event ? eventTime : null,
+      eventTime:
+          selectedType == NotificationType.event && !isRepeating
+              ? eventTime
+              : null,
       expiresAt: expiresAt,
+      repeatWeekdays: isRepeating ? (repeatDays.toList()..sort()) : const [],
+      repeatTime: isRepeating ? _formatTimeOfDay(repeatTime!) : null,
+      repeatUntil: isRepeating ? repeatUntil : null,
       hasImage: hadImage,
       imageWidth: notification?.imageWidth,
       imageHeight: notification?.imageHeight,
@@ -1039,6 +1138,143 @@ class _NotificationsTabState extends State<NotificationsTab> {
     );
   }
 
+  static TimeOfDay? _parseTimeOfDay(String? hhmm) {
+    if (hhmm == null) return null;
+    final parts = hhmm.split(':');
+    if (parts.length != 2) return null;
+    final h = int.tryParse(parts[0]), m = int.tryParse(parts[1]);
+    if (h == null || m == null) return null;
+    return TimeOfDay(hour: h, minute: m);
+  }
+
+  static String _formatTimeOfDay(TimeOfDay t) =>
+      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+
+  /// "Repeats weekly" switch with weekday chips, time and optional end date.
+  Widget _buildRepeatSection(
+    BuildContext context, {
+    required bool repeatWeekly,
+    required Set<int> days,
+    required TimeOfDay? time,
+    required DateTime? until,
+    required ValueChanged<bool> onRepeatChanged,
+    required ValueChanged<int> onDayToggled,
+    required ValueChanged<TimeOfDay> onTimeChanged,
+    required ValueChanged<DateTime?> onUntilChanged,
+  }) {
+    const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    final primary = Theme.of(context).colorScheme.primary;
+
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SwitchListTile(
+            title: Text(
+              'Repeats weekly',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
+            ),
+            subtitle: Text(
+              repeatWeekly
+                  ? 'Shown every week with the next date'
+                  : 'One-off event',
+              style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600]),
+            ),
+            secondary: const Icon(Icons.repeat),
+            value: repeatWeekly,
+            onChanged: onRepeatChanged,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+          ),
+          if (repeatWeekly)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      for (var day = 1; day <= 7; day++)
+                        FilterChip(
+                          label: Text(labels[day - 1]),
+                          selected: days.contains(day),
+                          onSelected: (_) => onDayToggled(day),
+                          showCheckmark: true,
+                          checkmarkColor: Colors.white,
+                          selectedColor: primary,
+                          labelStyle: TextStyle(
+                            color: days.contains(day) ? Colors.white : null,
+                            fontWeight:
+                                days.contains(day) ? FontWeight.w600 : null,
+                          ),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.schedule, size: 18),
+                    label: Text(
+                      time == null ? 'Choose time' : time.format(context),
+                    ),
+                    onPressed: () async {
+                      FocusManager.instance.primaryFocus?.unfocus();
+                      final picked = await showTimePicker(
+                        context: context,
+                        initialTime:
+                            time ?? const TimeOfDay(hour: 19, minute: 30),
+                      );
+                      if (picked != null) onTimeChanged(picked);
+                    },
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextButton.icon(
+                          icon: const Icon(Icons.event_busy, size: 18),
+                          label: Text(
+                            until == null
+                                ? 'No end date'
+                                : 'Ends on ${DateFormat('EEE d MMM yyyy').format(until)}',
+                          ),
+                          style: TextButton.styleFrom(
+                            alignment: Alignment.centerLeft,
+                          ),
+                          onPressed: () async {
+                            FocusManager.instance.primaryFocus?.unfocus();
+                            final now = DateTime.now();
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: until ?? now,
+                              firstDate: DateTime(now.year, now.month, now.day),
+                              lastDate: DateTime(now.year + 5),
+                            );
+                            if (picked != null) onUntilChanged(picked);
+                          },
+                        ),
+                      ),
+                      if (until != null)
+                        IconButton(
+                          tooltip: 'No end date',
+                          icon: const Icon(Icons.close, size: 18),
+                          onPressed: () => onUntilChanged(null),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildDateTimePicker(
     BuildContext context, {
     required String label,
@@ -1049,6 +1285,8 @@ class _NotificationsTabState extends State<NotificationsTab> {
   }) {
     return InkWell(
       onTap: () async {
+        // Close the keyboard first, so it doesn't reopen after the pickers.
+        FocusManager.instance.primaryFocus?.unfocus();
         final date = await showDatePicker(
           context: context,
           initialDate: value ?? DateTime.now(),

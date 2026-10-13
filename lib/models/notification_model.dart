@@ -121,6 +121,13 @@ class MosqueNotification {
   final int? imageHeight;
   final DateTime? imageUpdatedAt; // Changes whenever the image is replaced
 
+  // Weekly repeating events (e.g. every Friday at 19:30). Only the rule is
+  // stored; the next date is worked out on each device, so nothing has to
+  // run or be written every week.
+  final List<int> repeatWeekdays; // DateTime.weekday values, 1 = Mon … 7 = Sun
+  final String? repeatTime; // "HH:mm", 24-hour
+  final DateTime? repeatUntil; // Last day it repeats (optional)
+
   MosqueNotification({
     required this.id,
     required this.title,
@@ -137,6 +144,9 @@ class MosqueNotification {
     this.imageWidth,
     this.imageHeight,
     this.imageUpdatedAt,
+    this.repeatWeekdays = const [],
+    this.repeatTime,
+    this.repeatUntil,
   });
 
   /// Create empty notification
@@ -245,6 +255,9 @@ class MosqueNotification {
       imageWidth: (data['imageWidth'] as num?)?.toInt(),
       imageHeight: (data['imageHeight'] as num?)?.toInt(),
       imageUpdatedAt: _parseDateTime(data['imageUpdatedAt']),
+      repeatWeekdays: _parseWeekdays(data['repeatWeekdays']),
+      repeatTime: _parseRepeatTime(data['repeatTime']),
+      repeatUntil: _parseDateTime(data['repeatUntil']),
     );
   }
 
@@ -275,6 +288,12 @@ class MosqueNotification {
           map['imageUpdatedAt'] != null
               ? DateTime.fromMillisecondsSinceEpoch(map['imageUpdatedAt'])
               : null,
+      repeatWeekdays: _parseWeekdays(map['repeatWeekdays']),
+      repeatTime: _parseRepeatTime(map['repeatTime']),
+      repeatUntil:
+          map['repeatUntil'] != null
+              ? DateTime.fromMillisecondsSinceEpoch(map['repeatUntil'])
+              : null,
     );
   }
 
@@ -300,6 +319,32 @@ class MosqueNotification {
     return null;
   }
 
+  /// Valid, sorted, de-duplicated weekdays (1–7).
+  static List<int> _parseWeekdays(dynamic value) {
+    if (value is! List) return const [];
+    final days =
+        value
+            .map((d) => d is num ? d.toInt() : int.tryParse('$d'))
+            .whereType<int>()
+            .where((d) => d >= DateTime.monday && d <= DateTime.sunday)
+            .toSet()
+            .toList()
+          ..sort();
+    return days;
+  }
+
+  /// "HH:mm" if valid, else null.
+  static String? _parseRepeatTime(dynamic value) {
+    if (value is! String) return null;
+    final parts = value.split(':');
+    if (parts.length != 2) return null;
+    final h = int.tryParse(parts[0]), m = int.tryParse(parts[1]);
+    if (h == null || m == null || h < 0 || h > 23 || m < 0 || m > 59) {
+      return null;
+    }
+    return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}';
+  }
+
   /// Convert to Map for local storage
   Map<String, dynamic> toMap() {
     return {
@@ -318,6 +363,9 @@ class MosqueNotification {
       'imageWidth': imageWidth,
       'imageHeight': imageHeight,
       'imageUpdatedAt': imageUpdatedAt?.millisecondsSinceEpoch,
+      'repeatWeekdays': repeatWeekdays,
+      'repeatTime': repeatTime,
+      'repeatUntil': repeatUntil?.millisecondsSinceEpoch,
     };
   }
 
@@ -348,6 +396,12 @@ class MosqueNotification {
       'imageUpdatedAt':
           hasImage && imageUpdatedAt != null
               ? Timestamp.fromDate(imageUpdatedAt!)
+              : null,
+      'repeatWeekdays': isRepeating ? repeatWeekdays : null,
+      'repeatTime': isRepeating ? repeatTime : null,
+      'repeatUntil':
+          isRepeating && repeatUntil != null
+              ? Timestamp.fromDate(repeatUntil!)
               : null,
     };
   }
@@ -392,6 +446,57 @@ class MosqueNotification {
   /// Check if this is an event notification
   bool get isEvent => type == NotificationType.event;
 
+  /// Whether this is a weekly repeating event.
+  bool get isRepeating =>
+      isEvent && repeatWeekdays.isNotEmpty && repeatTime != null;
+
+  /// How long a repeating event keeps showing "today" after it starts.
+  static const repeatGrace = Duration(hours: 1);
+
+  /// When the event (next) takes place: for a repeating event, the next
+  /// occurrence that started no more than [repeatGrace] ago, or null after
+  /// [repeatUntil]; otherwise [eventTime].
+  DateTime? nextEventTime([DateTime? now]) {
+    if (!isRepeating) return eventTime;
+    now ??= DateTime.now();
+    final parts = repeatTime!.split(':');
+    final hour = int.parse(parts[0]), minute = int.parse(parts[1]);
+    final until = repeatUntil;
+    final lastDay =
+        until == null ? null : DateTime(until.year, until.month, until.day);
+
+    for (var offset = 0; offset <= 7; offset++) {
+      final day = DateTime(now.year, now.month, now.day + offset);
+      if (!repeatWeekdays.contains(day.weekday)) continue;
+      if (lastDay != null && day.isAfter(lastDay)) return null;
+      final start = DateTime(day.year, day.month, day.day, hour, minute);
+      if (start.add(repeatGrace).isAfter(now)) return start;
+    }
+    return null;
+  }
+
+  /// "Every Friday", "Every Sat & Sun", "Every Mon, Wed & Fri".
+  String? get repeatLabel {
+    if (!isRepeating) return null;
+    const full = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ];
+    const short = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    if (repeatWeekdays.length == 7) return 'Every day';
+    if (repeatWeekdays.length == 1) {
+      return 'Every ${full[repeatWeekdays.first - 1]}';
+    }
+    final names = repeatWeekdays.map((d) => short[d - 1]).toList();
+    final last = names.removeLast();
+    return 'Every ${names.join(', ')} & $last';
+  }
+
   /// Check if this is an alert notification
   bool get isAlert => type == NotificationType.alert;
 
@@ -426,6 +531,8 @@ class MosqueNotification {
   String get expiryText {
     final duration = timeUntilExpiry;
     if (duration == Duration.zero) return 'Expired';
+    // Weekly events run until switched off or their end date.
+    if (isRepeating && duration.inDays >= 7) return 'Weekly';
 
     if (duration.inDays > 0) {
       return '${duration.inDays}d left';
@@ -455,6 +562,9 @@ class MosqueNotification {
     int? imageWidth,
     int? imageHeight,
     DateTime? imageUpdatedAt,
+    List<int>? repeatWeekdays,
+    String? repeatTime,
+    DateTime? repeatUntil,
   }) {
     return MosqueNotification(
       id: id ?? this.id,
@@ -472,6 +582,9 @@ class MosqueNotification {
       imageWidth: imageWidth ?? this.imageWidth,
       imageHeight: imageHeight ?? this.imageHeight,
       imageUpdatedAt: imageUpdatedAt ?? this.imageUpdatedAt,
+      repeatWeekdays: repeatWeekdays ?? this.repeatWeekdays,
+      repeatTime: repeatTime ?? this.repeatTime,
+      repeatUntil: repeatUntil ?? this.repeatUntil,
     );
   }
 
