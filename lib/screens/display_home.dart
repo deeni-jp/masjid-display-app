@@ -471,22 +471,139 @@ class _NoticeCarousel extends StatefulWidget {
 
 class _NoticeCarouselState extends State<_NoticeCarousel> {
   static const _interval = Duration(seconds: 10);
+  static const _maxInterval = Duration(seconds: 30);
   Timer? _timer;
   int _index = 0;
 
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(_interval, (_) {
+    _scheduleNext();
+    // Text is measured to fit the card; measure again once the display
+    // fonts have loaded.
+    PaintingBinding.instance.systemFonts.addListener(_onFontsChanged);
+  }
+
+  void _onFontsChanged() {
+    if (mounted) setState(() {});
+  }
+
+  /// Longer notices stay on screen longer, so they can be read.
+  Duration _durationFor(MosqueNotification? n) {
+    if (n == null) return _interval;
+    final chars = n.title.length + n.message.length;
+    final extraSeconds = ((chars - 120) / 25).ceil().clamp(0, 20);
+    final d = _interval + Duration(seconds: extraSeconds);
+    return d > _maxInterval ? _maxInterval : d;
+  }
+
+  void _scheduleNext() {
+    final notices = widget.notices;
+    final current =
+        notices.isEmpty ? null : notices[_index.clamp(0, notices.length - 1)];
+    _timer = Timer(_durationFor(current), () {
+      if (!mounted) return;
       if (widget.notices.length > 1) {
         setState(() => _index = (_index + 1) % widget.notices.length);
       }
+      _scheduleNext();
     });
+  }
+
+  bool _isArabic(String text) => _arabicScript.hasMatch(text);
+
+  TextStyle _messageStyle(String message, double size) {
+    if (_isArabic(message)) {
+      return DesignText.arabic(size: size * 0.9, color: widget.p.ink);
+    }
+    return DesignText.latin(
+      size: size,
+      // Bold at the design size; lighter when shrunk for long text.
+      weight: size >= 26 * widget.s ? FontWeight.w700 : FontWeight.w600,
+      color: widget.p.ink,
+      height: 1.3,
+    );
+  }
+
+  /// The largest message size (from [maxSize] down to [minSize]) at which the
+  /// whole message fits in [maxHeight], and how many lines fit at that size.
+  /// If it doesn't fit even at [minSize], the text ends with an ellipsis.
+  _MessageFit _fitMessage(
+    BuildContext context,
+    String message, {
+    required double maxSize,
+    required double minSize,
+    required double width,
+    required double maxHeight,
+  }) {
+    final textScaler = MediaQuery.textScalerOf(context);
+    // Text widgets merge their style into the inherited default (e.g. its
+    // letter spacing), so measure with the same merged style.
+    final inherited = DefaultTextStyle.of(context).style;
+    final direction =
+        _isArabic(message) ? TextDirection.rtl : TextDirection.ltr;
+    TextPainter layout(TextStyle style, String text, [int? maxLines]) =>
+        TextPainter(
+          text: TextSpan(text: text, style: inherited.merge(style)),
+          textDirection: direction,
+          textScaler: textScaler,
+          maxLines: maxLines,
+        )..layout(maxWidth: width);
+
+    final step = (maxSize - minSize) / 8;
+    var size = maxSize;
+    while (size - step >= minSize - 0.01 && step > 0) {
+      if (layout(_messageStyle(message, size), message).height <= maxHeight) {
+        break;
+      }
+      size -= step;
+    }
+    final style = _messageStyle(message, size);
+    final lineHeight = layout(style, 'Hg').height;
+    return _MessageFit(
+      style: style,
+      maxLines: (maxHeight / lineHeight).floor().clamp(1, 1000),
+    );
+  }
+
+  /// The description, at most [maxHeight] tall. maxLines guarantees an
+  /// ellipsis (rather than a silently cut-off line) if it's too long.
+  Widget _messageText(MosqueNotification n, _MessageFit fit, double maxHeight) {
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: maxHeight < 0 ? 0 : maxHeight),
+      child: Text(
+        n.message,
+        maxLines: fit.maxLines,
+        overflow: TextOverflow.ellipsis,
+        textDirection:
+            _isArabic(n.message) ? TextDirection.rtl : TextDirection.ltr,
+        style: fit.style,
+      ),
+    );
+  }
+
+  double _measure(
+    BuildContext context,
+    String text,
+    TextStyle style,
+    double width, {
+    int? maxLines,
+  }) {
+    return (TextPainter(
+      text: TextSpan(
+        text: text,
+        style: DefaultTextStyle.of(context).style.merge(style),
+      ),
+      textDirection: TextDirection.ltr,
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: maxLines,
+    )..layout(maxWidth: width)).height;
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    PaintingBinding.instance.systemFonts.removeListener(_onFontsChanged);
     super.dispose();
   }
 
@@ -552,7 +669,13 @@ class _NoticeCarouselState extends State<_NoticeCarousel> {
     if (n.hasImage) return _buildImageSlide(s, n);
 
     final label = _noticeLabel(n.type);
-    final isArabicMessage = _arabicScript.hasMatch(n.message);
+    final eventText = _eventText(n);
+    final eventStyle = DesignText.latin(
+      size: 23 * s,
+      weight: FontWeight.w600,
+      color: widget.p.inkMuted,
+    );
+    final hasTitle = n.title.trim().isNotEmpty;
 
     return GestureDetector(
       key: ValueKey(n.id),
@@ -562,52 +685,92 @@ class _NoticeCarouselState extends State<_NoticeCarousel> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _chip(s, label),
-          const Spacer(),
-          Text(
-            n.title,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: DesignText.latin(
-              size: 54 * s,
-              weight: FontWeight.w800,
-              color: widget.p.title,
-              height: 1.08,
-              features: const [],
+          SizedBox(height: 20 * s),
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, c) {
+                // Long descriptions get a shorter title and smaller text so
+                // the whole notice fits; short ones keep the design sizes.
+                final longMessage = n.message.length > 160;
+                final titleStyle = DesignText.latin(
+                  size: (longMessage ? 42 : 54) * s,
+                  weight: FontWeight.w800,
+                  color: widget.p.title,
+                  height: 1.08,
+                  features: const [],
+                );
+                final titleHeight =
+                    hasTitle
+                        ? _measure(
+                          context,
+                          n.title,
+                          titleStyle,
+                          c.maxWidth,
+                          maxLines: 2,
+                        )
+                        : 0.0;
+                final eventHeight =
+                    eventText == null
+                        ? 0.0
+                        : 10 * s +
+                            _measure(
+                              context,
+                              eventText,
+                              eventStyle,
+                              c.maxWidth,
+                            );
+                final ruleHeight = hasTitle ? 2 * 18 * s + 3 * s : 0.0;
+                // A few pixels of slack for rounding.
+                final available =
+                    c.maxHeight - titleHeight - ruleHeight - eventHeight - 4;
+                final fit = _fitMessage(
+                  context,
+                  n.message,
+                  maxSize: 29 * s,
+                  minSize: 19 * s,
+                  width: c.maxWidth,
+                  maxHeight: available,
+                );
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Spacer(),
+                    if (hasTitle) ...[
+                      Text(
+                        n.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: titleStyle,
+                      ),
+                      SizedBox(height: 18 * s),
+                      Container(
+                        width: 110 * s,
+                        height: 3 * s,
+                        color: DesignColors.gold,
+                      ),
+                      SizedBox(height: 18 * s),
+                    ],
+                    _messageText(n, fit, available),
+                    if (eventText != null) ...[
+                      SizedBox(height: 10 * s),
+                      Text(eventText, style: eventStyle),
+                    ],
+                    const Spacer(flex: 2),
+                  ],
+                );
+              },
             ),
           ),
-          SizedBox(height: 22 * s),
-          Container(width: 110 * s, height: 3 * s, color: DesignColors.gold),
-          SizedBox(height: 22 * s),
-          Text(
-            n.message,
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-            textDirection:
-                isArabicMessage ? TextDirection.rtl : TextDirection.ltr,
-            style:
-                isArabicMessage
-                    ? DesignText.arabic(size: 26 * s, color: widget.p.ink)
-                    : DesignText.latin(
-                      size: 29 * s,
-                      weight: FontWeight.w700,
-                      color: widget.p.ink,
-                    ),
-          ),
-          if (n.isEvent && n.eventTime != null) ...[
-            SizedBox(height: 10 * s),
-            Text(
-              DateFormat('EEEE · h:mm a').format(n.eventTime!),
-              style: DesignText.latin(
-                size: 23 * s,
-                weight: FontWeight.w600,
-                color: widget.p.inkMuted,
-              ),
-            ),
-          ],
-          const Spacer(flex: 2),
         ],
       ),
     );
+  }
+
+  /// "Friday 17 Oct · 7:30 PM" for events with a time.
+  String? _eventText(MosqueNotification n) {
+    if (!n.isEvent || n.eventTime == null) return null;
+    return DateFormat('EEEE d MMM · h:mm a').format(n.eventTime!);
   }
 
   /// A notice with an image: the image takes the place of the description
@@ -641,11 +804,36 @@ class _NoticeCarouselState extends State<_NoticeCarousel> {
             ),
           ],
           SizedBox(height: 18 * s),
-          Expanded(child: NoticeImage(notification: n, borderRadius: 18 * s)),
-          if (n.isEvent && n.eventTime != null) ...[
+          // The description gets up to a third of the space; the image
+          // keeps the rest.
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, c) {
+                final fit = _fitMessage(
+                  context,
+                  n.message,
+                  maxSize: 26 * s,
+                  minSize: 19 * s,
+                  width: c.maxWidth,
+                  maxHeight: c.maxHeight / 3,
+                );
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _messageText(n, fit, c.maxHeight / 3),
+                    SizedBox(height: 16 * s),
+                    Expanded(
+                      child: NoticeImage(notification: n, borderRadius: 18 * s),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+          if (_eventText(n) case final eventText?) ...[
             SizedBox(height: 12 * s),
             Text(
-              DateFormat('EEEE · h:mm a').format(n.eventTime!),
+              eventText,
               style: DesignText.latin(
                 size: 23 * s,
                 weight: FontWeight.w600,
@@ -723,11 +911,9 @@ class _NoticeCarouselState extends State<_NoticeCarousel> {
                                       features: const [],
                                     ),
                                   ),
-                                if (n.isEvent && n.eventTime != null)
+                                if (_eventText(n) case final eventText?)
                                   Text(
-                                    DateFormat(
-                                      'EEEE · h:mm a',
-                                    ).format(n.eventTime!),
+                                    eventText,
                                     style: DesignText.latin(
                                       size: 20 * s,
                                       weight: FontWeight.w600,
@@ -842,6 +1028,16 @@ class _NoticeCarouselState extends State<_NoticeCarousel> {
       ],
     );
   }
+}
+
+/// How a notice description is drawn so it fits its space.
+class _MessageFit {
+  final TextStyle style;
+
+  /// Lines that fit in the space at [style].
+  final int maxLines;
+
+  const _MessageFit({required this.style, required this.maxLines});
 }
 
 class _Dots extends StatelessWidget {
