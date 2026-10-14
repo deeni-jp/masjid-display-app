@@ -26,7 +26,7 @@ void main() {
       'Asr': '15:15',
       'Maghrib': '17:25',
       'Isha': '19:15',
-      'Jummah': '13:15',
+      'Jumuah': '13:15',
     },
   );
 
@@ -73,9 +73,9 @@ void main() {
     List<String> names(DateTime day) =>
         schedule.congregationalPrayers(day).map((p) => p.name).toList();
 
-    test('Jummah replaces Dhuhr on Fridays', () {
+    test('Jumuah replaces Dhuhr on Fridays', () {
       final friday = DateTime(2026, 10, 16);
-      expect(names(friday), ['Fajr', 'Asr', 'Maghrib', 'Isha', 'Jummah']);
+      expect(names(friday), ['Fajr', 'Asr', 'Maghrib', 'Isha', 'Jumuah']);
     });
 
     test('Dhuhr on other days', () {

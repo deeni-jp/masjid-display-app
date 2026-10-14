@@ -11,15 +11,15 @@ Runs on Android, iOS and the web, with Firebase (free Spark plan) as the backend
 ## Features
 
 - Prayer times from the [Aladhan API](https://aladhan.com/prayer-times-api) for
-  the device's location, with iqamah times set by the masjid and Jummah on Fridays
+  the device's location, with iqamah times set by the masjid and Jumuah on Fridays
 - Live countdown and an iqamah sequence: countdown → "Time for prayer" →
   "Prayer in progress"
 - Notices (announcements, events, alerts) with priorities, images, expiry and
   push notifications
 - **Masjid display mode** on screens ≥ 900 px wide: large prayer table, clock,
-  Hijri date, rotating notices, donation QR code
+  Hijri date, rotating notices
 - Roles: public, moderator (edits iqamah times and notices), admin (manages users)
-- Automatic dark mode after Maghrib; English with Arabic labels
+- Light / Dark / Auto (sunset to sunrise) theme and adjustable text size; English with Arabic labels
 
 ## Quick start
 

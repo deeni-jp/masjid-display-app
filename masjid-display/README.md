@@ -17,6 +17,19 @@ Setup installs what's missing (Chrome/Chromium; Flutter after asking – about
 2 GB, one time), builds the app, makes it start automatically, and opens it.
 **First time only:** sign in with the display account (needs a keyboard).
 
+Setup also asks two questions (saved in `display.conf` next to the setup
+script; press Enter to keep the current answer):
+
+- **How the screen is mounted** – horizontal or vertical. A vertical screen
+  gets its own layout (prayer times on top, notices below). On a Raspberry Pi
+  setup turns the picture itself; if it ends up upside down, run setup again
+  and pick "Vertical, the other way up". On Windows, rotate it once in
+  Settings → System → Display → Display orientation.
+- **Text size** – Normal, Large or Extra large, for reading from far away.
+
+Screen size in inches doesn't need a setting: the layout always fills the
+screen, so a bigger monitor simply shows everything bigger.
+
 **Unattended restarts:** the PC must sign in by itself after a power cut.
 
 - Windows: Win+R → `netplwiz` → untick "Users must enter a user name and
@@ -35,6 +48,7 @@ project; setup then skips the build.
 | Leave full screen briefly | `Alt+F4` – it reopens within ~10 seconds |
 | Stop the display | Windows: right-click `stop-display.ps1` → Run with PowerShell · Pi: `bash masjid-display/raspberry-pi/stop-display.sh` |
 | Update the app | `git pull`, then run setup again (rebuilds and restarts) |
+| Change orientation or text size | Run setup again. Text size can also be changed on the display: settings (gear) → Settings |
 | Remove autostart | `setup.bat -Uninstall` · `setup.sh --uninstall` |
 
 ## Troubleshooting

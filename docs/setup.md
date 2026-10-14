@@ -92,7 +92,7 @@ Admins can then promote others from **Settings → Manage Users** in the app.
 | App name, timings, notice rotation, default expiry | `AppConstants` in `lib/utils/constants.dart` |
 | Iqamah sequence durations | `lib/models/prayer_windows.dart` |
 | Design colours and fonts (light/dark) | `DesignColors`, `DesignPalette`, `DesignText` in `lib/utils/design.dart` |
-| Masjid name and donation QR code | `MasjidInfo` in `lib/utils/design.dart`; QR image `assets/images/qr code for donations.png` |
+| Masjid name | `MasjidInfo` in `lib/utils/design.dart` (from `AppConstants.appName`) |
 
 ### Logo and app icons
 

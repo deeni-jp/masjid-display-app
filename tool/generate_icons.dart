@@ -10,8 +10,10 @@
 //   dart run tool/generate_icons.dart
 //   dart run flutter_launcher_icons
 //
-// mosque.png is small, so the 1024px icons are upscaled and look soft.
-// Replace mosque.png with higher-resolution artwork and re-run for crisp icons.
+// If mosque.png has no real transparency (e.g. a "transparent" checkerboard
+// painted into the image), the light background around the badge is removed
+// first: see _removeLightBackground.
+import 'dart:collection';
 import 'dart:io';
 import 'dart:math';
 
@@ -27,7 +29,11 @@ void main() {
     exit(1);
   }
 
-  final logo = _trimTransparent(decoded);
+  final source =
+      _hasTransparency(decoded)
+          ? decoded
+          : _removeLightBackground(decoded.convert(numChannels: 4));
+  final logo = _trimTransparent(source);
   stdout.writeln(
     'Source ${decoded.width}x${decoded.height}, '
     'logo ${logo.width}x${logo.height}',
@@ -47,6 +53,80 @@ void main() {
     'assets/icon/app_icon_foreground.png',
     _onCanvas(logo, fill: 0.60, background: img.ColorRgba8(0, 0, 0, 0)),
   );
+}
+
+bool _hasTransparency(img.Image image) {
+  if (!image.hasAlpha) return false;
+  for (final p in image) {
+    if (p.a < 250) return true;
+  }
+  return false;
+}
+
+/// White or light grey (a checkerboard square), not a colour from the logo.
+bool _isLightGrey(img.Pixel p) {
+  final hi = max(p.r, max(p.g, p.b));
+  final lo = min(p.r, min(p.g, p.b));
+  return lo >= 185 && hi - lo <= 30;
+}
+
+/// Makes the light, grey background transparent: flood-fills from the image
+/// edges through white/grey pixels, so it stops at the logo's coloured
+/// border and white areas inside the logo are kept. Edge pixels next to the
+/// removed area get partial transparency to avoid a light halo.
+img.Image _removeLightBackground(img.Image image) {
+  final w = image.width, h = image.height;
+  final removed = List<bool>.filled(w * h, false);
+  final queue = Queue<int>();
+
+  void visit(int x, int y) {
+    if (x < 0 || y < 0 || x >= w || y >= h) return;
+    final i = y * w + x;
+    if (removed[i] || !_isLightGrey(image.getPixel(x, y))) return;
+    removed[i] = true;
+    queue.add(i);
+  }
+
+  for (var x = 0; x < w; x++) {
+    visit(x, 0);
+    visit(x, h - 1);
+  }
+  for (var y = 0; y < h; y++) {
+    visit(0, y);
+    visit(w - 1, y);
+  }
+  while (queue.isNotEmpty) {
+    final i = queue.removeFirst();
+    final x = i % w, y = i ~/ w;
+    visit(x + 1, y);
+    visit(x - 1, y);
+    visit(x, y + 1);
+    visit(x, y - 1);
+  }
+
+  for (var y = 0; y < h; y++) {
+    for (var x = 0; x < w; x++) {
+      final i = y * w + x;
+      final p = image.getPixel(x, y);
+      if (removed[i]) {
+        p.a = 0;
+        continue;
+      }
+      // Anti-aliased edge: fade pixels that touch the background by how
+      // light they are (light = mostly background colour).
+      final touches =
+          (x > 0 && removed[i - 1]) ||
+          (x < w - 1 && removed[i + 1]) ||
+          (y > 0 && removed[i - w]) ||
+          (y < h - 1 && removed[i + w]);
+      if (touches) {
+        final lo = min(p.r, min(p.g, p.b)).toDouble();
+        final fade = ((lo - 90) / (185 - 90)).clamp(0.0, 1.0);
+        p.a = (255 * (1 - fade)).round();
+      }
+    }
+  }
+  return image;
 }
 
 /// Crops away fully (or almost fully) transparent borders.

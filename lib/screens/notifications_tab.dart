@@ -10,6 +10,7 @@ import '../services/user_service.dart';
 import '../services/fcm_notification_sender.dart';
 import '../services/notice_image_service.dart';
 import '../utils/constants.dart';
+import '../utils/env_config.dart';
 import '../widgets/notice_image.dart';
 import '../widgets/notification_card.dart';
 
@@ -876,6 +877,9 @@ class _NotificationsTabState extends State<NotificationsTab> {
           print(
             sent
                 ? '✅ Push notification sent successfully'
+                : EnvConfig.pushWorkerUrl.isEmpty
+                ? 'ℹ️ Push not sent: push notifications are not set up '
+                    '(PUSH_WORKER_URL in .env; see push-worker/README.md)'
                 : '❌ Failed to send push notification',
           );
         }

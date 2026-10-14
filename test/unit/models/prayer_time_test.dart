@@ -316,16 +316,15 @@ void main() {
 
     group('Prayer Logic', () {
       test('isNext returns true when prayer is upcoming', () {
-        // Arrange
-        final now = DateTime.now();
-        final futureTime = now.add(const Duration(hours: 1));
-        final timeStr =
-            '${futureTime.hour.toString().padLeft(2, '0')}:${futureTime.minute.toString().padLeft(2, '0')}';
+        // Arrange: a fixed time of day, so "an hour later" never wraps past
+        // midnight (times are parsed for today)
+        final today = DateTime.now();
+        final now = DateTime(today.year, today.month, today.day, 10, 0);
 
         final prayer = PrayerTime.fromMaps(
           name: 'Dhuhr',
-          timings: {'Dhuhr': timeStr},
-          iqamaMap: {'Dhuhr': timeStr},
+          timings: {'Dhuhr': '11:00'},
+          iqamaMap: {'Dhuhr': '11:00'},
         );
 
         // Act & Assert
@@ -333,16 +332,15 @@ void main() {
       });
 
       test('isNext returns false when prayer has passed', () {
-        // Arrange
-        final now = DateTime.now();
-        final pastTime = now.subtract(const Duration(hours: 1));
-        final timeStr =
-            '${pastTime.hour.toString().padLeft(2, '0')}:${pastTime.minute.toString().padLeft(2, '0')}';
+        // Arrange: a fixed time of day, so "an hour earlier" never wraps
+        // back past midnight (times are parsed for today)
+        final today = DateTime.now();
+        final now = DateTime(today.year, today.month, today.day, 10, 0);
 
         final prayer = PrayerTime.fromMaps(
           name: 'Fajr',
-          timings: {'Fajr': timeStr},
-          iqamaMap: {'Fajr': timeStr},
+          timings: {'Fajr': '09:00'},
+          iqamaMap: {'Fajr': '09:00'},
         );
 
         // Act & Assert
@@ -473,9 +471,9 @@ void main() {
         final allPrayers = schedule.getAllPrayers();
 
         // Assert
-        expect(allPrayers.length, 7); // 6 regular prayers + Jummah
+        expect(allPrayers.length, 7); // 6 regular prayers + Jumuah
         expect(allPrayers.any((p) => p.name == 'Sunrise'), isTrue);
-        expect(allPrayers.any((p) => p.name == 'Jummah'), isTrue);
+        expect(allPrayers.any((p) => p.name == 'Jumuah'), isTrue);
       });
 
       test('getMainPrayers excludes Sunrise', () {
@@ -489,11 +487,11 @@ void main() {
         final mainPrayers = schedule.getMainPrayers();
 
         // Assert
-        expect(mainPrayers.length, 6); // 5 regular prayers + Jummah
+        expect(mainPrayers.length, 6); // 5 regular prayers + Jumuah
         expect(mainPrayers.any((p) => p.name == 'Sunrise'), isFalse);
         expect(mainPrayers.any((p) => p.name == 'Fajr'), isTrue);
         expect(mainPrayers.any((p) => p.name == 'Isha'), isTrue);
-        expect(mainPrayers.any((p) => p.name == 'Jummah'), isTrue);
+        expect(mainPrayers.any((p) => p.name == 'Jumuah'), isTrue);
       });
 
       test('getPrayerByName returns correct prayer', () {
@@ -530,7 +528,7 @@ void main() {
     group('Next Prayer Logic', () {
       // Fixed times on today's date, so results don't depend on when the
       // tests run. (Times in a schedule are parsed as "today".) The prayers
-      // used avoid Dhuhr, which is skipped for Jummah on Fridays.
+      // used avoid Dhuhr, which is skipped for Jumuah on Fridays.
       DateTime at(int hour, int minute) {
         final today = DateTime.now();
         return DateTime(today.year, today.month, today.day, hour, minute);
@@ -587,7 +585,7 @@ void main() {
     });
 
     group('Friday Prayer Handling', () {
-      test('getPrayersInOrder includes both Dhuhr and Jummah', () {
+      test('getPrayersInOrder includes both Dhuhr and Jumuah', () {
         // Arrange
         final schedule = PrayerSchedule(
           timings: testTimings,
@@ -604,15 +602,15 @@ void main() {
           reason: 'Dhuhr should be in the list',
         );
         expect(
-          prayers.any((p) => p.name == 'Jummah'),
+          prayers.any((p) => p.name == 'Jumuah'),
           isTrue,
-          reason: 'Jummah should be added at the end',
+          reason: 'Jumuah should be added at the end',
         );
         expect(prayers.any((p) => p.name == 'Fajr'), isTrue);
         expect(prayers.any((p) => p.name == 'Asr'), isTrue);
       });
 
-      test('Jummah prayer uses Dhuhr waqt time', () {
+      test('Jumuah prayer uses Dhuhr waqt time', () {
         // Arrange
         final schedule = PrayerSchedule(
           timings: testTimings,
@@ -621,15 +619,41 @@ void main() {
 
         // Act
         final prayers = schedule.getPrayersInOrder();
-        final jummah = prayers.firstWhere((p) => p.name == 'Jummah');
+        final jumuah = prayers.firstWhere((p) => p.name == 'Jumuah');
         final dhuhr = prayers.firstWhere((p) => p.name == 'Dhuhr');
 
         // Assert
         expect(
-          jummah.waqt,
+          jumuah.waqt,
           dhuhr.waqt,
-          reason: 'Jummah should use Dhuhr waqt time',
+          reason: 'Jumuah should use Dhuhr waqt time',
         );
+      });
+
+      test('Jumuah iqama falls back to the old "Jummah" key', () {
+        final schedule = PrayerSchedule(
+          timings: testTimings,
+          iqamaMap: {'Jummah': '13:15'},
+        );
+
+        for (final prayers in [
+          schedule.getPrayersInOrder(),
+          schedule.getAllPrayers(),
+        ]) {
+          expect(prayers.firstWhere((p) => p.name == 'Jumuah').iqama, '13:15');
+        }
+      });
+
+      test('the new "Jumuah" key wins over the old one', () {
+        final schedule = PrayerSchedule(
+          timings: testTimings,
+          iqamaMap: {'Jummah': '13:15', 'Jumuah': '13:30'},
+        );
+
+        final jumuah = schedule.getPrayersInOrder().firstWhere(
+          (p) => p.name == 'Jumuah',
+        );
+        expect(jumuah.iqama, '13:30');
       });
     });
 

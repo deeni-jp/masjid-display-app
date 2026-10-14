@@ -19,7 +19,14 @@ set -u
 PORT=8080
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WEB_ROOT="$(cd "$HERE/../.." && pwd)/build/web"
-URL="http://localhost:$PORT/"
+
+# Screen orientation and text size, chosen in setup.sh
+ORIENTATION=horizontal
+TEXT_SIZE=normal
+# shellcheck source=/dev/null
+[ -f "$HERE/display.conf" ] && . "$HERE/display.conf"
+
+URL="http://localhost:$PORT/?textSize=$TEXT_SIZE"
 STOP_FLAG="$HERE/stop.flag"
 PROFILE_DIR="$HERE/chrome-profile"
 LOG_DIR="$HERE/logs"
@@ -45,6 +52,31 @@ find_chromium() {
 }
 
 kiosk_running() { pgrep -f -- "--user-data-dir=$PROFILE_DIR" >/dev/null; }
+
+# Turns the picture for a vertically mounted screen (every start, so it
+# survives restarts). Wayland (newer Raspberry Pi OS): wlr-randr; X11: xrandr.
+rotate_screen() {
+    local wayland xorg output
+    case "$ORIENTATION" in
+        vertical) wayland=90; xorg=left ;;     # both: 90° anticlockwise
+        vertical-flipped) wayland=270; xorg=right ;;
+        *) return 0 ;;
+    esac
+    if [ -n "${WAYLAND_DISPLAY:-}" ] && command -v wlr-randr >/dev/null 2>&1; then
+        output="$(wlr-randr | awk '/^[^ ]/ { print $1; exit }')"
+        if [ -n "$output" ] && wlr-randr --output "$output" --transform "$wayland"; then
+            log "Screen rotated for $ORIENTATION ($output)"
+            return 0
+        fi
+    elif [ -n "${DISPLAY:-}" ] && command -v xrandr >/dev/null 2>&1; then
+        output="$(xrandr --query | awk '/ connected/ { print $1; exit }')"
+        if [ -n "$output" ] && xrandr --output "$output" --rotate "$xorg"; then
+            log "Screen rotated for $ORIENTATION ($output)"
+            return 0
+        fi
+    fi
+    log 'WARNING: could not rotate the screen; set it in Preferences > Screen Configuration'
+}
 
 log "Starting masjid display ($URL)"
 rm -f "$STOP_FLAG"
@@ -97,6 +129,8 @@ fi
 
 # Keep the screen on (X11 desktops; on Wayland setup.sh turns blanking off).
 command -v xset >/dev/null 2>&1 && xset s off -dpms s noblank 2>/dev/null
+
+rotate_screen
 
 # 4. Keep it open
 while [ ! -f "$STOP_FLAG" ]; do

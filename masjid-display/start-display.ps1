@@ -24,7 +24,16 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$url = "http://localhost:$Port/"
+
+# Text size chosen in setup.ps1 (display.conf)
+$textSize = 'normal'
+$confPath = Join-Path $PSScriptRoot 'display.conf'
+if (Test-Path $confPath) {
+    foreach ($line in Get-Content $confPath) {
+        if ($line -match '^\s*TEXT_SIZE=(\w+)') { $textSize = $Matches[1] }
+    }
+}
+$url = "http://localhost:$Port/?textSize=$textSize"
 $stopFlag = Join-Path $PSScriptRoot 'stop.flag'
 $profileDir = Join-Path $PSScriptRoot 'chrome-profile'
 $logDir = Join-Path $PSScriptRoot 'logs'

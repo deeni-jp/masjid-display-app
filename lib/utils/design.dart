@@ -102,7 +102,7 @@ class Bilingual {
     'Asr': 'العصر',
     'Maghrib': 'المغرب',
     'Isha': 'العشاء',
-    'Jummah': 'الجمعة',
+    'Jumuah': 'الجمعة',
     'Sunset': 'الغروب',
     'Zenith': 'الزوال',
   };
@@ -166,12 +166,9 @@ class DesignTime {
   }
 }
 
-/// Masjid name and donation details shown on the display.
-/// Replace the placeholder values with the masjid's real details.
+/// Masjid name shown on the display.
 class MasjidInfo {
   static const String name = AppConstants.appName;
-  static const String donationQrAsset =
-      'assets/images/qr code for donations.png';
 }
 
 /// Light and dark colour sets for the home screens (display and mobile).

@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Display, text size and branding
+- Vertical monitors get their own layout on the masjid display (stacked,
+  prayer table largest) instead of a shrunken landscape screen.
+- Text size setting (Small / Normal / Large / Extra large) in Settings, for
+  the app and the display.
+- Display setup (Raspberry Pi and Windows) asks how the screen is mounted and
+  the text size; on a Raspberry Pi it also rotates the screen.
+- New masjid logo and app icons.
+- "Jummah" is now spelled "Jumuah"; the saved Friday iqamah carries over.
+
 ### Notices
 - Weekly repeating events: post once with "Repeats weekly" (day(s), time and
   an optional end date); the app always shows the next date, e.g. "Every

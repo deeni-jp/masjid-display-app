@@ -9,6 +9,7 @@ import '../models/notification_model.dart';
 import '../models/user_model.dart';
 import '../models/hijri_date.dart';
 import '../models/prayer_windows.dart';
+import '../models/text_size.dart';
 import '../models/theme_setting.dart';
 import '../services/prayer_service.dart';
 import '../services/hijri_calendar_service.dart';
@@ -31,6 +32,8 @@ import '../widgets/masjid_logo.dart';
 class HomePage extends StatefulWidget {
   final ThemeSetting themeSetting;
   final Future<void> Function(ThemeSetting) onThemeSettingChanged;
+  final TextSize textSize;
+  final Future<void> Function(TextSize) onTextSizeChanged;
 
   /// Reports night (sunset to sunrise) for the Auto theme
   final Future<void> Function(bool) onNightChanged;
@@ -42,6 +45,8 @@ class HomePage extends StatefulWidget {
     super.key,
     required this.themeSetting,
     required this.onThemeSettingChanged,
+    required this.textSize,
+    required this.onTextSizeChanged,
     required this.onNightChanged,
     required this.darkMode,
     required this.currentUser,
@@ -566,6 +571,8 @@ class _HomePageState extends State<HomePage> {
                           darkMode: widget.darkMode,
                           themeSetting: widget.themeSetting,
                           onThemeSettingChanged: widget.onThemeSettingChanged,
+                          textSize: widget.textSize,
+                          onTextSizeChanged: widget.onTextSizeChanged,
                           onUserChanged: widget.onUserChanged,
                         ),
                       ],

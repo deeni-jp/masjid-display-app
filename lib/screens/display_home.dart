@@ -3,6 +3,8 @@
 // Large-screen masjid display (design/screens/1 · Home display).
 // Used by HomeTab when the window is at least [kDisplayBreakpoint] wide.
 import 'dart:async';
+import 'dart:math' show min;
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' show DateFormat;
@@ -14,6 +16,9 @@ import '../utils/design.dart';
 import '../widgets/notice_image.dart';
 import '../widgets/masjid_logo.dart';
 
+/// Prayer table text on the web (the masjid display), read from a distance.
+const double kWebPrayerTableFontScale = 1.6;
+
 class DisplayHome extends StatefulWidget {
   final PrayerSchedule? prayerSchedule;
   final PrayerTime? nextPrayer;
@@ -23,6 +28,10 @@ class DisplayHome extends StatefulWidget {
   final VoidCallback? onOpenSettings;
   final void Function(MosqueNotification)? onNotificationTap;
   final bool darkMode;
+
+  /// Size of the prayer table text; defaults to [kWebPrayerTableFontScale] on
+  /// the web (the masjid display) and 1 elsewhere.
+  final double? prayerTableFontScale;
 
   const DisplayHome({
     super.key,
@@ -34,6 +43,7 @@ class DisplayHome extends StatefulWidget {
     this.onOpenSettings,
     this.onNotificationTap,
     this.darkMode = false,
+    this.prayerTableFontScale,
   });
 
   @override
@@ -137,8 +147,12 @@ class _DisplayHomeState extends State<DisplayHome> {
   static const double _designWidth = 2000;
   static const double _designHeight = 1125;
 
-  /// Height of the footer row (ticker + donate tile).
-  static const double _footerHeight = 146;
+  /// Masjid name card: a little shorter than the clock card beside/above it.
+  static const double _titleHeight = 112;
+
+  /// Next-prayer countdown strip (shown under the clock while notices take
+  /// the carousel).
+  static const double _stripHeight = 130;
 
   @override
   Widget build(BuildContext context) {
@@ -209,127 +223,180 @@ class _DisplayHomeState extends State<DisplayHome> {
       color: p.background,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final s = (constraints.maxWidth / _designWidth).clamp(
-            0.0,
-            constraints.maxHeight / _designHeight,
+          // A screen taller than wide (monitor mounted vertically) gets the
+          // portrait layout on a 1125x2000 canvas, so it fills the screen
+          // instead of shrinking the landscape design to fit the width.
+          final portrait = constraints.maxHeight > constraints.maxWidth;
+          final designWidth = portrait ? _designHeight : _designWidth;
+          final designHeight = portrait ? _designWidth : _designHeight;
+          final s = min(
+            constraints.maxWidth / designWidth,
+            constraints.maxHeight / designHeight,
           );
           final gap = 26 * s;
 
+          final header = _MasjidHeader(
+            s: s,
+            p: p,
+            onOpenSettings: onOpenSettings,
+          );
+          final clock = _ClockCard(s: s, p: p, hijriDate: hijriDate);
+          // Bigger type in the main section.
+          final table = _PrayerTable(
+            s: s * 1.35,
+            fontScale:
+                widget.prayerTableFontScale ??
+                (kIsWeb ? kWebPrayerTableFontScale : 1),
+            p: p,
+            schedule: prayerSchedule,
+            nextPrayer: nextPrayer,
+          );
+          // With notices showing, the next-prayer countdown moves to a
+          // strip under the clock; otherwise the carousel shows it.
+          final strip =
+              cardNotices.isEmpty
+                  ? null
+                  : SizedBox(
+                    height: _stripHeight * s,
+                    // Countdown text scaled up with the taller strip.
+                    child: _NextPrayerStrip(
+                      s: s * _stripHeight / 96,
+                      p: p,
+                      nextPrayer: nextPrayer,
+                      timeToNext: timeToNext,
+                    ),
+                  );
+          final carousel = _NoticeCarousel(
+            s: s,
+            p: p,
+            notices: cardNotices,
+            index: cardIndex,
+            nextPrayer: nextPrayer,
+            timeToNext: timeToNext,
+            onTap: onNotificationTap,
+          );
+          final ticker =
+              tickerNotices.isEmpty
+                  ? null
+                  : SizedBox(
+                    height: 92 * s,
+                    child: _NoticeTicker(
+                      s: s,
+                      p: p,
+                      notices: tickerNotices,
+                      onTap: onNotificationTap,
+                    ),
+                  );
+
           return Padding(
             padding: EdgeInsets.fromLTRB(50 * s, 44 * s, 50 * s, 44 * s),
-            child: Column(
-              children: [
-                SizedBox(
-                  height: 136 * s,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Expanded(
-                        flex: 1155,
-                        child: _MasjidHeader(
-                          s: s,
-                          p: p,
-                          onOpenSettings: onOpenSettings,
-                        ),
-                      ),
-                      SizedBox(width: gap),
-                      Expanded(
-                        flex: 718,
-                        child: _ClockCard(s: s, p: p, hijriDate: hijriDate),
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(height: gap),
-                Expanded(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Expanded(
-                        flex: 1155,
-                        // Bigger type in the main section.
-                        child: _PrayerTable(
-                          s: s * 1.35,
-                          p: p,
-                          schedule: prayerSchedule,
-                          nextPrayer: nextPrayer,
-                        ),
-                      ),
-                      SizedBox(width: gap),
-                      Expanded(
-                        flex: 718,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            // With notices showing, the next-prayer countdown
-                            // moves to a strip under the clock; otherwise the
-                            // carousel shows it.
-                            if (cardNotices.isNotEmpty) ...[
-                              SizedBox(
-                                height: 96 * s,
-                                child: _NextPrayerStrip(
-                                  s: s,
-                                  p: p,
-                                  nextPrayer: nextPrayer,
-                                  timeToNext: timeToNext,
-                                ),
-                              ),
-                              SizedBox(height: gap),
-                            ],
-                            Expanded(
-                              child: _NoticeCarousel(
-                                s: s,
-                                p: p,
-                                notices: cardNotices,
-                                index: cardIndex,
-                                nextPrayer: nextPrayer,
-                                timeToNext: timeToNext,
-                                onTap: onNotificationTap,
-                              ),
-                            ),
-                            // No ticker: the donate tile sits here instead
-                            // of alone in an otherwise empty footer.
-                            if (tickerNotices.isEmpty) ...[
-                              SizedBox(height: gap),
-                              SizedBox(
-                                height: _footerHeight * s,
-                                child: _DonateTile(s: s, p: p),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (tickerNotices.isNotEmpty) ...[
-                  SizedBox(height: gap),
-                  SizedBox(
-                    height: _footerHeight * s,
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: SizedBox(
-                            height: 92 * s,
-                            child: _NoticeTicker(
-                              s: s,
-                              p: p,
-                              notices: tickerNotices,
-                              onTap: onNotificationTap,
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: gap),
-                        _DonateTile(s: s, p: p),
-                      ],
+            child:
+                portrait
+                    ? _portraitLayout(
+                      s: s,
+                      gap: gap,
+                      header: header,
+                      clock: clock,
+                      table: table,
+                      strip: strip,
+                      carousel: carousel,
+                      ticker: ticker,
+                    )
+                    : _landscapeLayout(
+                      s: s,
+                      gap: gap,
+                      header: header,
+                      clock: clock,
+                      table: table,
+                      strip: strip,
+                      carousel: carousel,
+                      ticker: ticker,
                     ),
-                  ),
-                ],
-              ],
-            ),
           );
         },
       ),
+    );
+  }
+
+  /// Clock (left) and masjid name on top; prayer table beside the notices;
+  /// ticker below.
+  Widget _landscapeLayout({
+    required double s,
+    required double gap,
+    required Widget header,
+    required Widget clock,
+    required Widget table,
+    required Widget? strip,
+    required Widget carousel,
+    required Widget? ticker,
+  }) {
+    return Column(
+      children: [
+        SizedBox(
+          height: 136 * s,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(flex: 1155, child: clock),
+              SizedBox(width: gap),
+              Expanded(
+                flex: 718,
+                child: Center(
+                  child: SizedBox(height: _titleHeight * s, child: header),
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: gap),
+        Expanded(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(flex: 1155, child: table),
+              SizedBox(width: gap),
+              Expanded(
+                flex: 718,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (strip != null) ...[strip, SizedBox(height: gap)],
+                    Expanded(child: carousel),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (ticker != null) ...[SizedBox(height: gap), ticker],
+      ],
+    );
+  }
+
+  /// Everything stacked, full width; the prayer table gets the most room.
+  Widget _portraitLayout({
+    required double s,
+    required double gap,
+    required Widget header,
+    required Widget clock,
+    required Widget table,
+    required Widget? strip,
+    required Widget carousel,
+    required Widget? ticker,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(height: 136 * s, child: clock),
+        SizedBox(height: gap),
+        SizedBox(height: _titleHeight * s, child: header),
+        SizedBox(height: gap),
+        Expanded(flex: 5, child: table),
+        SizedBox(height: gap),
+        if (strip != null) ...[strip, SizedBox(height: gap)],
+        Expanded(flex: 3, child: carousel),
+        if (ticker != null) ...[SizedBox(height: gap), ticker],
+      ],
     );
   }
 }
@@ -379,7 +446,8 @@ class _MasjidHeader extends StatelessWidget {
               ),
             ),
           ),
-          if (onOpenSettings != null)
+          if (onOpenSettings != null) ...[
+            SizedBox(width: 16 * s),
             Material(
               color: p.accentSurfaceSoft,
               shape: RoundedRectangleBorder(
@@ -400,6 +468,7 @@ class _MasjidHeader extends StatelessWidget {
                 ),
               ),
             ),
+          ],
         ],
       ),
     );
@@ -424,17 +493,29 @@ class _ClockCard extends StatelessWidget {
         border: Border.all(color: p.border, width: 1.5),
       ),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          TimeWithPeriod(
-            time: now,
-            seconds: true,
-            size: 70 * s,
-            weight: FontWeight.w800,
-            color: p.title,
-            periodScale: 0.36,
+          // Clock (left) and date (right edge) share the width at most 3:2
+          // and each shrinks to fit, so with large text the clock can't
+          // squeeze the date to nothing.
+          Flexible(
+            flex: 3,
+            child: FittedBox(
+              alignment: Alignment.centerLeft,
+              fit: BoxFit.scaleDown,
+              child: TimeWithPeriod(
+                time: now,
+                seconds: true,
+                size: 70 * s,
+                weight: FontWeight.w800,
+                color: p.title,
+                periodScale: 0.36,
+              ),
+            ),
           ),
           SizedBox(width: 16 * s),
-          Expanded(
+          Flexible(
+            flex: 2,
             child: FittedBox(
               alignment: Alignment.centerRight,
               fit: BoxFit.scaleDown,
@@ -984,50 +1065,73 @@ class _NoticeCarouselState extends State<_NoticeCarousel> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _chip(s, 'NEXT PRAYER', 'الصلاة القادمة'),
-        const Spacer(),
-        Text(
-          next?.name ?? '—',
-          style: DesignText.latin(
-            size: 76 * s,
-            weight: FontWeight.w800,
-            color: widget.p.title,
-            height: 1,
-          ),
-        ),
-        Text(
-          Bilingual.prayerArabic(next?.name ?? ''),
-          textDirection: TextDirection.rtl,
-          style: DesignText.arabic(size: 42 * s, color: widget.p.inkMuted),
-        ),
-        SizedBox(height: 20 * s),
-        Container(width: 110 * s, height: 3 * s, color: DesignColors.gold),
-        SizedBox(height: 20 * s),
-        Text(
-          DesignTime.hms(widget.timeToNext),
-          style: DesignText.latin(
-            size: 64 * s,
-            weight: FontWeight.w800,
-            color: widget.p.ink,
-          ),
-        ),
-        if (iqamah != null) ...[
-          Text(
-            'Iqamah ${DateFormat('h:mm a').format(iqamah)}',
-            style: DesignText.latin(
-              size: 26 * s,
-              weight: FontWeight.w600,
-              color: widget.p.inkMuted,
+        Expanded(
+          // A third of the free space above, two thirds below; shrinks to
+          // fit a short card (portrait screen, large text).
+          child: Align(
+            alignment: const Alignment(-1, -1 / 3),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: _nextPrayerDetails(s, next, iqamah),
+              ),
             ),
           ),
-          Text(
-            'الإقامة ${Bilingual.timeArabic(iqamah)}',
-            textDirection: TextDirection.rtl,
-            style: DesignText.arabic(size: 22 * s, color: widget.p.inkMuted),
-          ),
-        ],
-        const Spacer(flex: 2),
+        ),
       ],
     );
+  }
+
+  List<Widget> _nextPrayerDetails(
+    double s,
+    PrayerTime? next,
+    DateTime? iqamah,
+  ) {
+    return [
+      Text(
+        next?.name ?? '—',
+        style: DesignText.latin(
+          size: 76 * s,
+          weight: FontWeight.w800,
+          color: widget.p.title,
+          height: 1,
+        ),
+      ),
+      Text(
+        Bilingual.prayerArabic(next?.name ?? ''),
+        textDirection: TextDirection.rtl,
+        style: DesignText.arabic(size: 42 * s, color: widget.p.inkMuted),
+      ),
+      SizedBox(height: 20 * s),
+      Container(width: 110 * s, height: 3 * s, color: DesignColors.gold),
+      SizedBox(height: 20 * s),
+      Text(
+        DesignTime.hms(widget.timeToNext),
+        style: DesignText.latin(
+          size: 64 * s,
+          weight: FontWeight.w800,
+          color: widget.p.ink,
+        ),
+      ),
+      if (iqamah != null) ...[
+        Text(
+          'Iqamah ${DateFormat('h:mm a').format(iqamah)}',
+          style: DesignText.latin(
+            size: 26 * s,
+            weight: FontWeight.w600,
+            color: widget.p.inkMuted,
+          ),
+        ),
+        Text(
+          'الإقامة ${Bilingual.timeArabic(iqamah)}',
+          textDirection: TextDirection.rtl,
+          style: DesignText.arabic(size: 22 * s, color: widget.p.inkMuted),
+        ),
+      ],
+    ];
   }
 
   /// Label chip, with an optional Arabic label beside it.
@@ -1099,8 +1203,9 @@ class _FullScreenNotice extends StatelessWidget {
         color: DesignColors.greenDeep,
         child: LayoutBuilder(
           builder: (context, c) {
-            // Same scale as the display layout (design width 2000).
-            final s = c.maxWidth / 2000;
+            // Same scale as the display layout (design width 2000, or 1125
+            // on a portrait screen).
+            final s = c.maxWidth / (c.maxHeight > c.maxWidth ? 1125 : 2000);
             return Padding(
               padding: EdgeInsets.fromLTRB(40 * s, 36 * s, 40 * s, 28 * s),
               child: Column(
@@ -1343,7 +1448,7 @@ Widget _prayerIcon(String name, double size, Color color) {
       icon = Icons.wb_twilight;
     case 'Dhuhr':
       icon = Icons.light_mode_outlined;
-    case 'Jummah':
+    case 'Jumuah':
       icon = Icons.groups_outlined;
     case 'Asr':
       icon = Icons.wb_cloudy_outlined;
@@ -1357,7 +1462,7 @@ Widget _prayerIcon(String name, double size, Color color) {
   return Icon(icon, size: size, color: color);
 }
 
-/// Rows for the prayer tables. Jummah takes Dhuhr's place on Fridays and
+/// Rows for the prayer tables. Jumuah takes Dhuhr's place on Fridays and
 /// is listed as an extra row on the other days.
 List<PrayerTime> displayPrayers(PrayerSchedule? schedule) {
   if (schedule == null) return const [];
@@ -1372,22 +1477,26 @@ List<PrayerTime> displayPrayers(PrayerSchedule? schedule) {
 
   return [
     find('Fajr'),
-    isFriday ? (find('Jummah') ?? find('Dhuhr')) : find('Dhuhr'),
+    isFriday ? (find('Jumuah') ?? find('Dhuhr')) : find('Dhuhr'),
     find('Asr'),
     find('Maghrib'),
     find('Isha'),
-    if (!isFriday) find('Jummah'),
+    if (!isFriday) find('Jumuah'),
   ].whereType<PrayerTime>().toList();
 }
 
 class _PrayerTable extends StatelessWidget {
   final double s;
+
+  /// Extra size for the names, times and icons (not the spacing).
+  final double fontScale;
   final DesignPalette p;
   final PrayerSchedule? schedule;
   final PrayerTime? nextPrayer;
 
   const _PrayerTable({
     required this.s,
+    this.fontScale = 1,
     required this.p,
     required this.schedule,
     required this.nextPrayer,
@@ -1499,7 +1608,7 @@ class _PrayerTable extends StatelessWidget {
               children: [
                 _prayerIcon(
                   prayer.name,
-                  36 * s,
+                  36 * s * fontScale,
                   highlighted ? Colors.white : p.inkMuted,
                 ),
                 SizedBox(width: 18 * s),
@@ -1511,13 +1620,13 @@ class _PrayerTable extends StatelessWidget {
                       english: prayer.name,
                       arabic: Bilingual.prayerArabic(prayer.name),
                       englishStyle: DesignText.latin(
-                        size: 33 * s,
+                        size: 33 * s * fontScale,
                         weight: FontWeight.w800,
                         color: fg,
                         height: 1.15,
                       ),
                       arabicStyle: DesignText.arabic(
-                        size: 20 * s,
+                        size: 20 * s * fontScale,
                         color: fgMuted,
                         height: 1.45,
                       ),
@@ -1540,95 +1649,11 @@ class _PrayerTable extends StatelessWidget {
         fit: BoxFit.scaleDown,
         child: TimeWithPeriod(
           time: t,
-          size: 32 * s,
+          size: 32 * s * fontScale,
           color: color,
           periodScale: 0.55,
         ),
       ),
     );
   }
-}
-
-// ─────────────────────────── Donate tile ───────────────────────────
-
-/// Compact donation QR code with a "Donate" label.
-class _DonateTile extends StatelessWidget {
-  final double s;
-  final DesignPalette p;
-
-  const _DonateTile({required this.s, required this.p});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.fromLTRB(6 * s, 6 * s, 30 * s, 6 * s),
-      decoration: BoxDecoration(
-        color: p.surface,
-        borderRadius: BorderRadius.circular(26 * s),
-        border: Border.all(color: p.border, width: 1.5),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // White tile in both themes: scanners need a light quiet zone.
-          AspectRatio(
-            aspectRatio: 1,
-            child: Container(
-              padding: EdgeInsets.all(5 * s),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(18 * s),
-              ),
-              child: Image.asset(
-                MasjidInfo.donationQrAsset,
-                fit: BoxFit.contain,
-                filterQuality: FilterQuality.medium,
-                semanticLabel: 'Donation QR code',
-                errorBuilder:
-                    (context, error, stack) =>
-                        CustomPaint(painter: _DashedRectPainter(radius: 8 * s)),
-              ),
-            ),
-          ),
-          SizedBox(width: 22 * s),
-          Text(
-            'Donate',
-            style: DesignText.latin(
-              size: 36 * s,
-              weight: FontWeight.w800,
-              color: p.title,
-              features: const [],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DashedRectPainter extends CustomPainter {
-  final double radius;
-
-  const _DashedRectPainter({required this.radius});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint =
-        Paint()
-          ..color = DesignColors.inkFaint
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2;
-    final path =
-        Path()..addRRect(
-          RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(radius)),
-        );
-    for (final metric in path.computeMetrics()) {
-      for (double d = 0; d < metric.length; d += 14) {
-        canvas.drawPath(metric.extractPath(d, d + 7), paint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(_DashedRectPainter old) => old.radius != radius;
 }

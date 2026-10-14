@@ -15,7 +15,7 @@ Roles are enforced by the Firestore rules, not only by the app.
 - Begin times come from the Aladhan API for the device's location (GPS, with
   IP-based fallback); iqamah times are set by moderators and synced live.
 - **Sunrise** is shown but is not a prayer: no iqamah, never the "next prayer".
-- **Jummah** replaces Dhuhr on Fridays; other days it is an extra row.
+- **Jumuah** replaces Dhuhr on Fridays; other days it is an extra row.
 - Data is cached, so the app keeps working briefly without internet.
 
 ## Iqamah sequence
@@ -51,19 +51,25 @@ and hides the bottom navigation; the ⚙️ button opens Settings.
 
 | Area | Content |
 |---|---|
-| Header | Masjid logo and name, settings button |
-| Clock | Time, Gregorian date, Hijri date (English and Arabic) |
+| Top left | Clock: time, Gregorian date, Hijri date (English and Arabic) |
+| Top right | Masjid logo and name, settings button |
 | Left | Large prayer table with begin and iqamah times; next prayer highlighted |
-| Right | Next-prayer countdown, rotating notices, donation QR code |
+| Right | Next-prayer countdown, rotating notices |
 | Bottom | Notice ticker |
+
+On a screen taller than wide (monitor mounted vertically) the same parts are
+stacked instead: clock, masjid name, prayer table (largest), countdown,
+notices, then the ticker.
 
 To run it on a dedicated PC that opens it full screen at boot, see
 [masjid-display/README.md](../masjid-display/README.md).
 
 ## Appearance
 
-- **Dark mode** switches on automatically between Maghrib and sunrise, with a
-  manual override in Settings.
+- **Theme**: Light, Dark, or Auto (dark from sunset to sunrise; the default).
+- **Text size**: Small, Normal, Large or Extra large, on top of the device's
+  own font size; applies everywhere, including the masjid display. Both are in
+  Settings.
 - English UI with Arabic labels; fonts Manrope, Noto Sans Arabic, Noto Sans JP.
 - Phone layout: next-prayer card, prayer list, rotating notice card, and bottom
   navigation (Times, Prayers, Qibla – not on web, Notices, Settings).

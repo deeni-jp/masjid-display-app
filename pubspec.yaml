@@ -56,5 +56,4 @@ flutter:
   uses-material-design: true
   assets:
     - .env
-    - "assets/images/qr code for donations.png"
     - assets/images/masjid_logo.png

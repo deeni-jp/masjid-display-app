@@ -1,6 +1,7 @@
 // lib/screens/more_tab.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../models/text_size.dart';
 import '../models/theme_setting.dart';
 import '../models/user_model.dart';
 import '../services/location_service.dart';
@@ -18,6 +19,8 @@ class MoreTab extends StatelessWidget {
   final bool darkMode;
   final ThemeSetting themeSetting;
   final Future<void> Function(ThemeSetting) onThemeSettingChanged;
+  final TextSize textSize;
+  final Future<void> Function(TextSize) onTextSizeChanged;
   final void Function(AppUser?) onUserChanged;
 
   const MoreTab({
@@ -28,6 +31,8 @@ class MoreTab extends StatelessWidget {
     required this.darkMode,
     required this.themeSetting,
     required this.onThemeSettingChanged,
+    required this.textSize,
+    required this.onTextSizeChanged,
     required this.onUserChanged,
   });
 
@@ -80,17 +85,8 @@ class MoreTab extends StatelessWidget {
             context,
             icon: Icons.settings,
             title: 'Settings',
-            subtitle: 'App preferences',
+            subtitle: 'Theme, text size, default location',
             onTap: () => _openSettings(context),
-          ),
-
-          // Theme Section
-          _buildSettingsCard(
-            context,
-            icon: themeSettingIcon(themeSetting),
-            title: 'Theme',
-            subtitle: themeSetting.label,
-            onTap: () => _showThemeDialog(context),
           ),
 
           // About Section
@@ -500,35 +496,6 @@ class MoreTab extends StatelessWidget {
     }
   }
 
-  Future<void> _showThemeDialog(BuildContext context) async {
-    final choice = await showDialog<ThemeSetting>(
-      context: context,
-      builder:
-          (context) => SimpleDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppStyles.radiusLarge),
-            ),
-            title: Text(
-              'Theme',
-              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-            ),
-            children: [
-              for (final option in ThemeSetting.values)
-                ListTile(
-                  leading: Icon(themeSettingIcon(option)),
-                  title: Text(option.label, style: GoogleFonts.poppins()),
-                  trailing:
-                      option == themeSetting ? const Icon(Icons.check) : null,
-                  onTap: () => Navigator.pop(context, option),
-                ),
-            ],
-          ),
-    );
-    if (choice != null && choice != themeSetting) {
-      await onThemeSettingChanged(choice);
-    }
-  }
-
   Future<void> _openSettings(BuildContext context) async {
     final defaultLocation = await StorageService.getDefaultLocation();
 
@@ -544,6 +511,8 @@ class MoreTab extends StatelessWidget {
           (context) => _SettingsBottomSheet(
             initialThemeSetting: themeSetting,
             onThemeSettingChanged: onThemeSettingChanged,
+            initialTextSize: textSize,
+            onTextSizeChanged: onTextSizeChanged,
             defaultLocation: defaultLocation,
           ),
     );
@@ -625,15 +594,20 @@ IconData themeSettingIcon(ThemeSetting setting) {
   }
 }
 
-/// Settings Bottom Sheet with proper state management for the theme picker
+/// Settings Bottom Sheet with proper state management for the theme and
+/// text size pickers
 class _SettingsBottomSheet extends StatefulWidget {
   final ThemeSetting initialThemeSetting;
   final Future<void> Function(ThemeSetting) onThemeSettingChanged;
+  final TextSize initialTextSize;
+  final Future<void> Function(TextSize) onTextSizeChanged;
   final String defaultLocation;
 
   const _SettingsBottomSheet({
     required this.initialThemeSetting,
     required this.onThemeSettingChanged,
+    required this.initialTextSize,
+    required this.onTextSizeChanged,
     required this.defaultLocation,
   });
 
@@ -643,12 +617,14 @@ class _SettingsBottomSheet extends StatefulWidget {
 
 class _SettingsBottomSheetState extends State<_SettingsBottomSheet> {
   late ThemeSetting _themeSetting;
+  late TextSize _textSize;
   late TextEditingController _controller;
 
   @override
   void initState() {
     super.initState();
     _themeSetting = widget.initialThemeSetting;
+    _textSize = widget.initialTextSize;
     _controller = TextEditingController(text: widget.defaultLocation);
   }
 
@@ -719,7 +695,35 @@ class _SettingsBottomSheetState extends State<_SettingsBottomSheet> {
                   style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey),
                 ),
               ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Text size',
+                style: GoogleFonts.poppins(fontSize: 16),
+              ),
+            ),
+            const SizedBox(height: 8),
+            // Chips wrap onto two lines on narrow screens or with big text.
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final option in TextSize.values)
+                    ChoiceChip(
+                      label: Text(option.label),
+                      selected: option == _textSize,
+                      onSelected: (_) {
+                        setState(() => _textSize = option);
+                        widget.onTextSizeChanged(option);
+                      },
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
             TextField(
               controller: _controller,
               decoration: InputDecoration(

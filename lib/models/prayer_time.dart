@@ -156,14 +156,15 @@ class PrayerSchedule {
       );
     }
 
-    // Add Jummah prayer with Dhuhr waqt and custom iqama
+    // Add Jumuah prayer with Dhuhr waqt and custom iqama ('Jummah' is the
+    // iqama key saved before the spelling change)
     final dhuhrWaqt = timings['Dhuhr'];
     if (dhuhrWaqt != null) {
       prayers.add(
         PrayerTime(
-          name: 'Jummah',
+          name: 'Jumuah',
           waqt: dhuhrWaqt,
-          iqama: iqamaMap['Jummah'] ?? '12:30',
+          iqama: iqamaMap['Jumuah'] ?? iqamaMap['Jummah'] ?? '12:30',
         ),
       );
     }
@@ -173,7 +174,7 @@ class PrayerSchedule {
 
   /// Get only main prayers (exclude Sunrise, etc.)
   List<PrayerTime> getMainPrayers() {
-    final mainNames = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha', 'Jummah'];
+    final mainNames = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha', 'Jumuah'];
     return getAllPrayers().where((p) => mainNames.contains(p.name)).toList();
   }
 
@@ -188,13 +189,13 @@ class PrayerSchedule {
         );
       }
     }
-    // Add Jummah at the end (uses Dhuhr waqt)
+    // Add Jumuah at the end (uses Dhuhr waqt; 'Jummah' is the old iqama key)
     if (timings.containsKey('Dhuhr')) {
       prayers.add(
         PrayerTime(
-          name: 'Jummah',
+          name: 'Jumuah',
           waqt: timings['Dhuhr']!,
-          iqama: iqamaMap['Jummah'] ?? '12:30',
+          iqama: iqamaMap['Jumuah'] ?? iqamaMap['Jummah'] ?? '12:30',
         ),
       );
     }
@@ -213,9 +214,9 @@ class PrayerSchedule {
       // Sunrise is not a prayer; it has no iqamah.
       if (prayer.name == 'Sunrise') continue;
 
-      // Jummah replaces Dhuhr on Fridays only
+      // Jumuah replaces Dhuhr on Fridays only
       if (isFriday && prayer.name == 'Dhuhr') continue;
-      if (!isFriday && prayer.name == 'Jummah') continue;
+      if (!isFriday && prayer.name == 'Jumuah') continue;
 
       final nextTime = prayer.getNextTime();
       if (nextTime != null &&

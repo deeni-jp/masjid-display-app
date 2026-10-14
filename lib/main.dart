@@ -7,6 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 
 import 'firebase_options.dart';
+import 'models/text_size.dart';
 import 'models/theme_setting.dart';
 import 'models/user_model.dart';
 import 'services/storage_service.dart';
@@ -94,15 +95,40 @@ class _PrayerAppState extends State<PrayerApp> {
     _loadThemePref();
   }
 
+  TextSize _textSize = TextSize.normal;
+
   Future<void> _loadThemePref() async {
     final setting = await StorageService.getThemeSetting();
     final isNight = await StorageService.getDarkMode();
+    var textSize = await StorageService.getTextSize();
+
+    // The masjid display opens the app with ?textSize=<choice from setup>.
+    if (kIsWeb) {
+      final requested = Uri.base.queryParameters['textSize'];
+      final fromSetup = textSizeFromSetup(
+        requested: requested,
+        lastApplied: await StorageService.getTextSizeSetup(),
+      );
+      if (fromSetup != null) {
+        textSize = fromSetup;
+        await StorageService.setTextSize(fromSetup);
+        await StorageService.setTextSizeSetup(requested!);
+      }
+    }
 
     if (mounted) {
       setState(() {
         _themeSetting = setting;
         _isNight = isNight;
+        _textSize = textSize;
       });
+    }
+  }
+
+  Future<void> _setTextSize(TextSize value) async {
+    await StorageService.setTextSize(value);
+    if (mounted) {
+      setState(() => _textSize = value);
     }
   }
 
@@ -213,9 +239,22 @@ class _PrayerAppState extends State<PrayerApp> {
       darkTheme: darkTheme,
       themeMode: _darkMode ? ThemeMode.dark : ThemeMode.light,
       debugShowCheckedModeBanner: false,
+      // Text size setting, on top of the device's own font size.
+      builder: (context, child) {
+        final media = MediaQuery.of(context);
+        final deviceScale = media.textScaler.scale(14) / 14;
+        return MediaQuery(
+          data: media.copyWith(
+            textScaler: TextScaler.linear(deviceScale * _textSize.factor),
+          ),
+          child: child!,
+        );
+      },
       home: AuthWrapper(
         themeSetting: _themeSetting,
         onThemeSettingChanged: _setThemeSetting,
+        textSize: _textSize,
+        onTextSizeChanged: _setTextSize,
         onNightChanged: _setIsNight,
         darkMode: _darkMode,
       ),
@@ -227,6 +266,8 @@ class _PrayerAppState extends State<PrayerApp> {
 class AuthWrapper extends StatefulWidget {
   final ThemeSetting themeSetting;
   final Future<void> Function(ThemeSetting) onThemeSettingChanged;
+  final TextSize textSize;
+  final Future<void> Function(TextSize) onTextSizeChanged;
   final Future<void> Function(bool) onNightChanged;
   final bool darkMode;
 
@@ -234,6 +275,8 @@ class AuthWrapper extends StatefulWidget {
     super.key,
     required this.themeSetting,
     required this.onThemeSettingChanged,
+    required this.textSize,
+    required this.onTextSizeChanged,
     required this.onNightChanged,
     required this.darkMode,
   });
@@ -359,6 +402,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
       currentUser: _currentUser!,
       themeSetting: widget.themeSetting,
       onThemeSettingChanged: widget.onThemeSettingChanged,
+      textSize: widget.textSize,
+      onTextSizeChanged: widget.onTextSizeChanged,
       onNightChanged: widget.onNightChanged,
       darkMode: widget.darkMode,
       onSignOut: _onSignOut,
@@ -378,6 +423,8 @@ class HomePageWrapper extends StatelessWidget {
   final AppUser currentUser;
   final ThemeSetting themeSetting;
   final Future<void> Function(ThemeSetting) onThemeSettingChanged;
+  final TextSize textSize;
+  final Future<void> Function(TextSize) onTextSizeChanged;
   final Future<void> Function(bool) onNightChanged;
   final bool darkMode;
   final VoidCallback onSignOut;
@@ -388,6 +435,8 @@ class HomePageWrapper extends StatelessWidget {
     required this.currentUser,
     required this.themeSetting,
     required this.onThemeSettingChanged,
+    required this.textSize,
+    required this.onTextSizeChanged,
     required this.onNightChanged,
     required this.darkMode,
     required this.onSignOut,
@@ -399,6 +448,8 @@ class HomePageWrapper extends StatelessWidget {
     return HomePage(
       themeSetting: themeSetting,
       onThemeSettingChanged: onThemeSettingChanged,
+      textSize: textSize,
+      onTextSizeChanged: onTextSizeChanged,
       onNightChanged: onNightChanged,
       darkMode: darkMode,
       currentUser: currentUser,

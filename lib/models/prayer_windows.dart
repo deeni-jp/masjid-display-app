@@ -60,12 +60,12 @@ class ProhibitedWindow {
 
 extension PrayerWindows on PrayerSchedule {
   /// The prayers held in congregation on [now]'s day: the five daily
-  /// prayers, with Jummah in place of Dhuhr on Fridays.
+  /// prayers, with Jumuah in place of Dhuhr on Fridays.
   List<PrayerTime> congregationalPrayers(DateTime now) {
     final isFriday = now.weekday == DateTime.friday;
     return getMainPrayers().where((p) {
       if (p.name == 'Dhuhr') return !isFriday;
-      if (p.name == 'Jummah') return isFriday;
+      if (p.name == 'Jumuah') return isFriday;
       return true;
     }).toList();
   }

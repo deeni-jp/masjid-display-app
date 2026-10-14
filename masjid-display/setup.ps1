@@ -4,8 +4,9 @@
 # (cloned or copied) by double-clicking setup.bat. It:
 #   1. checks Google Chrome is installed (offers to install it),
 #   2. builds the web app (installs Flutter first if needed, asking you),
-#   3. makes the display start automatically when Windows signs in,
-#   4. opens the display now (full-screen Chrome).
+#   3. asks how the screen is mounted and the text size,
+#   4. makes the display start automatically when Windows signs in,
+#   5. opens the display now (full-screen Chrome).
 #
 # Run it again any time to rebuild and restart (e.g. after `git pull`).
 #
@@ -97,7 +98,55 @@ if ($flutter) {
 }
 Write-Host 'App is ready.'
 
-# 3. Autostart ---------------------------------------------------------------
+# 3. Screen orientation and text size ----------------------------------------
+# Saved in display.conf (read by start-display.ps1). Screen size in inches
+# needs no setting: the layout always fills the screen.
+Step 'Screen and text size'
+$confPath = Join-Path $here 'display.conf'
+$conf = @{ ORIENTATION = 'horizontal'; TEXT_SIZE = 'normal' }
+if (Test-Path $confPath) {
+    foreach ($line in Get-Content $confPath) {
+        if ($line -match '^\s*([A-Z_]+)=(.*)$') { $conf[$Matches[1]] = $Matches[2].Trim() }
+    }
+}
+
+# Asks a numbered question; Enter keeps the current value.
+function Pick([string]$question, [string]$current, [object[]]$options) {
+    Write-Host $question
+    $default = 1
+    for ($i = 0; $i -lt $options.Count; $i++) {
+        if ($options[$i][0] -eq $current) { $default = $i + 1 }
+        Write-Host "  $($i + 1)) $($options[$i][1])"
+    }
+    $reply = Read-Host "Choose 1-$($options.Count) [$default]"
+    $n = 0
+    if (-not [int]::TryParse($reply, [ref]$n) -or $n -lt 1 -or $n -gt $options.Count) { $n = $default }
+    return $options[$n - 1][0]
+}
+
+$conf.ORIENTATION = Pick 'How is the screen mounted?' $conf.ORIENTATION @(
+    , @('horizontal', 'Horizontal (landscape)')
+    , @('vertical', 'Vertical (portrait)')
+)
+$conf.TEXT_SIZE = Pick 'Text size? (bigger is easier to read from far away)' $conf.TEXT_SIZE @(
+    , @('normal', 'Normal')
+    , @('large', 'Large')
+    , @('extraLarge', 'Extra large')
+)
+@(
+    '# Masjid display settings, written by setup.ps1 (run setup again to change them).'
+    '# ORIENTATION: horizontal | vertical'
+    '# TEXT_SIZE:   normal | large | extraLarge'
+    "ORIENTATION=$($conf.ORIENTATION)"
+    "TEXT_SIZE=$($conf.TEXT_SIZE)"
+) | Set-Content -Path $confPath -Encoding ASCII
+Write-Host "Saved: $($conf.ORIENTATION) screen, text size $($conf.TEXT_SIZE)."
+if ($conf.ORIENTATION -eq 'vertical') {
+    Write-Host ('Rotate the screen in Windows once: Settings > System > Display > ' +
+                'Display orientation > Portrait. The display switches to its vertical layout by itself.') -ForegroundColor Yellow
+}
+
+# 4. Autostart ---------------------------------------------------------------
 Step 'Setting up autostart'
 $startScript = Join-Path $here 'start-display.ps1'
 $shell = New-Object -ComObject WScript.Shell
@@ -110,7 +159,7 @@ $shortcut.Description = 'Opens the masjid prayer-times display in full screen'
 $shortcut.Save()
 Write-Host 'The display will open automatically every time Windows signs in.'
 
-# 4. Start it now ------------------------------------------------------------
+# 5. Start it now ------------------------------------------------------------
 Step 'Opening the display'
 & (Join-Path $here 'stop-display.ps1') | Out-Null   # restart cleanly with the new build
 Start-Sleep -Seconds 2

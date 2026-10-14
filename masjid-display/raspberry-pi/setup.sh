@@ -10,9 +10,10 @@
 # It:
 #   1. installs what's missing (Chromium, curl, Python) with apt,
 #   2. builds the web app (installs Flutter first if needed, asking you),
-#   3. makes the display start automatically when the desktop starts,
-#   4. turns on desktop auto-login and turns off screen blanking (asks first),
-#   5. opens the display now (full-screen Chromium).
+#   3. asks how the screen is mounted and the text size,
+#   4. makes the display start automatically when the desktop starts,
+#   5. turns on desktop auto-login and turns off screen blanking (asks first),
+#   6. opens the display now (full-screen Chromium).
 #
 # Run it again any time to rebuild and restart (e.g. after `git pull`).
 #
@@ -93,7 +94,59 @@ if [ -n "$FLUTTER" ]; then
 fi
 echo 'App is ready.'
 
-# 3. Autostart ---------------------------------------------------------------
+# 3. Screen orientation and text size ----------------------------------------
+# Saved in display.conf (read by start-display.sh). Screen size in inches
+# needs no setting: the layout always fills the screen.
+step 'Screen and text size'
+CONF="$HERE/display.conf"
+ORIENTATION=horizontal
+TEXT_SIZE=normal
+# shellcheck source=/dev/null
+[ -f "$CONF" ] && . "$CONF"
+
+# pick VAR "Question" current value:Label ...  (Enter keeps the current value)
+pick() {
+    local var=$1 question=$2 current=$3 i=1 default=1 reply
+    shift 3
+    local values=()
+    echo "$question"
+    for option in "$@"; do
+        values+=("${option%%:*}")
+        [ "${option%%:*}" = "$current" ] && default=$i
+        echo "  $i) ${option#*:}"
+        i=$((i + 1))
+    done
+    read -r -p "Choose 1-$# [$default]: " reply || reply=$default
+    if ! [[ "$reply" =~ ^[0-9]+$ ]] || [ "$reply" -lt 1 ] || [ "$reply" -gt $# ]; then
+        reply=$default
+    fi
+    printf -v "$var" '%s' "${values[$((reply - 1))]}"
+}
+
+pick ORIENTATION 'How is the screen mounted?' "$ORIENTATION" \
+    'horizontal:Horizontal (landscape)' \
+    'vertical:Vertical (portrait)' \
+    'vertical-flipped:Vertical, the other way up (if Vertical shows upside down)'
+pick TEXT_SIZE 'Text size? (bigger is easier to read from far away)' "$TEXT_SIZE" \
+    'normal:Normal' 'large:Large' 'extraLarge:Extra large'
+
+cat >"$CONF" <<EOF
+# Masjid display settings, written by setup.sh (run it again to change them).
+# ORIENTATION: horizontal | vertical | vertical-flipped
+# TEXT_SIZE:   normal | large | extraLarge
+ORIENTATION=$ORIENTATION
+TEXT_SIZE=$TEXT_SIZE
+EOF
+echo "Saved: $ORIENTATION screen, text size $TEXT_SIZE."
+
+# Rotating the screen on newer Raspberry Pi OS (Wayland) needs wlr-randr.
+if [ "$ORIENTATION" != horizontal ] && ! command -v wlr-randr >/dev/null 2>&1 &&
+    apt-cache show wlr-randr >/dev/null 2>&1; then
+    echo 'Installing wlr-randr (rotates the screen)...'
+    sudo apt-get install -y wlr-randr
+fi
+
+# 4. Autostart ---------------------------------------------------------------
 step 'Setting up autostart'
 mkdir -p "$(dirname "$AUTOSTART_FILE")"
 cat >"$AUTOSTART_FILE" <<EOF
@@ -106,7 +159,7 @@ X-GNOME-Autostart-enabled=true
 EOF
 echo 'The display will open automatically every time the desktop starts.'
 
-# 4. Unattended start + screen always on --------------------------------------
+# 5. Unattended start + screen always on --------------------------------------
 if command -v raspi-config >/dev/null 2>&1; then
     step 'Raspberry Pi settings'
     if ask 'Log in to the desktop automatically and never blank the screen? (recommended)'; then
@@ -116,7 +169,7 @@ if command -v raspi-config >/dev/null 2>&1; then
     fi
 fi
 
-# 5. Start it now ------------------------------------------------------------
+# 6. Start it now ------------------------------------------------------------
 step 'Opening the display'
 bash "$HERE/stop-display.sh" >/dev/null 2>&1 || true   # restart cleanly with the new build
 if [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then

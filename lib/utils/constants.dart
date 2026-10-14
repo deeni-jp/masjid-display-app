@@ -39,6 +39,9 @@ class AppConstants {
   static const String keyDarkModeManual =
       'dark_mode_manual'; // Legacy - read once to migrate to keyThemeSetting
   static const String keyThemeSetting = 'theme_setting';
+  static const String keyTextSize = 'text_size';
+  static const String keyTextSizeSetup =
+      'text_size_setup'; // Last ?textSize= from the display setup applied
   static const String keyDefaultLocation = 'default_location';
   static const String keyIqamaMap = 'iqama_map';
   static const String keyNotifications =
@@ -81,7 +84,7 @@ class AppColors {
   static const Color asrColor = Color(0xFFFFC107);
   static const Color maghribColor = Color(0xFFFF5722);
   static const Color ishaColor = Color(0xFF673AB7);
-  static const Color jummahColor = Color(0xFF4CAF50);
+  static const Color jumuahColor = Color(0xFF4CAF50);
 
   // Notification Priority Colors
   static const Color priorityHigh = Color(0xFFE53935);
@@ -137,8 +140,8 @@ class AppColors {
     if (lowerName.contains('asr')) return asrColor;
     if (lowerName.contains('maghrib')) return maghribColor;
     if (lowerName.contains('isha')) return ishaColor;
-    if (lowerName.contains('jummah') || lowerName.contains('jumuah')) {
-      return jummahColor;
+    if (lowerName.contains('jumuah')) {
+      return jumuahColor;
     }
     return primaryGreen;
   }
@@ -154,7 +157,7 @@ class AppColors {
     if (lowerName.contains('asr')) return Icons.wb_sunny_outlined;
     if (lowerName.contains('maghrib')) return Icons.wb_twilight;
     if (lowerName.contains('isha')) return Icons.nightlight_round;
-    if (lowerName.contains('jummah') || lowerName.contains('jumuah')) {
+    if (lowerName.contains('jumuah')) {
       return Icons.people;
     }
     return Icons.access_time;

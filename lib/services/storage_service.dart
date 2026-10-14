@@ -2,6 +2,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/notification_model.dart';
+import '../models/text_size.dart';
 import '../models/theme_setting.dart';
 import '../utils/constants.dart';
 
@@ -62,6 +63,31 @@ class StorageService {
   static Future<void> setThemeSetting(ThemeSetting value) async {
     final prefs = await _getPrefs();
     await prefs.setString(AppConstants.keyThemeSetting, value.name);
+  }
+
+  /// Get the text size (default Normal)
+  static Future<TextSize> getTextSize() async {
+    final prefs = await _getPrefs();
+    return TextSize.fromName(prefs.getString(AppConstants.keyTextSize)) ??
+        TextSize.normal;
+  }
+
+  /// Save the text size
+  static Future<void> setTextSize(TextSize value) async {
+    final prefs = await _getPrefs();
+    await prefs.setString(AppConstants.keyTextSize, value.name);
+  }
+
+  /// Get the last `?textSize=` value from the display setup that was applied
+  static Future<String?> getTextSizeSetup() async {
+    final prefs = await _getPrefs();
+    return prefs.getString(AppConstants.keyTextSizeSetup);
+  }
+
+  /// Save the last `?textSize=` value from the display setup that was applied
+  static Future<void> setTextSizeSetup(String value) async {
+    final prefs = await _getPrefs();
+    await prefs.setString(AppConstants.keyTextSizeSetup, value);
   }
 
   // ============ LOCATION SETTINGS ============
