@@ -30,9 +30,15 @@ service cloud.firestore {
       allow read: if request.auth != null &&
         (request.auth.uid == userId || isAdmin());
 
-      // Users can create their own document on sign-up, only as 'public'
+      // Users can create their own document on sign-up, only as 'public',
+      // active and not deleted, with only the fields AppUser.toFirestore()
+      // writes (no junk fields)
       allow create: if request.auth != null && request.auth.uid == userId &&
-        request.resource.data.role == 'public';
+        request.resource.data.keys().hasOnly(['email', 'displayName', 'role',
+          'createdAt', 'lastLogin', 'deleted', 'active']) &&
+        request.resource.data.role == 'public' &&
+        request.resource.data.deleted == false &&
+        request.resource.data.active == true;
 
       // Users can update only their display name and last-login time
       // (not role, deleted, active, ...). Admins can update any user.
@@ -98,8 +104,8 @@ service cloud.firestore {
       // Only admins can permanently delete logs (for test user cleanup)
       allow delete: if isAdmin();
 
-      // Any authenticated user can create logs (system creates during deletion)
-      allow create: if request.auth != null;
+      // Only admins can create logs (written by the admin delete-user flow)
+      allow create: if isAdmin();
 
       // Logs should never be updated (audit integrity)
       allow update: if false;

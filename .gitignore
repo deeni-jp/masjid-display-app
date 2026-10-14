@@ -53,6 +53,9 @@ key.properties
 # Firebase Security Rules protect the backend
 google-services.json
 GoogleService-Info.plist
+# Admin service-account keys (full database access) - never commit
+serviceAccountKey.json
+*-firebase-adminsdk-*.json
 
 # Environment variables
 .env
