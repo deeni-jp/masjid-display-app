@@ -2,6 +2,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/notification_model.dart';
+import '../models/theme_setting.dart';
 import '../utils/constants.dart';
 
 class StorageService {
@@ -20,28 +21,47 @@ class StorageService {
 
   // ============ THEME SETTINGS ============
 
-  /// Get dark mode preference
+  /// Get the last sunrise/sunset result (true = night), used by the Auto
+  /// theme until today's prayer times have loaded
   static Future<bool> getDarkMode() async {
     final prefs = await _getPrefs();
     return prefs.getBool(AppConstants.keyDarkMode) ?? false;
   }
 
-  /// Save dark mode preference
+  /// Save the last sunrise/sunset result (true = night)
   static Future<void> setDarkMode(bool value) async {
     final prefs = await _getPrefs();
     await prefs.setBool(AppConstants.keyDarkMode, value);
   }
 
-  /// Get dark mode manual override status
-  static Future<bool> getDarkModeManual() async {
+  /// Get the theme setting (Light / Dark / Auto). Older versions stored a
+  /// manual-override flag instead: a manual choice becomes Light or Dark,
+  /// anything else becomes Auto.
+  static Future<ThemeSetting> getThemeSetting() async {
     final prefs = await _getPrefs();
-    return prefs.getBool(AppConstants.keyDarkModeManual) ?? false;
+    final stored = ThemeSetting.fromName(
+      prefs.getString(AppConstants.keyThemeSetting),
+    );
+    if (stored != null) return stored;
+
+    final ThemeSetting migrated;
+    if (prefs.getBool(AppConstants.keyDarkModeManual) ?? false) {
+      migrated =
+          (prefs.getBool(AppConstants.keyDarkMode) ?? false)
+              ? ThemeSetting.dark
+              : ThemeSetting.light;
+    } else {
+      migrated = ThemeSetting.auto;
+    }
+    await setThemeSetting(migrated);
+    await prefs.remove(AppConstants.keyDarkModeManual);
+    return migrated;
   }
 
-  /// Save dark mode manual override status
-  static Future<void> setDarkModeManual(bool value) async {
+  /// Save the theme setting
+  static Future<void> setThemeSetting(ThemeSetting value) async {
     final prefs = await _getPrefs();
-    await prefs.setBool(AppConstants.keyDarkModeManual, value);
+    await prefs.setString(AppConstants.keyThemeSetting, value.name);
   }
 
   // ============ LOCATION SETTINGS ============

@@ -7,6 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 
 import 'firebase_options.dart';
+import 'models/theme_setting.dart';
 import 'models/user_model.dart';
 import 'services/storage_service.dart';
 import 'services/user_service.dart';
@@ -78,8 +79,14 @@ class PrayerApp extends StatefulWidget {
 }
 
 class _PrayerAppState extends State<PrayerApp> {
-  bool _darkMode = false;
-  bool _themeManualOverride = false;
+  ThemeSetting _themeSetting = ThemeSetting.auto;
+
+  /// Night (sunset to sunrise), reported by the home page; used in Auto
+  bool _isNight = false;
+
+  bool get _darkMode =>
+      _themeSetting == ThemeSetting.dark ||
+      (_themeSetting == ThemeSetting.auto && _isNight);
 
   @override
   void initState() {
@@ -88,31 +95,29 @@ class _PrayerAppState extends State<PrayerApp> {
   }
 
   Future<void> _loadThemePref() async {
-    final darkMode = await StorageService.getDarkMode();
-    final manual = await StorageService.getDarkModeManual();
+    final setting = await StorageService.getThemeSetting();
+    final isNight = await StorageService.getDarkMode();
 
     if (mounted) {
       setState(() {
-        _darkMode = darkMode;
-        _themeManualOverride = manual;
+        _themeSetting = setting;
+        _isNight = isNight;
       });
     }
   }
 
-  Future<void> _setDarkMode(bool value, {bool manual = true}) async {
-    if (!manual && _themeManualOverride) {
-      return;
-    }
-
-    await StorageService.setDarkMode(value);
-
-    if (manual) {
-      await StorageService.setDarkModeManual(true);
-      _themeManualOverride = true;
-    }
-
+  Future<void> _setThemeSetting(ThemeSetting value) async {
+    await StorageService.setThemeSetting(value);
     if (mounted) {
-      setState(() => _darkMode = value);
+      setState(() => _themeSetting = value);
+    }
+  }
+
+  Future<void> _setIsNight(bool value) async {
+    if (value == _isNight) return;
+    await StorageService.setDarkMode(value);
+    if (mounted) {
+      setState(() => _isNight = value);
     }
   }
 
@@ -208,19 +213,28 @@ class _PrayerAppState extends State<PrayerApp> {
       darkTheme: darkTheme,
       themeMode: _darkMode ? ThemeMode.dark : ThemeMode.light,
       debugShowCheckedModeBanner: false,
-      home: AuthWrapper(onToggleTheme: _setDarkMode, darkMode: _darkMode),
+      home: AuthWrapper(
+        themeSetting: _themeSetting,
+        onThemeSettingChanged: _setThemeSetting,
+        onNightChanged: _setIsNight,
+        darkMode: _darkMode,
+      ),
     );
   }
 }
 
 /// Wrapper that handles authentication state
 class AuthWrapper extends StatefulWidget {
-  final Future<void> Function(bool, {bool manual}) onToggleTheme;
+  final ThemeSetting themeSetting;
+  final Future<void> Function(ThemeSetting) onThemeSettingChanged;
+  final Future<void> Function(bool) onNightChanged;
   final bool darkMode;
 
   const AuthWrapper({
     super.key,
-    required this.onToggleTheme,
+    required this.themeSetting,
+    required this.onThemeSettingChanged,
+    required this.onNightChanged,
     required this.darkMode,
   });
 
@@ -343,7 +357,9 @@ class _AuthWrapperState extends State<AuthWrapper> {
     // Show home page if signed in
     return HomePageWrapper(
       currentUser: _currentUser!,
-      onToggleTheme: widget.onToggleTheme,
+      themeSetting: widget.themeSetting,
+      onThemeSettingChanged: widget.onThemeSettingChanged,
+      onNightChanged: widget.onNightChanged,
       darkMode: widget.darkMode,
       onSignOut: _onSignOut,
       onUserChanged: (user) {
@@ -360,7 +376,9 @@ class _AuthWrapperState extends State<AuthWrapper> {
 /// Wrapper for HomePage that passes user data
 class HomePageWrapper extends StatelessWidget {
   final AppUser currentUser;
-  final Future<void> Function(bool, {bool manual}) onToggleTheme;
+  final ThemeSetting themeSetting;
+  final Future<void> Function(ThemeSetting) onThemeSettingChanged;
+  final Future<void> Function(bool) onNightChanged;
   final bool darkMode;
   final VoidCallback onSignOut;
   final void Function(AppUser?) onUserChanged;
@@ -368,7 +386,9 @@ class HomePageWrapper extends StatelessWidget {
   const HomePageWrapper({
     super.key,
     required this.currentUser,
-    required this.onToggleTheme,
+    required this.themeSetting,
+    required this.onThemeSettingChanged,
+    required this.onNightChanged,
     required this.darkMode,
     required this.onSignOut,
     required this.onUserChanged,
@@ -377,7 +397,9 @@ class HomePageWrapper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return HomePage(
-      onToggleTheme: onToggleTheme,
+      themeSetting: themeSetting,
+      onThemeSettingChanged: onThemeSettingChanged,
+      onNightChanged: onNightChanged,
       darkMode: darkMode,
       currentUser: currentUser,
       onUserChanged: onUserChanged,

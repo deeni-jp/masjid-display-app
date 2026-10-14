@@ -36,7 +36,9 @@ class AppConstants {
 
   // SharedPreferences Keys
   static const String keyDarkMode = 'dark_mode';
-  static const String keyDarkModeManual = 'dark_mode_manual';
+  static const String keyDarkModeManual =
+      'dark_mode_manual'; // Legacy - read once to migrate to keyThemeSetting
+  static const String keyThemeSetting = 'theme_setting';
   static const String keyDefaultLocation = 'default_location';
   static const String keyIqamaMap = 'iqama_map';
   static const String keyNotifications =

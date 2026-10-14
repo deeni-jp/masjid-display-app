@@ -9,6 +9,7 @@ import '../models/notification_model.dart';
 import '../models/user_model.dart';
 import '../models/hijri_date.dart';
 import '../models/prayer_windows.dart';
+import '../models/theme_setting.dart';
 import '../services/prayer_service.dart';
 import '../services/hijri_calendar_service.dart';
 import '../services/location_service.dart';
@@ -28,14 +29,20 @@ import '../widgets/notification_card.dart';
 import '../widgets/masjid_logo.dart';
 
 class HomePage extends StatefulWidget {
-  final Future<void> Function(bool, {bool manual}) onToggleTheme;
+  final ThemeSetting themeSetting;
+  final Future<void> Function(ThemeSetting) onThemeSettingChanged;
+
+  /// Reports night (sunset to sunrise) for the Auto theme
+  final Future<void> Function(bool) onNightChanged;
   final bool darkMode;
   final AppUser currentUser;
   final void Function(AppUser?) onUserChanged;
 
   const HomePage({
     super.key,
-    required this.onToggleTheme,
+    required this.themeSetting,
+    required this.onThemeSettingChanged,
+    required this.onNightChanged,
     required this.darkMode,
     required this.currentUser,
     required this.onUserChanged,
@@ -76,6 +83,10 @@ class _HomePageState extends State<HomePage> {
   // Notification cleanup timer
   Timer? _cleanupTimer;
 
+  // Fires once at the next sunrise, sunset or midnight (see
+  // _scheduleThemeEvents)
+  Timer? _themeTimer;
+
   // Full-screen sequence around iqamah: countdown -> prayer time started
   // -> prayer in progress (see prayer_windows.dart).
   PrayerPhaseState? _prayerPhase;
@@ -99,6 +110,7 @@ class _HomePageState extends State<HomePage> {
     _iqamaSub?.cancel();
     _notifSub?.cancel();
     _cleanupTimer?.cancel();
+    _themeTimer?.cancel();
     super.dispose();
   }
 
@@ -159,11 +171,15 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Future<void> _fetchPrayerTimes() async {
-    setState(() {
-      _loading = true;
-      _showLoadingOverlay = true;
-    });
+  /// [silent] (the midnight refresh): no loading overlay, and on failure no
+  /// error message or fallback location; the current data stays on screen.
+  Future<void> _fetchPrayerTimes({bool silent = false}) async {
+    if (!silent) {
+      setState(() {
+        _loading = true;
+        _showLoadingOverlay = true;
+      });
+    }
 
     try {
       // Get location
@@ -214,9 +230,16 @@ class _HomePageState extends State<HomePage> {
         // Non-critical, continue with cached/null
       }
 
-      // Apply theme based on sunset
-      await _applyThemeBySunset();
+      // Day/night for the Auto theme, and the timer for the next change
+      _scheduleThemeEvents();
     } catch (e) {
+      if (silent) {
+        debugPrint('Midnight prayer-time refresh failed: $e');
+        // Keep the sunrise/sunset/midnight timer going with current times
+        _scheduleThemeEvents();
+        return;
+      }
+
       setState(() {
         _loading = false;
         _showLoadingOverlay = false;
@@ -224,6 +247,9 @@ class _HomePageState extends State<HomePage> {
 
       // Try fallback location
       await _tryFallbackLocation();
+
+      // Keep the sunrise/sunset/midnight timer going with cached times
+      _scheduleThemeEvents();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -390,27 +416,30 @@ class _HomePageState extends State<HomePage> {
 
   // ============ THEME MANAGEMENT ============
 
-  Future<void> _applyThemeBySunset() async {
-    if (_prayerSchedule == null) return;
+  /// Reports day/night for the Auto theme, then sets one timer for the next
+  /// change instead of polling: at sunrise/sunset it re-checks, at midnight
+  /// it fetches the new day's prayer times (which calls this again).
+  void _scheduleThemeEvents() {
+    _themeTimer?.cancel();
+    final schedule = _prayerSchedule;
+    if (schedule == null || !mounted) return;
 
-    try {
-      final maghrib = _prayerSchedule!.getPrayerByName('Maghrib');
-      final sunrise = _prayerSchedule!.getPrayerByName('Sunrise');
+    DateTime? waqt(String name) =>
+        schedule.getPrayerByName(name)?.getWaqtTime();
+    final sunrise = waqt('Sunrise');
+    final sunset = waqt('Sunset') ?? waqt('Maghrib');
+    if (sunrise == null || sunset == null) return;
 
-      if (maghrib == null || sunrise == null) return;
+    final now = DateTime.now();
+    widget.onNightChanged(isNightAt(now, sunrise: sunrise, sunset: sunset));
 
-      final maghribTime = maghrib.getWaqtTime();
-      final sunriseTime = sunrise.getWaqtTime();
-
-      if (maghribTime == null || sunriseTime == null) return;
-
-      final now = DateTime.now();
-      final shouldDark = now.isAfter(maghribTime) || now.isBefore(sunriseTime);
-
-      await widget.onToggleTheme(shouldDark, manual: false);
-    } catch (e) {
-      debugPrint('Failed to apply theme by sunset: $e');
-    }
+    final next = nextThemeEvent(now, sunrise: sunrise, sunset: sunset);
+    final isMidnight = next.isAfter(sunset);
+    // +1s so the timer lands just after the event, not a moment before it.
+    _themeTimer = Timer(
+      next.difference(now) + const Duration(seconds: 1),
+      isMidnight ? () => _fetchPrayerTimes(silent: true) : _scheduleThemeEvents,
+    );
   }
 
   // ============ UI CALLBACKS ============
@@ -535,7 +564,8 @@ class _HomePageState extends State<HomePage> {
                           usingRemoteIqama: _usingRemoteIqama,
                           currentUser: widget.currentUser,
                           darkMode: widget.darkMode,
-                          onToggleTheme: widget.onToggleTheme,
+                          themeSetting: widget.themeSetting,
+                          onThemeSettingChanged: widget.onThemeSettingChanged,
                           onUserChanged: widget.onUserChanged,
                         ),
                       ],

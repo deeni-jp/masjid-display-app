@@ -1,6 +1,7 @@
 // lib/screens/more_tab.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../models/theme_setting.dart';
 import '../models/user_model.dart';
 import '../services/location_service.dart';
 import '../services/user_service.dart';
@@ -15,7 +16,8 @@ class MoreTab extends StatelessWidget {
   final bool usingRemoteIqama;
   final AppUser currentUser;
   final bool darkMode;
-  final Future<void> Function(bool, {bool manual}) onToggleTheme;
+  final ThemeSetting themeSetting;
+  final Future<void> Function(ThemeSetting) onThemeSettingChanged;
   final void Function(AppUser?) onUserChanged;
 
   const MoreTab({
@@ -24,7 +26,8 @@ class MoreTab extends StatelessWidget {
     required this.usingRemoteIqama,
     required this.currentUser,
     required this.darkMode,
-    required this.onToggleTheme,
+    required this.themeSetting,
+    required this.onThemeSettingChanged,
     required this.onUserChanged,
   });
 
@@ -84,11 +87,10 @@ class MoreTab extends StatelessWidget {
           // Theme Section
           _buildSettingsCard(
             context,
-            icon: darkMode ? Icons.dark_mode : Icons.light_mode,
+            icon: themeSettingIcon(themeSetting),
             title: 'Theme',
-            subtitle: darkMode ? 'Dark mode' : 'Light mode',
-            onTap: () => onToggleTheme(!darkMode, manual: true),
-            trailing: darkMode ? 'Light' : 'Dark',
+            subtitle: themeSetting.label,
+            onTap: () => _showThemeDialog(context),
           ),
 
           // About Section
@@ -498,6 +500,35 @@ class MoreTab extends StatelessWidget {
     }
   }
 
+  Future<void> _showThemeDialog(BuildContext context) async {
+    final choice = await showDialog<ThemeSetting>(
+      context: context,
+      builder:
+          (context) => SimpleDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppStyles.radiusLarge),
+            ),
+            title: Text(
+              'Theme',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            ),
+            children: [
+              for (final option in ThemeSetting.values)
+                ListTile(
+                  leading: Icon(themeSettingIcon(option)),
+                  title: Text(option.label, style: GoogleFonts.poppins()),
+                  trailing:
+                      option == themeSetting ? const Icon(Icons.check) : null,
+                  onTap: () => Navigator.pop(context, option),
+                ),
+            ],
+          ),
+    );
+    if (choice != null && choice != themeSetting) {
+      await onThemeSettingChanged(choice);
+    }
+  }
+
   Future<void> _openSettings(BuildContext context) async {
     final defaultLocation = await StorageService.getDefaultLocation();
 
@@ -511,8 +542,8 @@ class MoreTab extends StatelessWidget {
       ),
       builder:
           (context) => _SettingsBottomSheet(
-            initialDarkMode: darkMode,
-            onToggleTheme: onToggleTheme,
+            initialThemeSetting: themeSetting,
+            onThemeSettingChanged: onThemeSettingChanged,
             defaultLocation: defaultLocation,
           ),
     );
@@ -582,15 +613,27 @@ class MoreTab extends StatelessWidget {
   }
 }
 
-/// Settings Bottom Sheet with proper state management for dark mode toggle
+/// Icon for a theme option (Theme card, theme dialog, settings sheet)
+IconData themeSettingIcon(ThemeSetting setting) {
+  switch (setting) {
+    case ThemeSetting.light:
+      return Icons.light_mode;
+    case ThemeSetting.dark:
+      return Icons.dark_mode;
+    case ThemeSetting.auto:
+      return Icons.brightness_auto;
+  }
+}
+
+/// Settings Bottom Sheet with proper state management for the theme picker
 class _SettingsBottomSheet extends StatefulWidget {
-  final bool initialDarkMode;
-  final Future<void> Function(bool, {bool manual}) onToggleTheme;
+  final ThemeSetting initialThemeSetting;
+  final Future<void> Function(ThemeSetting) onThemeSettingChanged;
   final String defaultLocation;
 
   const _SettingsBottomSheet({
-    required this.initialDarkMode,
-    required this.onToggleTheme,
+    required this.initialThemeSetting,
+    required this.onThemeSettingChanged,
     required this.defaultLocation,
   });
 
@@ -599,13 +642,13 @@ class _SettingsBottomSheet extends StatefulWidget {
 }
 
 class _SettingsBottomSheetState extends State<_SettingsBottomSheet> {
-  late bool _darkMode;
+  late ThemeSetting _themeSetting;
   late TextEditingController _controller;
 
   @override
   void initState() {
     super.initState();
-    _darkMode = widget.initialDarkMode;
+    _themeSetting = widget.initialThemeSetting;
     _controller = TextEditingController(text: widget.defaultLocation);
   }
 
@@ -641,17 +684,41 @@ class _SettingsBottomSheetState extends State<_SettingsBottomSheet> {
               ],
             ),
             const SizedBox(height: 20),
-            SwitchListTile(
-              title: Text('Dark Mode', style: GoogleFonts.poppins()),
-              value: _darkMode,
-              onChanged: (v) {
-                setState(() => _darkMode = v);
-                widget.onToggleTheme(v, manual: true);
-              },
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppStyles.radiusMedium),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Theme', style: GoogleFonts.poppins(fontSize: 16)),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: SegmentedButton<ThemeSetting>(
+                segments: [
+                  for (final option in ThemeSetting.values)
+                    ButtonSegment(
+                      value: option,
+                      icon: Icon(themeSettingIcon(option)),
+                      // Short labels to fit; "Auto" is sunrise/sunset
+                      label: Text(
+                        option == ThemeSetting.auto ? 'Auto' : option.label,
+                      ),
+                    ),
+                ],
+                selected: {_themeSetting},
+                onSelectionChanged: (selection) {
+                  setState(() => _themeSetting = selection.first);
+                  widget.onThemeSettingChanged(selection.first);
+                },
               ),
             ),
+            const SizedBox(height: 4),
+            if (_themeSetting == ThemeSetting.auto)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Dark from sunset to sunrise',
+                  style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey),
+                ),
+              ),
             const SizedBox(height: 12),
             TextField(
               controller: _controller,
