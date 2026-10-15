@@ -38,7 +38,9 @@ committing anyway.
 
 ## Reporting a problem
 
-Email **dticcjp@gmail.com** rather than opening a public issue.
+Please don't open a public issue for a security problem. Report it privately
+on GitHub instead: the repository's **Security** tab → **Report a
+vulnerability**.
 
 ## Changing the rules
 

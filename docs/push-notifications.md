@@ -24,8 +24,8 @@ App (moderator saves notice)
 
 1. **Deploy the worker** – follow [push-worker/README.md](../push-worker/README.md)
    (`wrangler login`, store the service-account key, `wrangler deploy`).
-2. Put the worker URL in `.env` as `PUSH_WORKER_URL` (and in the GitHub
-   repository variable of the same name, for CI builds), then rebuild.
+2. Put the worker URL in `.env` as `PUSH_WORKER_URL` (the `.env` CI uses
+   too, see [ci-cd.md](ci-cd.md)), then rebuild.
 3. Enable the **Firebase Cloud Messaging API**: Google Cloud Console → APIs &
    Services → Library (otherwise FCM returns 403).
 

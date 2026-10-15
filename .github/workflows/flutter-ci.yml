@@ -2,8 +2,10 @@ name: Flutter CI/CD
 
 # Checks (format, analyze, tests) run on every push to any branch and on pull
 # requests, so contributors get feedback before review. Android builds run on
-# main, on version tags (v*) and on manual runs. iOS builds and Firestore rules
-# deploys are manual (Actions -> Flutter CI/CD -> Run workflow).
+# main, on version tags (v*) and on manual runs, but only when the signing and
+# Firebase secrets are set (see docs/ci-cd.md); otherwise they're skipped.
+# iOS builds and Firestore rules deploys are manual
+# (Actions -> Flutter CI/CD -> Run workflow).
 on:
   push:
     branches: ["**"]
@@ -37,14 +39,9 @@ jobs:
           channel: "stable"
 
       - name: Create .env file
-        run: |
-          cat > .env << EOF
-          # CI Environment Configuration (public values only: .env ships in the app)
-          ALADHAN_API_METHOD=3
-          ALADHAN_SCHOOL=1
-          PUSH_WORKER_URL=${{ vars.PUSH_WORKER_URL }}
-          APP_CHECK_WEB_SITE_KEY=${{ vars.APP_CHECK_WEB_SITE_KEY }}
-          EOF
+        env:
+          ENV_FILE: ${{ vars.ENV_FILE }}
+        run: bash .github/scripts/create-env.sh
 
       - name: Install dependencies
         run: flutter pub get
@@ -65,13 +62,34 @@ jobs:
           file: coverage/lcov.info
           fail_ci_if_error: false
 
+  # Android builds need this masjid's signing key and Firebase config. The
+  # public template (and a fresh fork) has neither, so the build is skipped
+  # there instead of failing.
+  android-secrets:
+    runs-on: ubuntu-latest
+    outputs:
+      ready: ${{ steps.check.outputs.ready }}
+    steps:
+      - id: check
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON" ] && [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::Android build skipped: set the GOOGLE_SERVICES_JSON and ANDROID_KEYSTORE_BASE64 secrets to build (docs/ci-cd.md)"
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
   build-android:
-    needs: analyze
+    needs: [analyze, android-secrets]
     runs-on: ubuntu-latest
     if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'push' &&
-       (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')))
+      needs.android-secrets.outputs.ready == 'true' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event_name == 'push' &&
+        (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))))
     steps:
       - uses: actions/checkout@v4
 
@@ -80,14 +98,9 @@ jobs:
           channel: "stable"
 
       - name: Create .env file
-        run: |
-          cat > .env << EOF
-          # CI Environment Configuration (public values only: .env ships in the app)
-          ALADHAN_API_METHOD=3
-          ALADHAN_SCHOOL=1
-          PUSH_WORKER_URL=${{ vars.PUSH_WORKER_URL }}
-          APP_CHECK_WEB_SITE_KEY=${{ vars.APP_CHECK_WEB_SITE_KEY }}
-          EOF
+        env:
+          ENV_FILE: ${{ vars.ENV_FILE }}
+        run: bash .github/scripts/create-env.sh
 
       - name: Install dependencies
         run: flutter pub get
@@ -97,12 +110,7 @@ jobs:
       - name: Create google-services.json
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
-        run: |
-          if [ -z "$GOOGLE_SERVICES_JSON" ]; then
-            echo "::error::GOOGLE_SERVICES_JSON secret is not set"
-            exit 1
-          fi
-          printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+        run: printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
 
       # Decode keystore from base64
       - name: Decode keystore
@@ -157,14 +165,9 @@ jobs:
           channel: "stable"
 
       - name: Create .env file
-        run: |
-          cat > .env << EOF
-          # CI Environment Configuration (public values only: .env ships in the app)
-          ALADHAN_API_METHOD=3
-          ALADHAN_SCHOOL=1
-          PUSH_WORKER_URL=${{ vars.PUSH_WORKER_URL }}
-          APP_CHECK_WEB_SITE_KEY=${{ vars.APP_CHECK_WEB_SITE_KEY }}
-          EOF
+        env:
+          ENV_FILE: ${{ vars.ENV_FILE }}
+        run: bash .github/scripts/create-env.sh
 
       - name: Install dependencies
         run: flutter pub get
@@ -186,17 +189,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Create .env file
+        env:
+          ENV_FILE: ${{ vars.ENV_FILE }}
+        run: bash .github/scripts/create-env.sh
+
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
 
+      # Deploys to the project in FIREBASE_PROJECT_ID (.env).
       - name: Deploy Firestore Rules
-        run: firebase deploy --only firestore:rules --token "${{ secrets.FIREBASE_TOKEN }}"
+        run: |
+          project=$(sed -n 's/^FIREBASE_PROJECT_ID=//p' .env | tr -d '[:space:]')
+          if [ -z "$project" ]; then
+            echo "::error::FIREBASE_PROJECT_ID is empty in .env"
+            exit 1
+          fi
+          firebase deploy --only firestore:rules,firestore:indexes \
+            --project "$project" --token "${{ secrets.FIREBASE_TOKEN }}"
 
-      # Uncomment if you want to deploy Firebase Functions
-      # - name: Deploy Firebase Functions
-      #   run: firebase deploy --only functions --token "${{ secrets.FIREBASE_TOKEN }}"
-
-  # Optional: Create GitHub Release on tag
+  # Version tags (v*) publish a GitHub release with the APK, so masjids that
+  # don't use Google Play can download and install it directly.
   release:
     needs: [build-android]
     runs-on: ubuntu-latest
@@ -215,11 +228,12 @@ jobs:
           name: release-aab
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: |
             app-release.apk
             app-release.aab
+          generate_release_notes: true
           draft: false
           prerelease: false
         env:

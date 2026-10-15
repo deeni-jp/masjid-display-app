@@ -6,7 +6,10 @@ still needs internet to reach Firebase.
 
 ## Setup
 
-Clone or copy the whole project onto the PC, then:
+Clone or copy your copy of the project onto the PC. It needs your masjid's
+`.env` in the project folder (masjid name, Firebase values – see
+[docs/setup.md](../docs/setup.md)); if it's missing, setup creates it from
+`.env.example` and stops so you can fill it in. Then:
 
 | PC | Run |
 |---|---|
@@ -58,5 +61,6 @@ project; setup then skips the build.
 - Port 8080 in use: change `$Port` / `PORT` at the top of `start-display.ps1`
   / `start-display.sh` and run setup again.
 - Location: allow the browser's location prompt, or the app uses IP-based location.
-- `.env` is created from `.env.example`; set `PUSH_WORKER_URL` in it only if
-  notices will be posted from this PC.
+- Setup stops with "Fill in your masjid's settings": fill in `.env` (at least
+  the `FIREBASE_*` values) and run setup again. `PUSH_WORKER_URL` is only needed
+  if notices will be posted from this PC.

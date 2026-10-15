@@ -25,8 +25,13 @@ Future<void> main() async {
   // Initialize environment configuration
   await EnvConfig.initialize();
 
-  // Initialize Firebase
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  // Initialize Firebase (each masjid's own project, configured in .env)
+  final options = DefaultFirebaseOptions.currentPlatform;
+  if (options.projectId.isEmpty || options.apiKey.isEmpty) {
+    runApp(const _SetupNeededApp());
+    return;
+  }
+  await Firebase.initializeApp(options: options);
 
   // Attest that requests come from this app (Firebase App Check)
   await _activateAppCheck();
@@ -35,6 +40,34 @@ Future<void> main() async {
   await StorageService.init();
 
   runApp(const PrayerApp());
+}
+
+/// Shown instead of the app until the Firebase values are filled in .env,
+/// so a fresh copy of the project explains what's missing instead of
+/// crashing.
+class _SetupNeededApp extends StatelessWidget {
+  const _SetupNeededApp();
+
+  @override
+  Widget build(BuildContext context) {
+    return const MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        body: Center(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Text(
+              'Firebase is not set up yet.\n\n'
+              'Fill in the FIREBASE_* values in .env (see .env.example and '
+              'docs/setup.md), then rebuild the app.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 18),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// Turns on Firebase App Check, which attaches a token to Firebase requests

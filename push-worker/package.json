@@ -1,5 +1,5 @@
 {
-  "name": "dticc-push-worker",
+  "name": "masjid-push-worker",
   "private": true,
   "type": "module",
   "scripts": {

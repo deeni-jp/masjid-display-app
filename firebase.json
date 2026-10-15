@@ -1,44 +1,8 @@
 {
-  "flutter": {
-    "platforms": {
-      "android": {
-        "default": {
-          "projectId": "dticc-app",
-          "appId": "1:245306822222:android:baad96922e3e610280bd1f",
-          "fileOutput": "android/app/google-services.json"
-        }
-      },
-      "dart": {
-        "lib/firebase_options.dart": {
-          "projectId": "dticc-app",
-          "configurations": {
-            "android": "1:245306822222:android:baad96922e3e610280bd1f",
-            "ios": "1:245306822222:ios:2bd79a71e60aa28b80bd1f",
-            "macos": "1:245306822222:ios:2bd79a71e60aa28b80bd1f",
-            "web": "1:245306822222:web:4d859861d70246e280bd1f",
-            "windows": "1:245306822222:web:e0a777780f3cefd780bd1f"
-          }
-        }
-      }
-    }
-  },
   "firestore": {
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
-  "functions": [
-    {
-      "source": "functions",
-      "codebase": "default",
-      "ignore": [
-        "node_modules",
-        ".git",
-        "firebase-debug.log",
-        "firebase-debug.*.log",
-        "*.local"
-      ]
-    }
-  ],
   "hosting": {
     "public": "build/web",
     "ignore": [

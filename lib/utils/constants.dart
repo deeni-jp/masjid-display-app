@@ -1,9 +1,11 @@
 // lib/utils/constants.dart
 import 'package:flutter/material.dart';
 
+import 'env_config.dart';
+
 class AppConstants {
-  // App Info
-  static const String appName = 'Darut Tauhid Masjid';
+  // App Info: the masjid name comes from MASJID_NAME in .env
+  static String get appName => EnvConfig.masjidName;
   static const String appVersion = '1.2.0';
 
   // Prayer Names

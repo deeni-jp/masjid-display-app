@@ -5,13 +5,15 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:http/http.dart' as http;
 
+import '../utils/env_config.dart';
+
 class LocationService {
-  // Default location: Nagatsuta, Yokohama
-  static const String defaultLocation = 'Nagatsuta, Yokohama';
-  static const double defaultLatitude = 35.5456;
-  static const double defaultLongitude = 139.5089;
-  static const String defaultCity = 'Nagatsuta';
-  static const String defaultCountry = 'Japan';
+  // Default location (normally the masjid's): DEFAULT_* in .env
+  static String get defaultLocation => '$defaultCity, $defaultCountry';
+  static double get defaultLatitude => EnvConfig.defaultLatitude;
+  static double get defaultLongitude => EnvConfig.defaultLongitude;
+  static String get defaultCity => EnvConfig.defaultCity;
+  static String get defaultCountry => EnvConfig.defaultCountry;
 
   /// Get current device location
   static Future<LocationData> getCurrentLocation() async {
@@ -67,7 +69,7 @@ class LocationService {
       );
     } catch (e) {
       // If any error occurs (permission denied, service disabled, etc.),
-      // return default Nagatsuta location
+      // return the default location
       debugPrint(
         'Location error: $e. Using default location: $defaultLocation',
       );
@@ -75,7 +77,7 @@ class LocationService {
     }
   }
 
-  /// Get default location (Nagatsuta, Yokohama)
+  /// Get the default location (DEFAULT_* in .env)
   /// Use this when location permission is denied or location services are disabled
   static LocationData getDefaultLocation() {
     return LocationData(

@@ -7,18 +7,25 @@ One GitHub Actions workflow: [`.github/workflows/flutter-ci.yml`](../.github/wor
 | Job | Runs on | What it does |
 |---|---|---|
 | **Analyze** | Every push to any branch; PRs to `main`/`develop` | `dart format` check, `flutter analyze --no-fatal-infos`, `flutter test --coverage` |
-| **Build Android** | Pushes to `main`, `v*` tags, manual runs | Signed release APK + AAB, uploaded as artifacts |
+| **Build Android** | Pushes to `main`, `v*` tags, manual runs – only when the Android secrets below are set (skipped otherwise, e.g. on the public template) | Signed release APK + AAB, uploaded as artifacts |
 | **Build iOS** | Manual runs only ("Build iOS") | Unsigned iOS build |
-| **Deploy Firebase** | Manual runs only ("Deploy Firestore rules") | `firebase deploy --only firestore:rules` |
-| **Release** | `v*` tags | GitHub release with the APK and AAB attached |
+| **Deploy Firebase** | Manual runs only ("Deploy Firestore rules") | Deploys `firestore.rules` and indexes to `FIREBASE_PROJECT_ID` from `.env` |
+| **Release** | `v*` tags | GitHub release with the APK and AAB attached – a download link for your community |
 
 - Manual runs: GitHub → **Actions** → **Flutter CI/CD** → **Run workflow**.
 - A newer push to the same branch cancels the older run.
 - Rules deployment is never automatic, because it changes live database security.
-- Release: `git tag v1.2.0 && git push origin v1.2.0`.
+- Release: bump `version:` in `pubspec.yaml`, then `git tag v1.3.0 && git push origin v1.3.0`.
 
-Every build creates its own `.env` from defaults plus the repository variables
-below.
+Every job needs `.env` (your masjid's public settings, see
+[setup.md](setup.md#4-env)). It's taken from, in order:
+
+1. a committed `.env` – simplest in your own copy of the repository (all its
+   values are public anyway): `git add -f .env`;
+2. the `ENV_FILE` repository variable – the whole `.env` file pasted as the value;
+3. `.env.example` – template defaults, enough for format/analyze/tests.
+
+See `.github/scripts/create-env.sh`.
 
 ## Secrets
 
@@ -44,8 +51,7 @@ base64 upload-keystore.jks | tr -d '\n'                                  # Linux
 
 | Variable | Value |
 |---|---|
-| `PUSH_WORKER_URL` | Push worker URL (`npx wrangler deploy` prints it) |
-| `APP_CHECK_WEB_SITE_KEY` | reCAPTCHA v3 site key (optional) |
+| `ENV_FILE` | Optional: the whole `.env` file, if it isn't committed |
 
 ## Troubleshooting
 
@@ -53,5 +59,7 @@ base64 upload-keystore.jks | tr -d '\n'                                  # Linux
 |---|---|
 | Formatting check fails | Run `dart format .` and commit |
 | Analyze fails | Run `flutter analyze` locally; warnings and errors fail, infos don't |
+| Android build skipped | Set the `GOOGLE_SERVICES_JSON` and `ANDROID_KEYSTORE_BASE64` secrets |
 | Android signing fails | Keystore base64 must be one line; check the passwords and alias |
+| No matching client for package name | `APP_ID` in `.env` must match the Android app in `GOOGLE_SERVICES_JSON` |
 | Rules deployment fails | Token expired – run `firebase login:ci` and update `FIREBASE_TOKEN` |

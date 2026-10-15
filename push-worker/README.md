@@ -9,7 +9,7 @@ How it works: when a moderator/admin saves a notice, the app calls
 `POST <worker>/notify` with the user's Firebase ID token and the notice id.
 The worker:
 
-1. verifies the ID token (Firebase Auth, project `dticc-app`);
+1. verifies the ID token (Firebase Auth, your project `FIREBASE_PROJECT_ID`);
 2. checks `users/{uid}` in Firestore has role `admin` or `moderator`;
 3. reads the notice from `mosque/data/notifications/{id}` (must be active and
    not expired) — the text comes from Firestore, not from the caller;
@@ -27,6 +27,9 @@ npm install
 npx wrangler login          # opens a browser to authorise your Cloudflare account
 ```
 
+In `wrangler.toml`, set `FIREBASE_PROJECT_ID` to your Firebase project ID
+(and optionally rename the worker with `name`).
+
 ### 1. Create a new service-account key
 
 Firebase Console → ⚙ Project settings → **Service accounts** →
@@ -42,19 +45,18 @@ npx wrangler deploy
 ```
 
 `wrangler deploy` prints the worker URL, e.g.
-`https://dticc-push.<your-account>.workers.dev`.
+`https://masjid-push.<your-account>.workers.dev`.
 
 ### 3. Point the app at it
 
-Set `PUSH_WORKER_URL=<that URL>` in the app's `.env` (and in the CI workflow's
-`.env` step). It's a public URL — not a secret.
+Set `PUSH_WORKER_URL=<that URL>` in the app's `.env` (and in the `.env` CI
+uses, see `docs/ci-cd.md`). It's a public URL — not a secret.
 
-### 4. Delete the old key (key rotation)
+### 4. Delete keys you don't use
 
 Google Cloud Console → IAM & Admin → **Service accounts** →
-`firebase-adminsdk-…@dticc-app.iam.gserviceaccount.com` → **Keys**.
-Delete every key except the one you just created (check the key IDs). Old keys
-were bundled into earlier app builds, so they must not stay valid.
+`firebase-adminsdk-…@<your-project>.iam.gserviceaccount.com` → **Keys**.
+Delete every key except the one the worker uses (check the key IDs).
 
 ## Changing the code
 
@@ -64,8 +66,8 @@ npx wrangler dev       # run locally on http://localhost:8787
 npx wrangler deploy    # publish
 ```
 
-Allowed browser origins are in `wrangler.toml` (`ALLOWED_ORIGINS`). The web
-app currently runs locally: if moderators send notices from it, add its
+Allowed browser origins are in `wrangler.toml` (`ALLOWED_ORIGINS`). If
+moderators send notices from the web app, add its
 address (e.g. `http://192.168.1.20:8080`) there and `npx wrangler deploy`.
 `http://localhost:*` is always allowed. The Android/iOS apps don't need this.
 

@@ -65,3 +65,6 @@ serviceAccountKey.json
 # Installed packages and generated reports
 node_modules/
 /coverage/
+
+# Local Claude Code settings
+.claude/settings.local.json

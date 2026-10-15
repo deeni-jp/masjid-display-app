@@ -84,6 +84,11 @@ if ($flutter) {
         Copy-Item (Join-Path $projectRoot '.env.example') $envFile
         Write-Host 'Created .env from .env.example.'
     }
+    # The masjid's name and Firebase project are set in .env (docs/setup.md).
+    if (-not (Select-String -Path $envFile -Pattern '^\s*FIREBASE_PROJECT_ID=\s*\S' -Quiet)) {
+        Fail ("Fill in your masjid's settings in $envFile (masjid name, Firebase values), " +
+              'then run setup again. See docs/setup.md.')
+    }
     Write-Host 'Building (the first build takes several minutes)...'
     Push-Location $projectRoot
     try {

@@ -86,6 +86,9 @@ if [ -n "$FLUTTER" ]; then
         cp "$PROJECT_ROOT/.env.example" "$PROJECT_ROOT/.env"
         echo 'Created .env from .env.example.'
     fi
+    # The masjid's name and Firebase project are set in .env (docs/setup.md).
+    grep -Eq '^[[:space:]]*FIREBASE_PROJECT_ID=[[:space:]]*[^[:space:]]' "$PROJECT_ROOT/.env" ||
+        fail "Fill in your masjid's settings in $PROJECT_ROOT/.env (masjid name, Firebase values), then run setup again. See docs/setup.md."
     echo 'Building (the first build can take 10+ minutes on a Raspberry Pi)...'
     (cd "$PROJECT_ROOT" && "$FLUTTER" build web --release) ||
         fail 'Building the app failed (see the messages above).'

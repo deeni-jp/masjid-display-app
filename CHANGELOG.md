@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### Open source, for any masjid
+- Licensed under GPL-3.0; the repository is a neutral template for any masjid.
+- All masjid-specific settings in `.env`: name, app ID, default location and
+  the Firebase project (`lib/firebase_options.dart` now reads them). A fresh
+  copy shows "Firebase is not set up yet" instead of crashing.
+- `dart run tool/apply_branding.dart` copies the name and app ID into the
+  Android, iOS, web and Windows project files.
+- Generic logo and icons; replace `assets/images/mosque.png` with your own.
+- CI: `.env` from a committed file, the `ENV_FILE` variable or the example;
+  Android builds are skipped when the signing secrets aren't set; releases
+  publish the APK as a download.
+- Docs: setup guide for a new masjid; APK vs Google Play distribution.
+- Display: stopping the display also turns off its autostart until setup is
+  run again; `stop-display.bat` on Windows. Setup checks `.env` is filled in.
+- Removed the unused legacy Cloud Functions (`functions/`).
+
 ### Display, text size and branding
 - Vertical monitors get their own layout on the masjid display (stacked,
   prayer table largest) instead of a shrunken landscape screen.
@@ -53,9 +69,9 @@ PC setup. Deployed and running on the masjid display (Raspberry Pi).
   other users' profiles.
 
 ### Production readiness
-- App name "Darut Tauhid Masjid", masjid logo in the app, new launcher/web icons.
+- App name and masjid logo in the app, new launcher/web icons.
 - Compact, centred login page on wide screens (web).
-- Android app ID `com.dticc.app`; release signing from `key.properties`.
+- Own Android app ID; release signing from `key.properties`.
 - Firebase App Check (monitoring mode) on Android, iOS and web.
 - Web app runs locally for now; Firebase Hosting config prepared for a later
   public launch.

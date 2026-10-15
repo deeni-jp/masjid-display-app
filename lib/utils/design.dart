@@ -168,7 +168,7 @@ class DesignTime {
 
 /// Masjid name shown on the display.
 class MasjidInfo {
-  static const String name = AppConstants.appName;
+  static String get name => AppConstants.appName;
 }
 
 /// Light and dark colour sets for the home screens (display and mobile).

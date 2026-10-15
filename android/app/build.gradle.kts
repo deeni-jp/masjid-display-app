@@ -40,11 +40,11 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
+        // Set APP_ID in .env and run `dart run tool/apply_branding.dart`.
         // Must match the Android app registered in Firebase (google-services.json /
-        // lib/firebase_options.dart). The Kotlin code package (namespace) can differ.
+        // FIREBASE_ANDROID_APP_ID). The Kotlin code package (namespace) can differ.
         // This is the Play Store identity: never change it after publishing.
-        applicationId = "com.dticc.app"
+        applicationId = "com.example.masjidprayertimes"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

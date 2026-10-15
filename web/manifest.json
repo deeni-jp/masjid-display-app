@@ -1,11 +1,11 @@
 {
-    "name": "Darut Tauhid Masjid",
-    "short_name": "Darut Tauhid",
+    "name": "Masjid Prayer Times",
+    "short_name": "Masjid",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#FFFFFF",
     "theme_color": "#0F5C46",
-    "description": "Prayer times, iqamah and notices for Darut Tauhid Masjid.",
+    "description": "Prayer times, iqamah and notices for Masjid Prayer Times.",
     "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
