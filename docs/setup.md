@@ -14,8 +14,8 @@ Firebase project — is set in `.env` and a logo file. No code changes needed.
 Fork this repository on GitHub (or download it), then clone your copy:
 
 ```bash
-git clone https://github.com/<you>/prayer_times_app.git
-cd prayer_times_app
+git clone https://github.com/<you>/masjid-display-app.git
+cd masjid-display-app
 cp .env.example .env
 flutter pub get
 ```
@@ -24,7 +24,7 @@ To receive later improvements, add this repository as `upstream` and pull
 from it now and then:
 
 ```bash
-git remote add upstream https://github.com/deeni-jp/prayer_times_app.git
+git remote add upstream https://github.com/deeni-jp/masjid-display-app.git
 git pull upstream main
 ```
 

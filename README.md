@@ -1,6 +1,6 @@
 # Masjid Prayer Times
 
-[![Flutter CI/CD](https://github.com/deeni-jp/prayer_times_app/actions/workflows/flutter-ci.yml/badge.svg)](https://github.com/deeni-jp/prayer_times_app/actions/workflows/flutter-ci.yml)
+[![Flutter CI/CD](https://github.com/deeni-jp/masjid-display-app/actions/workflows/flutter-ci.yml/badge.svg)](https://github.com/deeni-jp/masjid-display-app/actions/workflows/flutter-ci.yml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
 A free, open-source app for any masjid: prayer and iqamah times, notices with
