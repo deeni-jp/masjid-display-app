@@ -46,10 +46,10 @@ project; setup then skips the build.
 | To… | Do |
 |---|---|
 | Leave full screen briefly | `Alt+F4` – it reopens within ~10 seconds |
-| Stop the display | Windows: right-click `stop-display.ps1` → Run with PowerShell · Pi: `bash masjid-display/raspberry-pi/stop-display.sh` |
+| Stop the display and use the PC normally | Windows: double-click `stop-display.bat` · Pi: `bash masjid-display/raspberry-pi/stop-display.sh`. It stays off, also after a restart, until you run setup again |
+| Start it again | Run setup again (`setup.bat` / `setup.sh`) |
 | Update the app | `git pull`, then run setup again (rebuilds and restarts) |
 | Change orientation or text size | Run setup again. Text size can also be changed on the display: settings (gear) → Settings |
-| Remove autostart | `setup.bat -Uninstall` · `setup.sh --uninstall` |
 
 ## Troubleshooting
 

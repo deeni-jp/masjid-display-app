@@ -27,9 +27,7 @@ function Ask([string]$question) {
 }
 
 if ($Uninstall) {
-    & (Join-Path $here 'stop-display.ps1')
-    Remove-Item -Path $shortcutPath -ErrorAction SilentlyContinue
-    Write-Host 'Autostart removed. The display will no longer open at sign-in.'
+    & (Join-Path $here 'stop-display.ps1')   # also removes autostart
     exit 0
 }
 
@@ -146,6 +144,11 @@ if ($conf.ORIENTATION -eq 'vertical') {
                 'Display orientation > Portrait. The display switches to its vertical layout by itself.') -ForegroundColor Yellow
 }
 
+# Stop the running display first so it restarts cleanly with the new build.
+# (stop-display.ps1 also removes autostart, so this must come before step 4.)
+& (Join-Path $here 'stop-display.ps1') | Out-Null
+Start-Sleep -Seconds 2
+
 # 4. Autostart ---------------------------------------------------------------
 Step 'Setting up autostart'
 $startScript = Join-Path $here 'start-display.ps1'
@@ -161,8 +164,6 @@ Write-Host 'The display will open automatically every time Windows signs in.'
 
 # 5. Start it now ------------------------------------------------------------
 Step 'Opening the display'
-& (Join-Path $here 'stop-display.ps1') | Out-Null   # restart cleanly with the new build
-Start-Sleep -Seconds 2
 Start-Process -FilePath 'powershell.exe' -WindowStyle Hidden -ArgumentList @(
     '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$startScript`""
 )

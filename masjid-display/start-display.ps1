@@ -8,8 +8,8 @@
 #   5. keeps the screen from sleeping while running.
 #
 # Runs automatically at sign-in once setup.bat has been run.
-# Stop it with stop-display.ps1. To leave the kiosk temporarily: Alt+F4
-# (it reopens after a few seconds unless stop-display.ps1 was run).
+# Stop it (and its autostart) with stop-display.bat. To leave the kiosk
+# temporarily: Alt+F4 (it reopens after a few seconds).
 #
 # Options:
 #   -Port 8080     port for the local web server

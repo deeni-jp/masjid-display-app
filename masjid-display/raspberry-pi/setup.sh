@@ -36,9 +36,7 @@ ask() {
 }
 
 if [ "${1:-}" = "--uninstall" ]; then
-    bash "$HERE/stop-display.sh"
-    rm -f "$AUTOSTART_FILE"
-    echo 'Autostart removed. The display will no longer open at start-up.'
+    bash "$HERE/stop-display.sh"   # also removes autostart
     exit 0
 fi
 
@@ -146,6 +144,10 @@ if [ "$ORIENTATION" != horizontal ] && ! command -v wlr-randr >/dev/null 2>&1 &&
     sudo apt-get install -y wlr-randr
 fi
 
+# Stop the running display first so it restarts cleanly with the new build.
+# (stop-display.sh also removes autostart, so this must come before step 4.)
+bash "$HERE/stop-display.sh" >/dev/null 2>&1 || true
+
 # 4. Autostart ---------------------------------------------------------------
 step 'Setting up autostart'
 mkdir -p "$(dirname "$AUTOSTART_FILE")"
@@ -171,7 +173,6 @@ fi
 
 # 6. Start it now ------------------------------------------------------------
 step 'Opening the display'
-bash "$HERE/stop-display.sh" >/dev/null 2>&1 || true   # restart cleanly with the new build
 if [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then
     sleep 2
     setsid nohup bash "$HERE/start-display.sh" >/dev/null 2>&1 &

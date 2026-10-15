@@ -9,8 +9,8 @@
 #   4. reopens Chromium if it's closed or crashes.
 #
 # Runs automatically at desktop sign-in once setup.sh has been run.
-# Stop it with stop-display.sh. To leave the kiosk temporarily: Alt+F4
-# (it reopens after a few seconds unless stop-display.sh was run).
+# Stop it (and its autostart) with stop-display.sh. To leave the kiosk
+# temporarily: Alt+F4 (it reopens after a few seconds).
 #
 # Options: --dry-run  start the server and print the Chromium command only
 
